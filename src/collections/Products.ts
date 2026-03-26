@@ -3,8 +3,16 @@ import { anyone, isAdmin } from '../access'
 
 export const Products: CollectionConfig = {
   slug: 'products',
+  labels: {
+    singular: '商品',
+    plural: '商品',
+  },
   admin: {
     useAsTitle: 'title',
+    group: 'ショップ管理',
+    description: 'バルーンギフト商品の登録・編集・在庫管理',
+    listSearchableFields: ['title', 'sku', 'slug'],
+    defaultColumns: ['title', 'sku', 'price', 'productType', 'popularityScore', 'status'],
   },
   access: {
     read: anyone,
@@ -43,6 +51,16 @@ export const Products: CollectionConfig = {
       },
     },
     {
+      name: 'sku',
+      type: 'text',
+      label: 'SKU',
+      unique: true,
+      index: true,
+      admin: {
+        description: 'Shopify SKU（例: g-btd-0001）',
+      },
+    },
+    {
       name: 'price',
       type: 'number',
       label: '基本価格（税込）',
@@ -56,14 +74,39 @@ export const Products: CollectionConfig = {
       required: true,
       defaultValue: 'standard',
       options: [
-        { label: '通常商品', value: 'standard' },
+        { label: '通常商品（発送）', value: 'standard' },
         { label: 'デリバリー限定', value: 'delivery' },
       ],
     },
     {
+      name: 'tags',
+      type: 'json',
+      label: 'タグ',
+      admin: {
+        description: 'タグの配列（例: ["誕生日", "動物"]）',
+      },
+    },
+    {
+      name: 'shopifyHandle',
+      type: 'text',
+      label: 'Shopify Handle',
+      index: true,
+      admin: {
+        description: 'Shopifyとのリンク用',
+      },
+    },
+    {
+      name: 'bodyHtml',
+      type: 'textarea',
+      label: '商品説明（HTML）',
+      admin: {
+        description: 'Shopifyからインポートした商品説明HTML',
+      },
+    },
+    {
       name: 'description',
       type: 'richText',
-      label: '商品説明',
+      label: '商品説明（リッチテキスト）',
     },
     {
       name: 'images',
@@ -78,24 +121,87 @@ export const Products: CollectionConfig = {
         },
       ],
     },
+    // --- Shopify互換カスタムオプション ---
     {
       name: 'customOptions',
       type: 'group',
       label: 'カスタムオプション',
       fields: [
         {
-          name: 'subBalloons',
+          name: 'selectOptions',
           type: 'array',
-          label: 'サブバルーン選択肢',
+          label: 'セレクトオプション',
+          admin: {
+            description: '商品ごとの選択肢グループ（例: カラー、フリンジ、インサイダーバルーン等）',
+          },
           fields: [
             {
               name: 'name',
               type: 'text',
-              label: '名前',
+              label: 'オプション名',
               required: true,
+              admin: {
+                description: '例: "A インサイダーバルーン", "B フリンジ"',
+              },
             },
             {
-              name: 'additionalPrice',
+              name: 'required',
+              type: 'checkbox',
+              label: '必須',
+              defaultValue: false,
+            },
+            {
+              name: 'choices',
+              type: 'array',
+              label: '選択肢',
+              fields: [
+                {
+                  name: 'label',
+                  type: 'text',
+                  label: '表示名',
+                  required: true,
+                },
+                {
+                  name: 'additionalPrice',
+                  type: 'number',
+                  label: '追加料金',
+                  defaultValue: 0,
+                  min: 0,
+                },
+              ],
+            },
+          ],
+        },
+        {
+          name: 'textInputs',
+          type: 'array',
+          label: 'テキスト入力',
+          admin: {
+            description: '名入れ文字、カスタマイズ内容等のテキスト入力フィールド',
+          },
+          fields: [
+            {
+              name: 'name',
+              type: 'text',
+              label: 'ラベル',
+              required: true,
+              admin: {
+                description: '例: "名入れ文字", "カスタマイズ内容"',
+              },
+            },
+            {
+              name: 'required',
+              type: 'checkbox',
+              label: '必須',
+              defaultValue: false,
+            },
+            {
+              name: 'placeholder',
+              type: 'text',
+              label: 'プレースホルダ',
+            },
+            {
+              name: 'price',
               type: 'number',
               label: '追加料金',
               defaultValue: 0,
@@ -103,42 +209,19 @@ export const Products: CollectionConfig = {
             },
           ],
         },
-        {
-          name: 'letteringAvailable',
-          type: 'checkbox',
-          label: '文字入れ対応',
-          defaultValue: false,
-        },
-        {
-          name: 'letteringPrice',
-          type: 'number',
-          label: '文字入れ追加料金',
-          defaultValue: 0,
-          min: 0,
-          admin: {
-            condition: (data, siblingData) => siblingData?.letteringAvailable,
-          },
-        },
-        {
-          name: 'colors',
-          type: 'array',
-          label: 'カラーバリエーション',
-          fields: [
-            {
-              name: 'name',
-              type: 'text',
-              label: 'カラー名',
-              required: true,
-            },
-            {
-              name: 'hexCode',
-              type: 'text',
-              label: 'HEXカラーコード',
-              required: true,
-            },
-          ],
-        },
       ],
+    },
+    {
+      name: 'popularityScore',
+      type: 'number',
+      label: '人気スコア',
+      defaultValue: 0,
+      min: 0,
+      index: true,
+      admin: {
+        description: '注文数に応じて自動加算。手動で調整も可能（値が大きいほど「おすすめ順」で上位に表示）',
+        position: 'sidebar',
+      },
     },
     {
       name: 'status',

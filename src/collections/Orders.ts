@@ -1,10 +1,22 @@
 import type { CollectionConfig } from 'payload'
 import { isAdmin, isAdminOrOwner } from '../access'
+import { afterOrderChange } from '../hooks/orderHooks'
 
 export const Orders: CollectionConfig = {
   slug: 'orders',
+  labels: {
+    singular: '注文',
+    plural: '注文',
+  },
   admin: {
     useAsTitle: 'orderNumber',
+    group: 'ショップ管理',
+    description: '注文の確認・ステータス管理・履歴',
+    defaultColumns: ['orderNumber', 'customer', 'totalAmount', 'status', 'desiredArrivalDate', 'createdAt'],
+    listSearchableFields: ['orderNumber'],
+  },
+  hooks: {
+    afterChange: [afterOrderChange],
   },
   access: {
     read: isAdminOrOwner('customer'),

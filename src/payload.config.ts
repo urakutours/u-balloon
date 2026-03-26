@@ -2,6 +2,7 @@ import path from 'path'
 import { buildConfig } from 'payload'
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import { ja } from '@payloadcms/translations/languages/ja'
 import sharp from 'sharp'
 import { fileURLToPath } from 'url'
 
@@ -21,6 +22,16 @@ export default buildConfig({
     importMap: {
       baseDir: path.resolve(dirname),
     },
+    meta: {
+      titleSuffix: ' | U BALLOON 管理画面',
+    },
+    components: {
+      beforeDashboard: ['@/components/admin/Dashboard'],
+    },
+  },
+  i18n: {
+    supportedLanguages: { ja },
+    fallbackLanguage: 'ja',
   },
   collections: [Users, Media, Products, Orders, BusinessCalendar, PointTransactions],
   editor: lexicalEditor(),

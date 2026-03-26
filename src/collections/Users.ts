@@ -1,15 +1,29 @@
 import type { CollectionConfig } from 'payload'
-import { isAdmin, isAdminOrSelf } from '../access'
+import { isAdmin, isAdminOrSelf, anyone } from '../access'
+import { afterUserCreate } from '../hooks/userHooks'
+import { beforeUserPointsChange } from '../hooks/pointAdjustHook'
 
 export const Users: CollectionConfig = {
   slug: 'users',
+  labels: {
+    singular: 'ユーザー',
+    plural: 'ユーザー',
+  },
   admin: {
     useAsTitle: 'email',
+    group: '顧客管理',
+    description: '顧客情報・管理者アカウントの管理',
+    defaultColumns: ['email', 'name', 'role', 'points', 'phone', 'createdAt'],
+    listSearchableFields: ['email', 'name', 'phone'],
   },
   auth: true,
+  hooks: {
+    beforeChange: [beforeUserPointsChange],
+    afterChange: [afterUserCreate],
+  },
   access: {
     read: isAdminOrSelf,
-    create: isAdmin,
+    create: anyone, // Allow self-registration from frontend
     update: isAdminOrSelf,
     delete: isAdmin,
   },
@@ -69,7 +83,12 @@ export const Users: CollectionConfig = {
       type: 'json',
       label: '旧システム移行データ',
       admin: {
+        position: 'sidebar',
         description: '旧システムからの移行時に保持する追加データ',
+        condition: (data) => {
+          return data?.legacyData != null && data.legacyData !== '' && data.legacyData !== 'null'
+        },
+        readOnly: true,
       },
     },
   ],

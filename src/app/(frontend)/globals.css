@@ -5,32 +5,42 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
+  /* uBalloon Brand Colors — from Shopify store */
   --color-background: #ffffff;
-  --color-foreground: #09090b;
+  --color-foreground: #303636;
   --color-card: #ffffff;
-  --color-card-foreground: #09090b;
+  --color-card-foreground: #303636;
   --color-popover: #ffffff;
-  --color-popover-foreground: #09090b;
-  --color-primary: #18181b;
-  --color-primary-foreground: #fafafa;
-  --color-secondary: #f4f4f5;
-  --color-secondary-foreground: #18181b;
-  --color-muted: #f4f4f5;
-  --color-muted-foreground: #71717a;
-  --color-accent: #f4f4f5;
-  --color-accent-foreground: #18181b;
+  --color-popover-foreground: #303636;
+  --color-primary: #303636;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #fff1ed;
+  --color-secondary-foreground: #303636;
+  --color-muted: #f5f5f4;
+  --color-muted-foreground: #64748b;
+  --color-accent: #fff1ed;
+  --color-accent-foreground: #303636;
   --color-destructive: #ef4444;
-  --color-destructive-foreground: #fafafa;
-  --color-border: #e4e4e7;
-  --color-input: #e4e4e7;
-  --color-ring: #18181b;
-  --radius: 0.5rem;
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #e7e5e4;
+  --color-input: #e7e5e4;
+  --color-ring: #303636;
+
+  --radius: 0.375rem;
+  --font-sans: "Noto Sans JP", "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
 @theme inline {
   --font-heading: var(--font-sans);
   --font-sans: var(--font-sans);
+
+  /* Brand-specific colors */
+  --color-brand-pink: var(--brand-pink);
+  --color-brand-pink-light: var(--brand-pink-light);
+  --color-brand-teal: var(--brand-teal);
+  --color-brand-teal-bright: var(--brand-teal-bright);
+  --color-brand-mint: var(--brand-mint);
+  --color-brand-dark: var(--brand-dark);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -72,38 +82,47 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* uBalloon Brand Colors */
+  --brand-pink: #e369a7;
+  --brand-pink-light: #fff1ed;
+  --brand-teal: #04929c;
+  --brand-teal-bright: #00c5b9;
+  --brand-mint: #8ac6bb;
+  --brand-dark: #303636;
+
+  /* uBalloon Brand — Light theme */
+  --background: #ffffff;
+  --foreground: #303636;
+  --card: #ffffff;
+  --card-foreground: #303636;
+  --popover: #ffffff;
+  --popover-foreground: #303636;
+  --primary: #303636;
+  --primary-foreground: #ffffff;
+  --secondary: #fff1ed;
+  --secondary-foreground: #303636;
+  --muted: #f5f5f4;
+  --muted-foreground: #64748b;
+  --accent: #fff1ed;
+  --accent-foreground: #303636;
+  --destructive: #ef4444;
+  --border: #e7e5e4;
+  --input: #e7e5e4;
+  --ring: #04929c;
+  --chart-1: #e369a7;
+  --chart-2: #04929c;
+  --chart-3: #8ac6bb;
+  --chart-4: #303636;
+  --chart-5: #fff1ed;
+  --radius: 0.375rem;
+  --sidebar: #fafaf9;
+  --sidebar-foreground: #303636;
+  --sidebar-primary: #303636;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #fff1ed;
+  --sidebar-accent-foreground: #303636;
+  --sidebar-border: #e7e5e4;
+  --sidebar-ring: #04929c;
 }
 
 .dark {
@@ -145,9 +164,52 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
   }
   html {
     @apply font-sans;
   }
 }
+
+/* Animations */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out forwards;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.2s ease-out forwards;
+}
+
+/* Stagger children animations */
+.stagger-children > * {
+  opacity: 0;
+  animation: fade-in 0.4s ease-out forwards;
+}
+
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 60ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 120ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 180ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 240ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 360ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 420ms; }

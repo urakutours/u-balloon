@@ -3,8 +3,18 @@ import { anyone, isAdmin } from '../access'
 
 export const BusinessCalendar: CollectionConfig = {
   slug: 'business-calendar',
+  labels: {
+    singular: '営業カレンダー',
+    plural: '営業カレンダー',
+  },
   admin: {
     useAsTitle: 'date',
+    group: 'システム設定',
+    description: '休業日・発送可否の管理',
+    defaultColumns: ['date', 'isHoliday', 'shippingAvailable', 'note'],
+    components: {
+      beforeListTable: ['@/components/admin/BusinessCalendarView'],
+    },
   },
   access: {
     read: anyone,

@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start",
+      "Bash(taskkill /PID 10572 /F)",
+      "Bash(cmd.exe /c \"taskkill /PID 10572 /F\")",
+      "Bash(cmd.exe /c \"netstat -ano | findstr :3000 | findstr LISTENING\")",
+      "Bash(cmd.exe /c \"netstat -ano | findstr LISTENING | findstr :300\")",
+      "Bash(netstat -ano)",
+      "Bash(findstr \":3000\")",
+      "Bash(findstr \"LISTEN\")",
+      "Bash(taskkill //PID 24600 //F)"
+    ]
+  }
+}

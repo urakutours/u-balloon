@@ -3,8 +3,15 @@ import { isAdmin, isAdminOrOwner } from '../access'
 
 export const PointTransactions: CollectionConfig = {
   slug: 'point-transactions',
+  labels: {
+    singular: 'ポイント履歴',
+    plural: 'ポイント履歴',
+  },
   admin: {
     useAsTitle: 'description',
+    group: '顧客管理',
+    description: 'ポイントの付与・使用・調整履歴',
+    defaultColumns: ['description', 'user', 'type', 'amount', 'balance', 'createdAt'],
   },
   access: {
     read: isAdminOrOwner('user'),

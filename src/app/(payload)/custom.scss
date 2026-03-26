@@ -1,0 +1,786 @@
+/* =============================================
+   U BALLOON Admin Custom Styles
+   ============================================= */
+
+/* ---- Hide create button on business-calendar list page ---- */
+[class*="collection--business-calendar"] .collection-list__header .pill--has-action,
+[class*="collection--business-calendar"] header .btn[href$="/create"] {
+  display: none !important;
+}
+
+/* ---- Dashboard ---- */
+.ub-dashboard {
+  margin-bottom: 2rem;
+}
+
+.ub-period-selector {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.ub-period-buttons {
+  display: flex;
+  gap: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--theme-elevation-200);
+}
+
+.ub-period-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  background: var(--theme-elevation-50);
+  color: var(--theme-elevation-600);
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: var(--theme-elevation-100);
+  }
+
+  &--active {
+    background: var(--theme-elevation-500);
+    color: #fff;
+  }
+}
+
+.ub-custom-range {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.ub-date-input {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--theme-elevation-200);
+  border-radius: 6px;
+  background: var(--theme-input-bg, var(--theme-elevation-0));
+  color: var(--theme-text);
+  font-size: 0.8125rem;
+}
+
+/* ---- Summary Cards ---- */
+.ub-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.ub-summary-card {
+  border: 1px solid var(--theme-elevation-150);
+  border-radius: 12px;
+  padding: 1.25rem;
+  background: var(--theme-elevation-50);
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+  }
+
+  &--highlight {
+    border: 2px solid #f59e0b;
+    background: #fffbeb;
+
+    .ub-summary-card__title {
+      color: #92400e;
+      font-weight: 600;
+    }
+
+    .ub-summary-card__value {
+      color: #92400e;
+    }
+  }
+
+  &__title {
+    font-size: 0.8125rem;
+    color: var(--theme-elevation-500);
+    margin-bottom: 0.25rem;
+  }
+
+  &__value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--theme-text);
+  }
+
+  &__sub {
+    font-size: 0.875rem;
+    color: var(--theme-elevation-500);
+    margin-top: 0.25rem;
+  }
+}
+
+/* ---- Charts Grid ---- */
+.ub-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* ---- Cards ---- */
+.ub-card {
+  border: 1px solid var(--theme-elevation-150);
+  border-radius: 12px;
+  padding: 1.25rem;
+  background: var(--theme-elevation-50);
+  transition: box-shadow 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+}
+
+.ub-card-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+  color: var(--theme-text);
+}
+
+/* ---- Main Content Grid ---- */
+.ub-main-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 1.5rem;
+}
+
+.ub-right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* ---- Tables ---- */
+.ub-table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ub-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+
+  th {
+    text-align: left;
+    padding: 0.5rem;
+    font-weight: 600;
+    color: var(--theme-elevation-500);
+    border-bottom: 1px solid var(--theme-elevation-150);
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--theme-elevation-100);
+    white-space: nowrap;
+  }
+
+  tbody tr {
+    transition: background 0.1s ease;
+
+    &:hover {
+      background: var(--theme-elevation-75, var(--theme-elevation-100));
+    }
+  }
+}
+
+/* ---- Status ---- */
+.ub-status-badge {
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.ub-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.ub-status-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 0.875rem;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+
+  &:hover {
+    opacity: 0.85;
+    transform: translateY(-1px);
+  }
+}
+
+.ub-status-count {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+/* ---- Links ---- */
+.ub-link {
+  font-size: 0.875rem;
+  color: var(--theme-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+
+  &:hover {
+    opacity: 0.7;
+  }
+}
+
+/* ---- Muted Text ---- */
+.ub-muted-text {
+  color: var(--theme-elevation-500);
+}
+
+.ub-empty-text {
+  color: var(--theme-elevation-500);
+  font-size: 0.875rem;
+}
+
+/* ---- Holidays ---- */
+.ub-holiday-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.ub-holiday-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  flex-wrap: wrap;
+
+  &--today {
+    background: #fef3c7;
+  }
+}
+
+.ub-holiday-date {
+  font-weight: 600;
+  min-width: 120px;
+}
+
+.ub-badge {
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+
+  &--holiday {
+    background: #fef2f2;
+    color: #991b1b;
+  }
+
+  &--no-ship {
+    background: #fff7ed;
+    color: #9a3412;
+  }
+
+  &--today {
+    background: #fef3c7;
+    color: #92400e;
+    font-weight: 600;
+  }
+}
+
+/* =============================================
+   Calendar View
+   ============================================= */
+.ub-calendar-view {
+  margin-bottom: 1.5rem;
+}
+
+/* max-width based on 3-month calendar */
+.ub-calendar-view {
+  max-width: 900px;
+}
+
+/* ---- Mode Toolbar ---- */
+.ub-mode-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.ub-mode-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--theme-elevation-500);
+}
+
+.ub-mode-buttons {
+  display: flex;
+  gap: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--theme-elevation-200);
+}
+
+.ub-mode-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  background: var(--theme-elevation-50);
+  color: var(--theme-elevation-600);
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: var(--theme-elevation-100);
+  }
+
+  &--active.ub-mode-btn--holiday {
+    background: #fecaca;
+    color: #991b1b;
+    font-weight: 700;
+  }
+
+  &--active.ub-mode-btn--no-ship {
+    background: #fed7aa;
+    color: #9a3412;
+    font-weight: 700;
+  }
+
+  &--active.ub-mode-btn--clear {
+    background: var(--theme-elevation-200);
+    color: var(--theme-text);
+    font-weight: 700;
+  }
+}
+
+.ub-mode-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+
+  &--holiday {
+    background: #ef4444;
+  }
+
+  &--no-ship {
+    background: #f97316;
+  }
+
+  &--clear {
+    background: var(--theme-elevation-400);
+  }
+}
+
+.ub-change-count {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #f59e0b;
+  background: #fffbeb;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+}
+
+.ub-save-bar {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--theme-elevation-150);
+}
+
+/* ---- Pattern Fields ---- */
+.ub-pattern-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.ub-pattern-list {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--theme-elevation-150);
+}
+
+.ub-pattern-list-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--theme-elevation-500);
+  margin: 0 0 0.5rem 0;
+}
+
+.ub-pattern-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.625rem;
+  border-radius: 6px;
+  background: var(--theme-elevation-50);
+  border: 1px solid var(--theme-elevation-150);
+  margin-bottom: 0.375rem;
+  font-size: 0.8125rem;
+  flex-wrap: wrap;
+}
+
+.ub-pattern-item-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.ub-calendar-loading {
+  text-align: center;
+  padding: 0.5rem;
+  color: var(--theme-elevation-500);
+  font-size: 0.8125rem;
+}
+
+/* react-day-picker overrides */
+.ub-rdp {
+  --rdp-accent-color: var(--theme-elevation-500);
+  --rdp-background-color: var(--theme-elevation-100);
+  font-size: 0.875rem;
+  color: var(--theme-text);
+}
+
+.ub-rdp-months {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.ub-rdp-caption {
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 0.5rem 0;
+  color: var(--theme-text);
+}
+
+.ub-rdp-nav-btn {
+  cursor: pointer;
+  border: 1px solid var(--theme-elevation-200);
+  border-radius: 6px;
+  padding: 4px 8px;
+  background: var(--theme-elevation-50);
+  color: var(--theme-text);
+  transition: background 0.15s;
+
+  &:hover {
+    background: var(--theme-elevation-150);
+  }
+}
+
+.ub-rdp-weekdays {
+  border-bottom: 1px solid var(--theme-elevation-150);
+}
+
+.ub-rdp-weekday {
+  font-weight: 600;
+  color: var(--theme-elevation-500);
+  font-size: 0.75rem;
+  padding: 0.5rem;
+  text-align: center;
+}
+
+.ub-rdp-day {
+  padding: 2px;
+}
+
+.ub-rdp-day-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  background: transparent;
+  color: var(--theme-text);
+  transition: all 0.1s ease;
+
+  &:hover {
+    background: var(--theme-elevation-100);
+  }
+}
+
+.ub-day--holiday .ub-rdp-day-btn {
+  background: #fecaca !important;
+  color: #991b1b !important;
+  font-weight: 700;
+}
+
+.ub-day--no-ship .ub-rdp-day-btn {
+  background: #fed7aa !important;
+  color: #9a3412 !important;
+}
+
+.ub-day--selected .ub-rdp-day-btn {
+  outline: 2px solid var(--theme-elevation-500);
+  outline-offset: 1px;
+}
+
+.ub-day--today .ub-rdp-day-btn {
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ub-calendar-legend {
+  display: flex;
+  gap: 1.25rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--theme-elevation-150);
+  font-size: 0.8125rem;
+  color: var(--theme-elevation-600);
+}
+
+.ub-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.ub-legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+
+  &--holiday {
+    background: #fecaca;
+  }
+
+  &--no-ship {
+    background: #fed7aa;
+  }
+
+  &--today {
+    background: var(--theme-elevation-200);
+    text-decoration: underline;
+  }
+}
+
+/* ---- Form Elements ---- */
+.ub-form-group {
+  margin-bottom: 0.75rem;
+}
+
+.ub-form-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  color: var(--theme-text);
+}
+
+.ub-input {
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--theme-elevation-200);
+  border-radius: 6px;
+  background: var(--theme-input-bg, var(--theme-elevation-0));
+  color: var(--theme-text);
+  font-size: 0.8125rem;
+  transition: border-color 0.15s;
+
+  &:focus {
+    outline: none;
+    border-color: var(--theme-elevation-400);
+  }
+}
+
+.ub-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  color: var(--theme-text);
+}
+
+/* ---- Buttons ---- */
+.ub-btn-group {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.ub-btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  &--primary {
+    background: var(--theme-elevation-500);
+    color: #fff;
+
+    &:hover:not(:disabled) {
+      opacity: 0.85;
+    }
+  }
+
+  &--secondary {
+    background: var(--theme-elevation-100);
+    color: var(--theme-text);
+    border: 1px solid var(--theme-elevation-200);
+
+    &:hover:not(:disabled) {
+      background: var(--theme-elevation-150);
+    }
+  }
+
+  &--danger {
+    background: #ef4444;
+    color: #fff;
+
+    &:hover:not(:disabled) {
+      background: #dc2626;
+    }
+  }
+}
+
+/* ---- Bulk Operations ---- */
+.ub-day-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-bottom: 0.75rem;
+}
+
+.ub-day-btn {
+  padding: 0.375rem 0.75rem;
+  border: 1px solid var(--theme-elevation-200);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  background: var(--theme-elevation-50);
+  color: var(--theme-text);
+  transition: all 0.1s ease;
+
+  &--active {
+    background: var(--theme-elevation-500);
+    color: #fff;
+    border-color: var(--theme-elevation-500);
+  }
+}
+
+.ub-bulk-result {
+  padding: 0.625rem;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  margin-bottom: 0.75rem;
+
+  &--success {
+    background: #f0fdf4;
+    color: #166534;
+  }
+
+  &--error {
+    background: #fef2f2;
+    color: #991b1b;
+  }
+}
+
+/* =============================================
+   Responsive
+   ============================================= */
+@media (max-width: 1024px) {
+  .ub-main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ub-charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ub-rdp-months {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .ub-summary-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .ub-status-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .ub-period-selector {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ub-period-buttons {
+    width: 100%;
+  }
+
+  .ub-period-btn {
+    flex: 1;
+    text-align: center;
+  }
+
+  .ub-custom-range {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ub-holiday-item {
+    font-size: 0.8125rem;
+  }
+
+  .ub-holiday-date {
+    min-width: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .ub-summary-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .ub-status-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ub-summary-card__value {
+    font-size: 1.25rem;
+  }
+
+  .ub-rdp-months {
+    flex-direction: column;
+  }
+}
