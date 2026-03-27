@@ -12,6 +12,7 @@ export const Forms: CollectionConfig = {
     group: 'サイト管理',
     description: 'お問い合わせ・アンケート等のフォーム作成。テキスト・メール・選択肢など自由にフィールドを追加でき、送信時の通知先も設定できます。',
     defaultColumns: ['title', 'slug', 'updatedAt'],
+    listSearchableFields: ['title', 'slug'],
   },
   access: {
     read: anyone,
@@ -116,11 +117,19 @@ export const Forms: CollectionConfig = {
     },
     {
       name: 'notifyEmails',
-      type: 'json',
+      type: 'array',
       label: '通知先メールアドレス',
       admin: {
-        description: '送信時に通知するメールアドレスの配列（例: ["info@uballoon.com"]）',
+        description: '送信時に通知するメールアドレスを追加してください',
       },
+      fields: [
+        {
+          name: 'email',
+          type: 'email',
+          label: 'メールアドレス',
+          required: true,
+        },
+      ],
     },
   ],
 }

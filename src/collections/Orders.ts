@@ -1,6 +1,6 @@
 import type { CollectionConfig } from 'payload'
 import { isAdmin, isAdminOrOwner } from '../access'
-import { afterOrderChange } from '../hooks/orderHooks'
+import { afterOrderChange, beforeOrderStatusChange } from '../hooks/orderHooks'
 
 export const Orders: CollectionConfig = {
   slug: 'orders',
@@ -13,9 +13,10 @@ export const Orders: CollectionConfig = {
     group: '商品・注文',
     description: '受注一覧。ステータス変更・発送通知・追跡番号の管理ができます。',
     defaultColumns: ['orderNumber', 'customer', 'totalAmount', 'status', 'desiredArrivalDate', 'createdAt'],
-    listSearchableFields: ['orderNumber'],
+    listSearchableFields: ['orderNumber', 'deliveryAddress', 'notes'],
   },
   hooks: {
+    beforeChange: [beforeOrderStatusChange],
     afterChange: [afterOrderChange],
   },
   access: {
@@ -25,6 +26,7 @@ export const Orders: CollectionConfig = {
     delete: isAdmin,
   },
   fields: [
+    // Top-level fields
     {
       name: 'orderNumber',
       type: 'text',
@@ -48,160 +50,6 @@ export const Orders: CollectionConfig = {
       },
     },
     {
-      name: 'customer',
-      type: 'relationship',
-      relationTo: 'users',
-      label: '顧客',
-      required: true,
-    },
-    {
-      name: 'items',
-      type: 'array',
-      label: '注文商品',
-      required: true,
-      fields: [
-        {
-          name: 'product',
-          type: 'relationship',
-          relationTo: 'products',
-          label: '商品',
-          required: true,
-        },
-        {
-          name: 'quantity',
-          type: 'number',
-          label: '数量',
-          required: true,
-          min: 1,
-          defaultValue: 1,
-        },
-        {
-          name: 'selectedOptions',
-          type: 'json',
-          label: '選択されたカスタムオプション',
-        },
-        {
-          name: 'unitPrice',
-          type: 'number',
-          label: '単価',
-          required: true,
-          min: 0,
-        },
-      ],
-    },
-    {
-      name: 'deliveryAddress',
-      type: 'text',
-      label: '配送先住所',
-    },
-    {
-      name: 'deliveryDistance',
-      type: 'number',
-      label: '配送距離(km)',
-      min: 0,
-    },
-    {
-      name: 'shippingFee',
-      type: 'number',
-      label: '送料',
-      defaultValue: 0,
-      min: 0,
-    },
-    {
-      name: 'subtotal',
-      type: 'number',
-      label: '商品小計',
-      required: true,
-      min: 0,
-    },
-    {
-      name: 'promotion',
-      type: 'relationship',
-      relationTo: 'promotions',
-      label: '適用プロモーション',
-    },
-    {
-      name: 'discountAmount',
-      type: 'number',
-      label: '割引額',
-      defaultValue: 0,
-      min: 0,
-    },
-    {
-      name: 'pointsUsed',
-      type: 'number',
-      label: '使用ポイント',
-      defaultValue: 0,
-      min: 0,
-    },
-    {
-      name: 'pointsEarned',
-      type: 'number',
-      label: '付与ポイント',
-      defaultValue: 0,
-      min: 0,
-    },
-    {
-      name: 'totalAmount',
-      type: 'number',
-      label: '合計金額',
-      required: true,
-      min: 0,
-      admin: {
-        description: '送料込み、ポイント適用後',
-      },
-    },
-    {
-      name: 'desiredArrivalDate',
-      type: 'date',
-      label: '到着希望日',
-      admin: {
-        date: {
-          pickerAppearance: 'dayOnly',
-          displayFormat: 'yyyy/MM/dd',
-        },
-      },
-    },
-    {
-      name: 'desiredTimeSlot',
-      type: 'select',
-      label: '希望時間帯',
-      options: [
-        { label: '午前', value: 'morning' },
-        { label: '午後', value: 'afternoon' },
-        { label: '夕方', value: 'evening' },
-        { label: '夜', value: 'night' },
-      ],
-    },
-    {
-      name: 'eventDateTime',
-      type: 'date',
-      label: '使用日時（イベント日時）',
-      admin: {
-        date: {
-          pickerAppearance: 'dayAndTime',
-          displayFormat: 'yyyy/MM/dd HH:mm',
-        },
-        description: 'バルーンを使うイベントの日時',
-      },
-    },
-    {
-      name: 'notes',
-      type: 'textarea',
-      label: '備考',
-    },
-    {
-      name: 'paymentMethod',
-      type: 'select',
-      label: '支払い方法',
-      defaultValue: 'stripe',
-      required: true,
-      options: [
-        { label: 'クレジットカード（Stripe）', value: 'stripe' },
-        { label: '銀行振込', value: 'bank_transfer' },
-      ],
-    },
-    {
       name: 'status',
       type: 'select',
       label: 'ステータス',
@@ -217,52 +65,232 @@ export const Orders: CollectionConfig = {
         { label: 'キャンセル', value: 'cancelled' },
       ],
     },
+    // Tabs
     {
-      name: 'bankTransferDeadline',
-      type: 'date',
-      label: '振込期限',
-      admin: {
-        position: 'sidebar',
-        date: { pickerAppearance: 'dayOnly' },
-        condition: (data) => data?.paymentMethod === 'bank_transfer',
-      },
-    },
-    {
-      name: 'bankTransferConfirmedAt',
-      type: 'date',
-      label: '入金確認日',
-      admin: {
-        position: 'sidebar',
-        date: { pickerAppearance: 'dayOnly' },
-        condition: (data) => data?.paymentMethod === 'bank_transfer',
-      },
-    },
-    {
-      name: 'trackingInfo',
-      type: 'group',
-      label: '配送追跡情報',
-      admin: {
-        condition: (data) => ['shipped', 'delivered'].includes(data?.status || ''),
-      },
-      fields: [
+      type: 'tabs',
+      tabs: [
         {
-          name: 'carrier',
-          type: 'select',
-          label: '配送業者',
-          options: [
-            { label: 'ヤマト運輸', value: 'yamato' },
-            { label: 'ゆうパック', value: 'yupack' },
-            { label: '佐川急便', value: 'sagawa' },
-            { label: 'その他', value: 'other' },
+          label: '注文内容',
+          fields: [
+            {
+              name: 'customer',
+              type: 'relationship',
+              relationTo: 'users',
+              label: '顧客',
+              required: true,
+            },
+            {
+              name: 'items',
+              type: 'array',
+              label: '注文商品',
+              required: true,
+              fields: [
+                {
+                  name: 'product',
+                  type: 'relationship',
+                  relationTo: 'products',
+                  label: '商品',
+                  required: true,
+                },
+                {
+                  name: 'quantity',
+                  type: 'number',
+                  label: '数量',
+                  required: true,
+                  min: 1,
+                  defaultValue: 1,
+                },
+                {
+                  name: 'selectedOptions',
+                  type: 'json',
+                  label: '選択されたカスタムオプション',
+                },
+                {
+                  name: 'unitPrice',
+                  type: 'number',
+                  label: '単価',
+                  required: true,
+                  min: 0,
+                },
+              ],
+            },
+            {
+              name: 'subtotal',
+              type: 'number',
+              label: '商品小計',
+              required: true,
+              min: 0,
+            },
+            {
+              name: 'promotion',
+              type: 'relationship',
+              relationTo: 'promotions',
+              label: '適用プロモーション',
+            },
+            {
+              name: 'discountAmount',
+              type: 'number',
+              label: '割引額',
+              defaultValue: 0,
+              min: 0,
+            },
+            {
+              name: 'pointsUsed',
+              type: 'number',
+              label: '使用ポイント',
+              defaultValue: 0,
+              min: 0,
+            },
+            {
+              name: 'pointsEarned',
+              type: 'number',
+              label: '付与ポイント',
+              defaultValue: 0,
+              min: 0,
+            },
+            {
+              name: 'totalAmount',
+              type: 'number',
+              label: '合計金額',
+              required: true,
+              min: 0,
+              admin: {
+                description: '送料込み、ポイント適用後',
+              },
+            },
           ],
         },
         {
-          name: 'trackingNumber',
-          type: 'text',
-          label: '追跡番号',
+          label: '配送・日程',
+          fields: [
+            {
+              name: 'deliveryAddress',
+              type: 'text',
+              label: '配送先住所',
+            },
+            {
+              name: 'deliveryDistance',
+              type: 'number',
+              label: '配送距離(km)',
+              min: 0,
+            },
+            {
+              name: 'shippingFee',
+              type: 'number',
+              label: '送料',
+              defaultValue: 0,
+              min: 0,
+            },
+            {
+              name: 'desiredArrivalDate',
+              type: 'date',
+              label: '到着希望日',
+              admin: {
+                date: {
+                  pickerAppearance: 'dayOnly',
+                  displayFormat: 'yyyy/MM/dd',
+                },
+              },
+            },
+            {
+              name: 'desiredTimeSlot',
+              type: 'select',
+              label: '希望時間帯',
+              options: [
+                { label: '午前', value: 'morning' },
+                { label: '午後', value: 'afternoon' },
+                { label: '夕方', value: 'evening' },
+                { label: '夜', value: 'night' },
+              ],
+            },
+            {
+              name: 'eventDateTime',
+              type: 'date',
+              label: '使用日時（イベント日時）',
+              admin: {
+                date: {
+                  pickerAppearance: 'dayAndTime',
+                  displayFormat: 'yyyy/MM/dd HH:mm',
+                },
+                description: 'バルーンを使うイベントの日時',
+              },
+            },
+            {
+              name: 'trackingInfo',
+              type: 'group',
+              label: '配送追跡情報',
+              admin: {
+                description: '発送済みステータスに変更する前に、配送業者と追跡番号を入力してください。',
+              },
+              fields: [
+                {
+                  name: 'carrier',
+                  type: 'select',
+                  label: '配送業者',
+                  options: [
+                    { label: 'ヤマト運輸', value: 'yamato' },
+                    { label: 'ゆうパック', value: 'yupack' },
+                    { label: '佐川急便', value: 'sagawa' },
+                    { label: 'その他', value: 'other' },
+                  ],
+                },
+                {
+                  name: 'trackingNumber',
+                  type: 'text',
+                  label: '追跡番号',
+                },
+              ],
+            },
+          ],
+        },
+        {
+          label: '決済',
+          fields: [
+            {
+              name: 'paymentMethod',
+              type: 'select',
+              label: '支払い方法',
+              defaultValue: 'stripe',
+              required: true,
+              options: [
+                { label: 'クレジットカード（Stripe）', value: 'stripe' },
+                { label: '銀行振込', value: 'bank_transfer' },
+              ],
+            },
+            {
+              name: 'bankTransferDeadline',
+              type: 'date',
+              label: '振込期限',
+              admin: {
+                date: { pickerAppearance: 'dayOnly' },
+                condition: (data) => data?.paymentMethod === 'bank_transfer',
+              },
+            },
+            {
+              name: 'bankTransferConfirmedAt',
+              type: 'date',
+              label: '入金確認日',
+              admin: {
+                date: { pickerAppearance: 'dayOnly' },
+                condition: (data) => data?.paymentMethod === 'bank_transfer',
+              },
+            },
+          ],
+        },
+        {
+          label: 'メモ',
+          fields: [
+            {
+              name: 'notes',
+              type: 'textarea',
+              label: '備考',
+              maxLength: 1000,
+            },
+          ],
         },
       ],
     },
+    // Sidebar fields
     {
       name: 'stripeSessionId',
       type: 'text',

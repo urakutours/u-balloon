@@ -91,5 +91,71 @@ export const Users: CollectionConfig = {
         readOnly: true,
       },
     },
+    {
+      name: 'totalOrders',
+      type: 'number',
+      label: '累計注文数',
+      virtual: true,
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        description: 'この顧客の注文件数',
+      },
+      hooks: {
+        afterRead: [
+          async ({ data, req }) => {
+            if (!data?.id || !req.payload) return 0
+            try {
+              const result = await req.payload.find({
+                collection: 'orders',
+                where: { customer: { equals: data.id } },
+                limit: 0,
+                depth: 0,
+              })
+              return result.totalDocs
+            } catch {
+              return 0
+            }
+          },
+        ],
+      },
+    },
+    {
+      name: 'totalSpent',
+      type: 'number',
+      label: '累計購入金額',
+      virtual: true,
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        description: 'この顧客の注文合計金額（円）',
+      },
+      hooks: {
+        afterRead: [
+          async ({ data, req }) => {
+            if (!data?.id || !req.payload) return 0
+            try {
+              const result = await req.payload.find({
+                collection: 'orders',
+                where: {
+                  and: [
+                    { customer: { equals: data.id } },
+                    { status: { not_equals: 'cancelled' } },
+                  ],
+                },
+                limit: 500,
+                depth: 0,
+              })
+              return result.docs.reduce(
+                (sum, order) => sum + ((order.totalAmount as number) || 0),
+                0,
+              )
+            } catch {
+              return 0
+            }
+          },
+        ],
+      },
+    },
   ],
 }

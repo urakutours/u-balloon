@@ -12,6 +12,7 @@ export const PointTransactions: CollectionConfig = {
     group: '顧客',
     description: 'ポイントの付与・利用・手動調整の全履歴。注文時に自動記録されます。',
     defaultColumns: ['description', 'user', 'type', 'amount', 'balance', 'createdAt'],
+    listSearchableFields: ['description'],
   },
   access: {
     read: isAdminOrOwner('user'),
@@ -46,7 +47,7 @@ export const PointTransactions: CollectionConfig = {
       label: 'ポイント数',
       required: true,
       admin: {
-        description: '付与は正、使用は負',
+        description: '付与・移行は正の値（例: +100）、使用・失効は負の値（例: -50）',
       },
     },
     {

@@ -21,6 +21,7 @@ export const Pages: CollectionConfig = {
     group: 'サイト管理',
     description: '会社概要・特商法・プライバシーポリシー等の固定ページ管理。ブロックを組み合わせて自由にレイアウトできます。',
     defaultColumns: ['title', 'pageType', 'slug', 'status', 'updatedAt'],
+    listSearchableFields: ['title', 'slug'],
   },
   access: {
     read: anyone,
@@ -104,6 +105,8 @@ export const Pages: CollectionConfig = {
           name: 'description',
           type: 'textarea',
           label: 'メタディスクリプション',
+          maxLength: 160,
+          admin: { description: '検索結果に表示される説明文（160文字以内推奨）' },
         },
         {
           name: 'ogImage',

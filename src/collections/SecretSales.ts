@@ -12,6 +12,7 @@ export const SecretSales: CollectionConfig = {
     group: '販促・セール',
     description: 'URL限定セールページの作成。パスワード保護にも対応。SNSやメルマガで特定のお客様だけに公開できます。',
     defaultColumns: ['name', 'accessType', 'status', 'validUntil'],
+    listSearchableFields: ['name', 'slug'],
   },
   access: {
     read: isAdmin,
@@ -50,9 +51,10 @@ export const SecretSales: CollectionConfig = {
       name: 'password',
       type: 'text',
       label: 'パスワード',
+      minLength: 6,
       admin: {
         condition: (data) => data?.accessType === 'password',
-        description: '閲覧時に入力が必要なパスワード',
+        description: '閲覧時に入力が必要なパスワード（6文字以上）。セキュリティのため十分な長さのパスワードを設定してください。',
       },
     },
     {

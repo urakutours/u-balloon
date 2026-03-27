@@ -12,7 +12,7 @@ export const Products: CollectionConfig = {
     group: '商品・注文',
     description: 'バルーンギフト商品の登録・編集・在庫管理。商品名・SKU・価格・カスタムオプション・在庫数を管理できます。',
     listSearchableFields: ['title', 'sku', 'slug'],
-    defaultColumns: ['title', 'sku', 'price', 'productType', 'popularityScore', 'status'],
+    defaultColumns: ['title', 'sku', 'price', 'productType', 'stock', 'status'],
   },
   access: {
     read: anyone,
@@ -80,10 +80,24 @@ export const Products: CollectionConfig = {
     },
     {
       name: 'tags',
-      type: 'json',
+      type: 'select',
       label: 'タグ',
+      hasMany: true,
+      options: [
+        { label: '誕生日', value: '誕生日' },
+        { label: '結婚', value: '結婚' },
+        { label: '開店・周年・移転', value: '開店・周年・移転' },
+        { label: '動物', value: '動物' },
+        { label: '季節・イベント', value: '季節・イベント' },
+        { label: 'キッズ', value: 'キッズ' },
+        { label: 'デリバリー', value: 'デリバリー' },
+        { label: 'リリース', value: 'リリース' },
+        { label: 'ギフト', value: 'ギフト' },
+        { label: 'お祝い', value: 'お祝い' },
+        { label: 'オプション', value: 'オプション' },
+      ],
       admin: {
-        description: 'タグの配列（例: ["誕生日", "動物"]）',
+        description: '商品のカテゴリータグ（複数選択可）',
       },
     },
     {
@@ -100,7 +114,8 @@ export const Products: CollectionConfig = {
       type: 'textarea',
       label: '商品説明（HTML）',
       admin: {
-        description: 'Shopifyからインポートした商品説明HTML',
+        description: '※Shopifyからの移行データ（読み取り専用）。商品説明は下の「商品説明（リッチテキスト）」で編集してください。',
+        readOnly: true,
       },
     },
     {

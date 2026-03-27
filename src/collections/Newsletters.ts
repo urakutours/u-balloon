@@ -12,6 +12,7 @@ export const Newsletters: CollectionConfig = {
     group: 'メルマガ配信',
     description: 'メルマガの作成・テスト送信・一括配信。購読者全員に一斉送信できます。',
     defaultColumns: ['subject', 'status', 'sentAt', 'recipientCount'],
+    listSearchableFields: ['subject'],
   },
   access: {
     read: isAdmin,

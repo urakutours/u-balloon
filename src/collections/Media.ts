@@ -22,6 +22,11 @@ export const Media: CollectionConfig = {
       name: 'alt',
       type: 'text',
       required: true,
+      label: '代替テキスト',
+      maxLength: 125,
+      admin: {
+        description: '画像の内容を説明するテキスト（125文字以内推奨。例: 「ピンクのバルーンブーケ」）',
+      },
     },
   ],
   upload: true,

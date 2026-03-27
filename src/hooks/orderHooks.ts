@@ -1,4 +1,4 @@
-import type { CollectionAfterChangeHook } from 'payload'
+import type { CollectionAfterChangeHook, CollectionBeforeChangeHook } from 'payload'
 import { earnPoints } from '@/lib/points'
 import { sendEmail } from '@/lib/email'
 import { OrderConfirmEmail, OrderStatusUpdateEmail, PointsEarnedEmail } from '@/lib/email-templates'
@@ -254,6 +254,43 @@ async function updatePopularityScores(payload: Payload, doc: Record<string, unkn
   }
 }
 
+export const beforeOrderStatusChange: CollectionBeforeChangeHook = async ({
+  data,
+  originalDoc,
+  operation,
+}) => {
+  if (operation !== 'update' || !originalDoc) return data
+
+  const newStatus = data.status
+  const oldStatus = originalDoc.status
+
+  if (newStatus === oldStatus) return data
+
+  // Validate: shipped requires tracking number
+  if (newStatus === 'shipped') {
+    const trackingNumber = data.trackingInfo?.trackingNumber || originalDoc.trackingInfo?.trackingNumber
+    if (!trackingNumber) {
+      throw new Error('発送済みに変更するには、追跡番号を入力してください。（配送・日程タブ）')
+    }
+  }
+
+  // Validate: bank transfer confirmation required
+  if (newStatus === 'confirmed' &&
+      (data.paymentMethod || originalDoc.paymentMethod) === 'bank_transfer') {
+    const confirmedAt = data.bankTransferConfirmedAt || originalDoc.bankTransferConfirmedAt
+    if (!confirmedAt) {
+      throw new Error('銀行振込の注文を確認済みにするには、入金確認日を入力してください。（決済タブ）')
+    }
+  }
+
+  // Validate: delivered must come after shipped
+  if (newStatus === 'delivered' && oldStatus !== 'shipped') {
+    throw new Error('配達完了に変更するには、先にステータスを「発送済み」にしてください。')
+  }
+
+  return data
+}
+
 export const afterOrderChange: CollectionAfterChangeHook = async ({
   doc,
   previousDoc,
@@ -282,6 +319,31 @@ export const afterOrderChange: CollectionAfterChangeHook = async ({
   if (operation === 'update' && previousDoc && doc.status !== previousDoc.status) {
     processOrderStatusChange(payload, doc, previousDoc).catch((err) =>
       console.error('[Hook] Unhandled error in processOrderStatusChange:', err),
+    )
+
+    // Create audit log entry for status change
+    const statusLabels: Record<string, string> = {
+      pending: '保留中',
+      awaiting_payment: '入金待ち',
+      confirmed: '確認済み',
+      preparing: '準備中',
+      shipped: '発送済み',
+      delivered: '配達完了',
+      cancelled: 'キャンセル',
+    }
+    const oldStatus = previousDoc.status as string
+    const newStatus = doc.status as string
+    payload.create({
+      collection: 'order-audit-logs',
+      data: {
+        order: doc.id,
+        action: `ステータス変更: ${statusLabels[oldStatus] || oldStatus} → ${statusLabels[newStatus] || newStatus}`,
+        previousStatus: oldStatus,
+        newStatus: newStatus,
+        changedBy: req.user?.id || null,
+      },
+    }).catch((err) =>
+      console.error('[Hook] Audit log creation error:', err),
     )
 
     // Restore stock if order is cancelled

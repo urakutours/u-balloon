@@ -1,6 +1,87 @@
 /* =============================================
-   U BALLOON Admin Custom Styles
+   U BALLOON Admin — Brand Theme System
+   Brand Colors: Teal #04929c / Coral #fff1ed / Pink #e369a7
    ============================================= */
+
+/* ---- Brand CSS Variables ---- */
+:root,
+[data-theme="light"] {
+  --ub-brand-teal: #04929c;
+  --ub-brand-teal-bright: #00c5b9;
+  --ub-brand-teal-light: #e6f7f8;
+  --ub-brand-teal-50: #f0fafa;
+  --ub-brand-coral: #fff1ed;
+  --ub-brand-coral-deep: #ffddd3;
+  --ub-brand-pink: #e369a7;
+  --ub-brand-dark: #303636;
+
+  --ub-card-bg: #ffffff;
+  --ub-card-border: #e7e5e4;
+  --ub-card-hover-shadow: 0 4px 16px rgba(4, 146, 156, 0.1);
+  --ub-page-bg: #fafaf9;
+  --ub-text-primary: #303636;
+  --ub-text-secondary: #64748b;
+  --ub-text-muted: #94a3b8;
+  --ub-divider: #e7e5e4;
+  --ub-accent-bg: #f0fafa;
+  --ub-sidebar-hover: #f0fafa;
+  --ub-highlight-bg: #fffbeb;
+  --ub-highlight-border: #f59e0b;
+}
+
+[data-theme="dark"] {
+  --ub-brand-teal: #2dd4bf;
+  --ub-brand-teal-bright: #5eead4;
+  --ub-brand-teal-light: rgba(45, 212, 191, 0.12);
+  --ub-brand-teal-50: rgba(45, 212, 191, 0.06);
+  --ub-brand-coral: rgba(255, 241, 237, 0.08);
+  --ub-brand-coral-deep: rgba(255, 221, 211, 0.15);
+  --ub-brand-pink: #f0a0cc;
+
+  --ub-card-bg: var(--theme-elevation-100);
+  --ub-card-border: var(--theme-elevation-200);
+  --ub-card-hover-shadow: 0 4px 16px rgba(45, 212, 191, 0.08);
+  --ub-page-bg: var(--theme-elevation-0);
+  --ub-text-primary: var(--theme-text);
+  --ub-text-secondary: var(--theme-elevation-500);
+  --ub-text-muted: var(--theme-elevation-400);
+  --ub-divider: var(--theme-elevation-200);
+  --ub-accent-bg: rgba(45, 212, 191, 0.08);
+  --ub-sidebar-hover: rgba(45, 212, 191, 0.08);
+  --ub-highlight-bg: rgba(245, 158, 11, 0.1);
+  --ub-highlight-border: #f59e0b;
+}
+
+/* ---- Global Typography for Admin ---- */
+[data-theme] {
+  font-family: "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", system-ui, sans-serif !important;
+}
+
+/* ---- Payload Admin Overrides ---- */
+
+/* Accent color for Payload's own active states */
+[data-theme] .nav-group__toggle:hover,
+[data-theme] .nav-group__toggle:focus {
+  color: var(--ub-brand-teal) !important;
+}
+
+[data-theme] .nav a:hover,
+[data-theme] .nav a:focus {
+  color: var(--ub-brand-teal) !important;
+}
+
+[data-theme] .nav a.active {
+  color: var(--ub-brand-teal) !important;
+  font-weight: 600;
+}
+
+/* Pill/button primary accent */
+[data-theme] .pill--style-light-has-action,
+[data-theme] .btn[data-id="action-create"] {
+  background: var(--ub-brand-teal) !important;
+  border-color: var(--ub-brand-teal) !important;
+  color: #fff !important;
+}
 
 /* ---- Hide create button on business-calendar list page ---- */
 [class*="collection--business-calendar"] .collection-list__header .pill--has-action,
@@ -8,11 +89,14 @@
   display: none !important;
 }
 
-/* ---- Dashboard ---- */
+/* =============================================
+   Dashboard
+   ============================================= */
 .ub-dashboard {
   margin-bottom: 2rem;
 }
 
+/* ---- Period Selector ---- */
 .ub-period-selector {
   display: flex;
   flex-wrap: wrap;
@@ -26,26 +110,28 @@
   gap: 0;
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid var(--theme-elevation-200);
+  border: 1px solid var(--ub-divider);
 }
 
 .ub-period-btn {
   padding: 0.5rem 1rem;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 500;
   border: none;
   cursor: pointer;
-  background: var(--theme-elevation-50);
-  color: var(--theme-elevation-600);
+  background: var(--ub-card-bg);
+  color: var(--ub-text-secondary);
   transition: all 0.15s ease;
 
   &:hover {
-    background: var(--theme-elevation-100);
+    background: var(--ub-accent-bg);
+    color: var(--ub-brand-teal);
   }
 
   &--active {
-    background: var(--theme-elevation-500);
-    color: #fff;
+    background: var(--ub-brand-teal) !important;
+    color: #fff !important;
+    font-weight: 600;
   }
 }
 
@@ -57,12 +143,18 @@
 }
 
 .ub-date-input {
-  padding: 0.4rem 0.6rem;
-  border: 1px solid var(--theme-elevation-200);
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--ub-divider);
   border-radius: 6px;
-  background: var(--theme-input-bg, var(--theme-elevation-0));
-  color: var(--theme-text);
-  font-size: 0.8125rem;
+  background: var(--ub-card-bg);
+  color: var(--ub-text-primary);
+  font-size: 0.875rem;
+
+  &:focus {
+    outline: none;
+    border-color: var(--ub-brand-teal);
+    box-shadow: 0 0 0 2px var(--ub-brand-teal-light);
+  }
 }
 
 /* ---- Summary Cards ---- */
@@ -74,20 +166,21 @@
 }
 
 .ub-summary-card {
-  border: 1px solid var(--theme-elevation-150);
+  border: 1px solid var(--ub-card-border);
   border-radius: 12px;
   padding: 1.25rem;
-  background: var(--theme-elevation-50);
+  background: var(--ub-card-bg);
+  border-left: 4px solid var(--ub-brand-teal);
   transition: box-shadow 0.2s ease, transform 0.15s ease;
 
   &:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: var(--ub-card-hover-shadow);
     transform: translateY(-1px);
   }
 
   &--highlight {
-    border: 2px solid #f59e0b;
-    background: #fffbeb;
+    border-left-color: var(--ub-highlight-border) !important;
+    background: var(--ub-highlight-bg);
 
     .ub-summary-card__title {
       color: #92400e;
@@ -95,26 +188,98 @@
     }
 
     .ub-summary-card__value {
-      color: #92400e;
+      color: #b45309;
     }
   }
 
+  &--teal {
+    border-left-color: var(--ub-brand-teal);
+  }
+
+  &--pink {
+    border-left-color: var(--ub-brand-pink);
+  }
+
+  &--coral {
+    border-left-color: #f97316;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  &__icon {
+    font-size: 1.125rem;
+    line-height: 1;
+    opacity: 0.8;
+  }
+
   &__title {
-    font-size: 0.8125rem;
-    color: var(--theme-elevation-500);
+    font-size: 0.875rem;
+    color: var(--ub-text-secondary);
     margin-bottom: 0.25rem;
+    font-weight: 500;
   }
 
   &__value {
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--theme-text);
+    color: var(--ub-text-primary);
+    line-height: 1.2;
   }
 
   &__sub {
     font-size: 0.875rem;
-    color: var(--theme-elevation-500);
+    color: var(--ub-text-secondary);
     margin-top: 0.25rem;
+  }
+}
+
+/* ---- Section Headings ---- */
+.ub-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ub-text-primary);
+  margin: 0 0 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  &__icon {
+    color: var(--ub-brand-teal);
+    font-size: 1.125rem;
+  }
+}
+
+/* ---- Quick Actions ---- */
+.ub-quick-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.ub-quick-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--ub-brand-teal);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ub-brand-teal);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: var(--ub-brand-teal);
+    color: #fff;
   }
 }
 
@@ -128,22 +293,29 @@
 
 /* ---- Cards ---- */
 .ub-card {
-  border: 1px solid var(--theme-elevation-150);
+  border: 1px solid var(--ub-card-border);
   border-radius: 12px;
   padding: 1.25rem;
-  background: var(--theme-elevation-50);
+  background: var(--ub-card-bg);
   transition: box-shadow 0.2s ease;
 
   &:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--ub-card-hover-shadow);
   }
 }
 
 .ub-card-title {
-  font-size: 0.9375rem;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 700;
   margin: 0 0 1rem 0;
-  color: var(--theme-text);
+  color: var(--ub-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ub-card-title-icon {
+  color: var(--ub-brand-teal);
 }
 
 /* ---- Main Content Grid ---- */
@@ -151,12 +323,67 @@
   display: grid;
   grid-template-columns: 1.5fr 1fr;
   gap: 1.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .ub-right-column {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+/* ---- Today's Deliveries Widget ---- */
+.ub-delivery-widget {
+  margin-bottom: 1.5rem;
+}
+
+.ub-delivery-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.ub-delivery-slots {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+}
+
+.ub-delivery-slot {
+  border: 1px solid var(--ub-card-border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  background: var(--ub-card-bg);
+  text-align: center;
+  text-decoration: none;
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: var(--ub-brand-teal);
+    box-shadow: var(--ub-card-hover-shadow);
+  }
+
+  &__label {
+    font-size: 0.8125rem;
+    color: var(--ub-text-secondary);
+    margin-bottom: 0.25rem;
+  }
+
+  &__count {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--ub-text-primary);
+  }
+
+  &--active {
+    border-color: var(--ub-brand-teal);
+    background: var(--ub-brand-teal-50);
+
+    .ub-delivery-slot__count {
+      color: var(--ub-brand-teal);
+    }
+  }
 }
 
 /* ---- Tables ---- */
@@ -172,35 +399,42 @@
 
   th {
     text-align: left;
-    padding: 0.5rem;
+    padding: 0.625rem 0.75rem;
     font-weight: 600;
-    color: var(--theme-elevation-500);
-    border-bottom: 1px solid var(--theme-elevation-150);
+    color: var(--ub-text-secondary);
+    border-bottom: 2px solid var(--ub-divider);
     white-space: nowrap;
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
   }
 
   td {
-    padding: 0.5rem;
-    border-bottom: 1px solid var(--theme-elevation-100);
+    padding: 0.625rem 0.75rem;
+    border-bottom: 1px solid var(--ub-divider);
     white-space: nowrap;
+    color: var(--ub-text-primary);
   }
 
   tbody tr {
     transition: background 0.1s ease;
 
     &:hover {
-      background: var(--theme-elevation-75, var(--theme-elevation-100));
+      background: var(--ub-accent-bg);
     }
   }
 }
 
 /* ---- Status ---- */
 .ub-status-badge {
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: 9999px;
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: 600;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .ub-status-grid {
@@ -213,10 +447,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 0.75rem;
+  padding: 0.625rem 0.875rem;
   border-radius: 8px;
   text-decoration: none;
   font-size: 0.875rem;
+  font-weight: 500;
   transition: opacity 0.15s ease, transform 0.1s ease;
 
   &:hover {
@@ -227,28 +462,50 @@
 
 .ub-status-count {
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 1.125rem;
 }
 
 /* ---- Links ---- */
 .ub-link {
   font-size: 0.875rem;
-  color: var(--theme-text);
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  color: var(--ub-brand-teal);
+  text-decoration: none;
+  font-weight: 500;
+  transition: opacity 0.15s;
 
   &:hover {
     opacity: 0.7;
+    text-decoration: underline;
   }
 }
 
 /* ---- Muted Text ---- */
 .ub-muted-text {
-  color: var(--theme-elevation-500);
+  color: var(--ub-text-secondary);
+}
+
+.ub-empty-state {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--ub-text-muted);
+
+  &__icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.5;
+  }
+
+  &__text {
+    font-size: 0.875rem;
+  }
+
+  &__action {
+    margin-top: 0.75rem;
+  }
 }
 
 .ub-empty-text {
-  color: var(--theme-elevation-500);
+  color: var(--ub-text-secondary);
   font-size: 0.875rem;
 }
 
@@ -263,26 +520,28 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.375rem 0.5rem;
-  border-radius: 6px;
+  padding: 0.5rem 0.625rem;
+  border-radius: 8px;
   font-size: 0.875rem;
   flex-wrap: wrap;
 
   &--today {
-    background: #fef3c7;
+    background: var(--ub-highlight-bg);
+    border: 1px solid var(--ub-highlight-border);
   }
 }
 
 .ub-holiday-date {
   font-weight: 600;
   min-width: 120px;
+  color: var(--ub-text-primary);
 }
 
 .ub-badge {
-  padding: 1px 6px;
+  padding: 2px 8px;
   border-radius: 4px;
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: 600;
   white-space: nowrap;
 
   &--holiday {
@@ -296,22 +555,76 @@
   }
 
   &--today {
-    background: #fef3c7;
-    color: #92400e;
-    font-weight: 600;
+    background: var(--ub-brand-teal-light);
+    color: var(--ub-brand-teal);
+    font-weight: 700;
+  }
+
+  &--info {
+    background: var(--ub-brand-teal-light);
+    color: var(--ub-brand-teal);
   }
 }
 
+/* Dark mode badge overrides */
+[data-theme="dark"] .ub-badge {
+  &--holiday {
+    background: rgba(239, 68, 68, 0.15);
+    color: #fca5a5;
+  }
+
+  &--no-ship {
+    background: rgba(249, 115, 22, 0.15);
+    color: #fdba74;
+  }
+}
+
+/* ---- Loading skeleton ---- */
+.ub-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1.5rem;
+  color: var(--ub-text-muted);
+  font-size: 0.875rem;
+}
+
+.ub-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--ub-divider);
+  border-top-color: var(--ub-brand-teal);
+  border-radius: 50%;
+  animation: ub-spin 0.6s linear infinite;
+}
+
+@keyframes ub-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* =============================================
-   Calendar View
+   Calendar View — Redesigned
    ============================================= */
 .ub-calendar-view {
   margin-bottom: 1.5rem;
+  max-width: 700px;
 }
 
-/* max-width based on 3-month calendar */
-.ub-calendar-view {
-  max-width: 900px;
+.ub-calendar-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.ub-calendar-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 /* ---- Mode Toolbar ---- */
@@ -319,14 +632,14 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
   flex-wrap: wrap;
 }
 
 .ub-mode-label {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  color: var(--theme-elevation-500);
+  color: var(--ub-text-secondary);
 }
 
 .ub-mode-buttons {
@@ -334,7 +647,7 @@
   gap: 0;
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid var(--theme-elevation-200);
+  border: 1px solid var(--ub-divider);
 }
 
 .ub-mode-btn {
@@ -342,16 +655,16 @@
   align-items: center;
   gap: 0.375rem;
   padding: 0.5rem 1rem;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 500;
   border: none;
   cursor: pointer;
-  background: var(--theme-elevation-50);
-  color: var(--theme-elevation-600);
+  background: var(--ub-card-bg);
+  color: var(--ub-text-secondary);
   transition: all 0.15s ease;
 
   &:hover {
-    background: var(--theme-elevation-100);
+    background: var(--ub-accent-bg);
   }
 
   &--active.ub-mode-btn--holiday {
@@ -367,9 +680,21 @@
   }
 
   &--active.ub-mode-btn--clear {
-    background: var(--theme-elevation-200);
-    color: var(--theme-text);
+    background: var(--ub-brand-teal-light);
+    color: var(--ub-brand-teal);
     font-weight: 700;
+  }
+}
+
+[data-theme="dark"] .ub-mode-btn {
+  &--active.ub-mode-btn--holiday {
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+  }
+
+  &--active.ub-mode-btn--no-ship {
+    background: rgba(249, 115, 22, 0.2);
+    color: #fdba74;
   }
 }
 
@@ -387,28 +712,86 @@
   }
 
   &--clear {
-    background: var(--theme-elevation-400);
+    background: var(--ub-brand-teal);
   }
 }
 
 .ub-change-count {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
-  color: #f59e0b;
-  background: #fffbeb;
-  padding: 0.25rem 0.625rem;
+  color: var(--ub-brand-teal);
+  background: var(--ub-brand-teal-light);
+  padding: 0.25rem 0.75rem;
   border-radius: 9999px;
 }
 
 .ub-save-bar {
   display: flex;
   gap: 0.5rem;
-  margin-top: 1rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--theme-elevation-150);
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--ub-divider);
+}
+
+/* ---- Calendar Stats Summary ---- */
+.ub-calendar-stats {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.ub-calendar-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+
+  &__dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+  }
+
+  &__label {
+    color: var(--ub-text-secondary);
+  }
+
+  &__count {
+    font-weight: 700;
+    color: var(--ub-text-primary);
+  }
 }
 
 /* ---- Pattern Fields ---- */
+.ub-pattern-section {
+  margin-top: 1.25rem;
+}
+
+.ub-pattern-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: var(--ub-text-primary);
+  font-size: 1rem;
+  font-weight: 700;
+
+  &__arrow {
+    color: var(--ub-text-muted);
+    font-size: 0.75rem;
+    transition: transform 0.2s;
+  }
+
+  &--open .ub-pattern-toggle__arrow {
+    transform: rotate(180deg);
+  }
+}
+
 .ub-pattern-fields {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -419,13 +802,13 @@
 .ub-pattern-list {
   margin-top: 1rem;
   padding-top: 0.75rem;
-  border-top: 1px solid var(--theme-elevation-150);
+  border-top: 1px solid var(--ub-divider);
 }
 
 .ub-pattern-list-title {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  color: var(--theme-elevation-500);
+  color: var(--ub-text-secondary);
   margin: 0 0 0.5rem 0;
 }
 
@@ -434,12 +817,12 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: 0.5rem 0.625rem;
-  border-radius: 6px;
-  background: var(--theme-elevation-50);
-  border: 1px solid var(--theme-elevation-150);
+  padding: 0.625rem 0.75rem;
+  border-radius: 8px;
+  background: var(--ub-card-bg);
+  border: 1px solid var(--ub-card-border);
   margin-bottom: 0.375rem;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   flex-wrap: wrap;
 }
 
@@ -453,54 +836,72 @@
 .ub-calendar-loading {
   text-align: center;
   padding: 0.5rem;
-  color: var(--theme-elevation-500);
-  font-size: 0.8125rem;
-}
-
-/* react-day-picker overrides */
-.ub-rdp {
-  --rdp-accent-color: var(--theme-elevation-500);
-  --rdp-background-color: var(--theme-elevation-100);
+  color: var(--ub-text-muted);
   font-size: 0.875rem;
-  color: var(--theme-text);
 }
 
+/* ---- react-day-picker overrides ---- */
+.ub-rdp {
+  --rdp-accent-color: var(--ub-brand-teal);
+  --rdp-background-color: var(--ub-brand-teal-light);
+  font-size: 0.875rem;
+  color: var(--ub-text-primary);
+}
+
+/* Calendar months container: nav on top, months below */
 .ub-rdp-months {
   display: flex;
-  gap: 2rem;
   flex-wrap: wrap;
+  justify-content: center;
+  gap: 2rem;
+}
+
+/* Navigation: full width row centered above months */
+.ub-rdp-nav {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+/* Each month container */
+.ub-rdp-months > .rdp-month {
+  flex: 0 0 auto;
 }
 
 .ub-rdp-caption {
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 1.0625rem;
+  font-weight: 700;
   text-align: center;
   padding: 0.5rem 0;
-  color: var(--theme-text);
+  color: var(--ub-text-primary);
 }
 
 .ub-rdp-nav-btn {
   cursor: pointer;
-  border: 1px solid var(--theme-elevation-200);
+  border: 1px solid var(--ub-divider);
   border-radius: 6px;
-  padding: 4px 8px;
-  background: var(--theme-elevation-50);
-  color: var(--theme-text);
-  transition: background 0.15s;
+  padding: 6px 10px;
+  background: var(--ub-card-bg);
+  color: var(--ub-text-primary);
+  transition: all 0.15s;
 
   &:hover {
-    background: var(--theme-elevation-150);
+    background: var(--ub-brand-teal-light);
+    border-color: var(--ub-brand-teal);
+    color: var(--ub-brand-teal);
   }
 }
 
 .ub-rdp-weekdays {
-  border-bottom: 1px solid var(--theme-elevation-150);
+  border-bottom: 2px solid var(--ub-divider);
 }
 
 .ub-rdp-weekday {
   font-weight: 600;
-  color: var(--theme-elevation-500);
-  font-size: 0.75rem;
+  color: var(--ub-text-secondary);
+  font-size: 0.8125rem;
   padding: 0.5rem;
   text-align: center;
 }
@@ -510,18 +911,20 @@
 }
 
 .ub-rdp-day-btn {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   background: transparent;
-  color: var(--theme-text);
+  color: var(--ub-text-primary);
   transition: all 0.1s ease;
+  font-weight: 500;
 
   &:hover {
-    background: var(--theme-elevation-100);
+    background: var(--ub-brand-teal-light);
+    color: var(--ub-brand-teal);
   }
 }
 
@@ -534,51 +937,78 @@
 .ub-day--no-ship .ub-rdp-day-btn {
   background: #fed7aa !important;
   color: #9a3412 !important;
+  font-weight: 600;
+}
+
+[data-theme="dark"] {
+  .ub-day--holiday .ub-rdp-day-btn {
+    background: rgba(239, 68, 68, 0.25) !important;
+    color: #fca5a5 !important;
+  }
+
+  .ub-day--no-ship .ub-rdp-day-btn {
+    background: rgba(249, 115, 22, 0.25) !important;
+    color: #fdba74 !important;
+  }
 }
 
 .ub-day--selected .ub-rdp-day-btn {
-  outline: 2px solid var(--theme-elevation-500);
+  outline: 2px solid var(--ub-brand-teal);
   outline-offset: 1px;
 }
 
 .ub-day--today .ub-rdp-day-btn {
   font-weight: 700;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  background: var(--ub-brand-teal-light);
+  color: var(--ub-brand-teal);
 }
 
 .ub-calendar-legend {
   display: flex;
-  gap: 1.25rem;
-  margin-top: 1rem;
+  gap: 1.5rem;
+  margin-top: 1.25rem;
   padding-top: 0.75rem;
-  border-top: 1px solid var(--theme-elevation-150);
-  font-size: 0.8125rem;
-  color: var(--theme-elevation-600);
+  border-top: 1px solid var(--ub-divider);
+  font-size: 0.875rem;
+  color: var(--ub-text-secondary);
 }
 
 .ub-legend-item {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: 0.5rem;
 }
 
 .ub-legend-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
 
   &--holiday {
     background: #fecaca;
+    border: 1px solid #f87171;
   }
 
   &--no-ship {
     background: #fed7aa;
+    border: 1px solid #fb923c;
   }
 
   &--today {
-    background: var(--theme-elevation-200);
-    text-decoration: underline;
+    background: var(--ub-brand-teal-light);
+    border: 1px solid var(--ub-brand-teal);
+  }
+}
+
+[data-theme="dark"] .ub-legend-dot {
+  &--holiday {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: rgba(239, 68, 68, 0.5);
+  }
+
+  &--no-ship {
+    background: rgba(249, 115, 22, 0.25);
+    border-color: rgba(249, 115, 22, 0.5);
   }
 }
 
@@ -589,25 +1019,26 @@
 
 .ub-form-label {
   display: block;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  margin-bottom: 0.25rem;
-  color: var(--theme-text);
+  margin-bottom: 0.375rem;
+  color: var(--ub-text-primary);
 }
 
 .ub-input {
   width: 100%;
-  padding: 0.5rem 0.625rem;
-  border: 1px solid var(--theme-elevation-200);
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--ub-divider);
   border-radius: 6px;
-  background: var(--theme-input-bg, var(--theme-elevation-0));
-  color: var(--theme-text);
-  font-size: 0.8125rem;
-  transition: border-color 0.15s;
+  background: var(--ub-card-bg);
+  color: var(--ub-text-primary);
+  font-size: 0.875rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
 
   &:focus {
     outline: none;
-    border-color: var(--theme-elevation-400);
+    border-color: var(--ub-brand-teal);
+    box-shadow: 0 0 0 2px var(--ub-brand-teal-light);
   }
 }
 
@@ -615,9 +1046,9 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   cursor: pointer;
-  color: var(--theme-text);
+  color: var(--ub-text-primary);
 }
 
 /* ---- Buttons ---- */
@@ -629,13 +1060,13 @@
 }
 
 .ub-btn {
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 1.125rem;
   border: none;
-  border-radius: 6px;
-  font-size: 0.8125rem;
-  font-weight: 500;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.15s ease;
+  transition: all 0.15s ease;
 
   &:disabled {
     opacity: 0.5;
@@ -643,21 +1074,22 @@
   }
 
   &--primary {
-    background: var(--theme-elevation-500);
+    background: var(--ub-brand-teal);
     color: #fff;
 
     &:hover:not(:disabled) {
       opacity: 0.85;
+      box-shadow: 0 2px 8px rgba(4, 146, 156, 0.3);
     }
   }
 
   &--secondary {
-    background: var(--theme-elevation-100);
-    color: var(--theme-text);
-    border: 1px solid var(--theme-elevation-200);
+    background: var(--ub-card-bg);
+    color: var(--ub-text-primary);
+    border: 1px solid var(--ub-divider);
 
     &:hover:not(:disabled) {
-      background: var(--theme-elevation-150);
+      background: var(--ub-accent-bg);
     }
   }
 
@@ -680,37 +1112,155 @@
 }
 
 .ub-day-btn {
-  padding: 0.375rem 0.75rem;
-  border: 1px solid var(--theme-elevation-200);
-  border-radius: 6px;
+  padding: 0.375rem 0.875rem;
+  border: 1px solid var(--ub-divider);
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 0.8125rem;
-  background: var(--theme-elevation-50);
-  color: var(--theme-text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: var(--ub-card-bg);
+  color: var(--ub-text-primary);
   transition: all 0.1s ease;
 
   &--active {
-    background: var(--theme-elevation-500);
+    background: var(--ub-brand-teal);
     color: #fff;
-    border-color: var(--theme-elevation-500);
+    border-color: var(--ub-brand-teal);
   }
 }
 
 .ub-bulk-result {
-  padding: 0.625rem;
-  border-radius: 6px;
-  font-size: 0.8125rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
   margin-bottom: 0.75rem;
 
   &--success {
-    background: #f0fdf4;
-    color: #166534;
+    background: var(--ub-brand-teal-light);
+    color: var(--ub-brand-teal);
   }
 
   &--error {
     background: #fef2f2;
     color: #991b1b;
   }
+}
+
+/* ---- Product List: Stock Visual Feedback ---- */
+/* Applied via Payload's cell rendering - these are global table cell styles */
+.collection-list--products .table .row-1 .cell-stock {
+  font-weight: 600;
+}
+
+/* ---- Dashboard: Stock Alerts ---- */
+.ub-stock-alerts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ub-stock-alert-item {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ub-stock-alert-link {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.625rem 0.875rem;
+  background: var(--ub-accent-bg);
+  border: 1px solid var(--ub-divider);
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--ub-text-primary);
+  transition: all 0.15s;
+}
+
+.ub-stock-alert-link:hover {
+  background: var(--ub-brand-teal-light);
+  border-color: var(--ub-brand-teal);
+}
+
+.ub-stock-alert-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 70%;
+}
+
+.ub-stock-alert-count {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  background: #fef3c7;
+  color: #92400e;
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .ub-stock-alert-count {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+}
+
+.ub-stock-alert-count--zero {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+[data-theme="dark"] .ub-stock-alert-count--zero {
+  background: rgba(220, 38, 38, 0.15);
+  color: #f87171;
+}
+
+/* ---- Read-only Field Styling ---- */
+.field-type.read-only .field-type__wrap input,
+.field-type.read-only .field-type__wrap textarea,
+.field-type.read-only .field-type__wrap .react-select {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* ---- Order Form Tab Styling ---- */
+.tabs-field .tabs-field__tabs {
+  border-bottom: 2px solid var(--ub-divider);
+  gap: 0;
+}
+
+.tabs-field .tabs-field__tab-button {
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.625rem 1.25rem;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.15s;
+  color: var(--ub-text-secondary);
+}
+
+.tabs-field .tabs-field__tab-button:hover {
+  color: var(--ub-text-primary);
+  background: var(--ub-accent-bg);
+}
+
+.tabs-field .tabs-field__tab-button--active {
+  color: var(--ub-brand-teal);
+  border-bottom-color: var(--ub-brand-teal);
+  font-weight: 600;
+}
+
+.tabs-field .tabs-field__tab-button--active:hover {
+  color: var(--ub-brand-teal);
+}
+
+/* ---- Improved Form Field Descriptions ---- */
+.field-description {
+  font-size: 0.8125rem;
+  color: var(--ub-text-muted);
+  margin-top: 0.25rem;
+  line-height: 1.4;
 }
 
 /* =============================================
@@ -725,8 +1275,8 @@
     grid-template-columns: 1fr;
   }
 
-  .ub-rdp-months {
-    justify-content: center;
+  .ub-delivery-slots {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -765,6 +1315,29 @@
   .ub-holiday-date {
     min-width: auto;
   }
+
+  /* Calendar: stack 2 months vertically on tablet/mobile */
+  .ub-rdp-months {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  /* Nav stays row, centered */
+  .ub-rdp-nav {
+    flex-direction: row;
+    width: auto;
+  }
+
+  /* Each month takes consistent width when stacked */
+  .ub-rdp-months > .rdp-month {
+    width: 100%;
+    max-width: 320px;
+  }
+
+  .ub-rdp-months > .rdp-month table {
+    width: 100%;
+  }
 }
 
 @media (max-width: 480px) {
@@ -776,11 +1349,11 @@
     grid-template-columns: 1fr;
   }
 
-  .ub-summary-card__value {
-    font-size: 1.25rem;
+  .ub-delivery-slots {
+    grid-template-columns: 1fr;
   }
 
-  .ub-rdp-months {
-    flex-direction: column;
+  .ub-summary-card__value {
+    font-size: 1.25rem;
   }
 }

@@ -12,6 +12,7 @@ export const Promotions: CollectionConfig = {
     group: '販促・セール',
     description: 'クーポンコードや割引キャンペーンの作成。%割引・定額値引き・送料無料に対応。有効期限・利用回数制限の設定も可能です。',
     defaultColumns: ['name', 'code', 'discountType', 'discountValue', 'status', 'validUntil'],
+    listSearchableFields: ['name', 'code'],
   },
   access: {
     read: anyone,

@@ -12,6 +12,7 @@ export const Posts: CollectionConfig = {
     group: 'サイト管理',
     description: 'ブログ記事の作成・管理。お知らせ・コラム・イベント・ガイド・スタッフブログのカテゴリーで公開できます。',
     defaultColumns: ['title', 'category', 'status', 'publishedAt'],
+    listSearchableFields: ['title', 'slug'],
   },
   access: {
     read: anyone,
@@ -57,6 +58,7 @@ export const Posts: CollectionConfig = {
       name: 'excerpt',
       type: 'textarea',
       label: '抜粋',
+      maxLength: 200,
       admin: {
         description: '一覧ページで表示される記事の要約（150文字程度）',
       },
@@ -71,6 +73,7 @@ export const Posts: CollectionConfig = {
       name: 'category',
       type: 'select',
       label: 'カテゴリ',
+      defaultValue: 'news',
       options: [
         { label: 'お知らせ', value: 'news' },
         { label: 'コラム', value: 'column' },
@@ -81,10 +84,21 @@ export const Posts: CollectionConfig = {
     },
     {
       name: 'tags',
-      type: 'json',
+      type: 'select',
       label: 'タグ',
+      hasMany: true,
+      options: [
+        { label: '誕生日', value: '誕生日' },
+        { label: '結婚式', value: '結婚式' },
+        { label: '開店祝い', value: '開店祝い' },
+        { label: 'バルーンアート', value: 'バルーンアート' },
+        { label: 'デコレーション', value: 'デコレーション' },
+        { label: 'ギフト', value: 'ギフト' },
+        { label: 'イベント', value: 'イベント' },
+        { label: 'スタッフ', value: 'スタッフ' },
+      ],
       admin: {
-        description: 'タグの配列（例: ["誕生日", "結婚式"]）',
+        description: '記事のタグ（複数選択可）',
       },
     },
     {

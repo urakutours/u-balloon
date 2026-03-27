@@ -12,6 +12,7 @@ export const NewsletterSubscribers: CollectionConfig = {
     group: 'メルマガ配信',
     description: 'メルマガを受け取っている購読者の一覧。ステータス（購読中/解除済み/バウンス）の確認ができます。',
     defaultColumns: ['email', 'name', 'status', 'source', 'createdAt'],
+    listSearchableFields: ['email', 'name'],
   },
   access: {
     read: isAdmin,

@@ -10,7 +10,8 @@ export const FormSubmissions: CollectionConfig = {
   admin: {
     group: 'サイト管理',
     description: 'フォームから送信されたデータの一覧。お問い合わせ内容の確認に使用します。',
-    defaultColumns: ['form', 'createdAt'],
+    defaultColumns: ['form', 'submitterEmail', 'createdAt'],
+    listSearchableFields: ['submitterEmail'],
   },
   access: {
     read: isAdmin,
@@ -31,6 +32,11 @@ export const FormSubmissions: CollectionConfig = {
       type: 'json',
       label: '送信データ',
       required: true,
+      admin: {
+        components: {
+          Cell: '@/components/admin/FormSubmissionDataCell',
+        },
+      },
     },
     {
       name: 'submitterEmail',

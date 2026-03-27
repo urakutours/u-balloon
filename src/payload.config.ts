@@ -11,6 +11,7 @@ import { Users } from './collections/Users'
 import { Media } from './collections/Media'
 import { Products } from './collections/Products'
 import { Orders } from './collections/Orders'
+import { OrderAuditLogs } from './collections/OrderAuditLogs'
 import { BusinessCalendar } from './collections/BusinessCalendar'
 import { PointTransactions } from './collections/PointTransactions'
 import { Pages } from './collections/Pages'
@@ -49,6 +50,7 @@ const s3Plugins = process.env.R2_BUCKET
 export default buildConfig({
   admin: {
     user: Users.slug,
+    theme: 'all',
     importMap: {
       baseDir: path.resolve(dirname),
     },
@@ -63,7 +65,7 @@ export default buildConfig({
     supportedLanguages: { ja },
     fallbackLanguage: 'ja',
   },
-  collections: [Users, Media, Products, Orders, BusinessCalendar, PointTransactions, Pages, Posts, Forms, FormSubmissions, Promotions, SecretSales, EmailTemplates, NewsletterSubscribers, Newsletters, SubscriptionPlans, Subscriptions, ABTests],
+  collections: [Products, Orders, OrderAuditLogs, SubscriptionPlans, Subscriptions, Users, PointTransactions, Pages, Posts, Forms, FormSubmissions, Promotions, SecretSales, ABTests, NewsletterSubscribers, Newsletters, Media, BusinessCalendar, EmailTemplates],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || 'default-secret-change-me-in-production-32chars',
   typescript: {

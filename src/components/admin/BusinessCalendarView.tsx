@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { DayPicker } from 'react-day-picker'
 import {
   format,
@@ -71,22 +71,7 @@ export default function BusinessCalendarView() {
   const [patternRules, setPatternRules] = useState<PatternRule[]>([])
   const [deletingPattern, setDeletingPattern] = useState<string | null>(null)
 
-  // Responsive: detect width for numberOfMonths
   const containerRef = useRef<HTMLDivElement>(null)
-  const [numMonths, setNumMonths] = useState(3)
-
-  useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-    const observer = new ResizeObserver((resizeEntries) => {
-      const width = resizeEntries[0]?.contentRect.width ?? 900
-      if (width >= 850) setNumMonths(3)
-      else if (width >= 560) setNumMonths(2)
-      else setNumMonths(1)
-    })
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
 
   // Hide unwanted Payload UI elements via persistent <style> tag
   useEffect(() => {
@@ -115,7 +100,7 @@ export default function BusinessCalendarView() {
     setLoading(true)
     try {
       const start = format(startOfMonth(month), 'yyyy-MM-dd')
-      const end = format(endOfMonth(addMonths(month, 2)), 'yyyy-MM-dd')
+      const end = format(endOfMonth(addMonths(month, 1)), 'yyyy-MM-dd')
       const res = await fetch(
         `/api/business-calendar?where[date][greater_than_equal]=${start}&where[date][less_than_equal]=${end}&limit=200&sort=date`,
         { credentials: 'include' },
@@ -166,17 +151,14 @@ export default function BusinessCalendarView() {
 
     if (paintMode === 'clear') {
       if (existing && localState !== null) {
-        // Mark for deletion
         newOverrides.set(dateStr, null)
         newChanges.set(dateStr, { date: dateStr, action: 'delete', existingId: existing.id })
       } else if (!existing && localState !== undefined) {
-        // Was a pending create, just remove it
         newOverrides.delete(dateStr)
         newChanges.delete(dateStr)
       }
     } else if (paintMode === 'holiday') {
       if (effectiveIsHoliday) {
-        // Toggle off
         if (existing) {
           newOverrides.set(dateStr, null)
           newChanges.set(dateStr, { date: dateStr, action: 'delete', existingId: existing.id })
@@ -195,7 +177,6 @@ export default function BusinessCalendarView() {
       }
     } else if (paintMode === 'noShip') {
       if (!effectiveShipAvail && !effectiveIsHoliday) {
-        // Toggle off
         if (existing) {
           newOverrides.set(dateStr, null)
           newChanges.set(dateStr, { date: dateStr, action: 'delete', existingId: existing.id })
@@ -260,7 +241,7 @@ export default function BusinessCalendarView() {
     setLocalOverrides(new Map())
   }
 
-  // Pattern registration (no end date required — defaults to 1 year)
+  // Pattern registration
   const handlePatternSubmit = async () => {
     if (!patternStart || patternDays.length === 0) return
     setPatternSubmitting(true)
@@ -364,8 +345,46 @@ export default function BusinessCalendarView() {
 
   const hasPendingChanges = pendingChanges.size > 0
 
+  // Stats summary
+  const stats = useMemo(() => {
+    let holidays = 0
+    let noShipDays = 0
+    entries.forEach((entry, dateStr) => {
+      const override = localOverrides.get(dateStr)
+      if (override === null) return
+      const effective = override ?? entry
+      if (effective.isHoliday) holidays++
+      else if (!effective.shippingAvailable) noShipDays++
+    })
+    localOverrides.forEach((override, dateStr) => {
+      if (override === null || entries.has(dateStr)) return
+      if (override.isHoliday) holidays++
+      else if (!override.shippingAvailable) noShipDays++
+    })
+    return { holidays, noShipDays }
+  }, [entries, localOverrides])
+
   return (
     <div className="ub-calendar-view" ref={containerRef}>
+      {/* Calendar Stats */}
+      <div className="ub-calendar-stats">
+        <div className="ub-calendar-stat">
+          <span className="ub-calendar-stat__dot" style={{ background: '#ef4444' }} />
+          <span className="ub-calendar-stat__label">休業日</span>
+          <span className="ub-calendar-stat__count">{stats.holidays}日</span>
+        </div>
+        <div className="ub-calendar-stat">
+          <span className="ub-calendar-stat__dot" style={{ background: '#f97316' }} />
+          <span className="ub-calendar-stat__label">発送不可日</span>
+          <span className="ub-calendar-stat__count">{stats.noShipDays}日</span>
+        </div>
+        {hasPendingChanges && (
+          <div className="ub-calendar-stat">
+            <span className="ub-change-count">{pendingChanges.size}件の未保存変更</span>
+          </div>
+        )}
+      </div>
+
       {/* Mode selector toolbar */}
       <div className="ub-mode-toolbar">
         <span className="ub-mode-label">塗りモード:</span>
@@ -395,24 +414,22 @@ export default function BusinessCalendarView() {
             解除
           </button>
         </div>
-        {hasPendingChanges && (
-          <span className="ub-change-count">
-            {pendingChanges.size}件の変更
-          </span>
-        )}
       </div>
 
       {/* Calendar */}
       <div className="ub-card">
         {loading && (
-          <div className="ub-calendar-loading">読み込み中...</div>
+          <div className="ub-loading">
+            <div className="ub-spinner" />
+            カレンダーを読み込み中...
+          </div>
         )}
         <DayPicker
           mode="single"
           onSelect={(date) => date && handleDayClick(date)}
           onMonthChange={setCurrentMonth}
           month={currentMonth}
-          numberOfMonths={numMonths}
+          numberOfMonths={2}
           locale={ja}
           modifiers={{
             holiday: holidayDates,
@@ -466,7 +483,7 @@ export default function BusinessCalendarView() {
               disabled={saving}
               className="ub-btn ub-btn--primary"
             >
-              {saving ? '保存中...' : `保存（${pendingChanges.size}件）`}
+              {saving ? '保存中...' : `保存（${pendingChanges.size}件の変更）`}
             </button>
             <button
               type="button"
@@ -481,25 +498,22 @@ export default function BusinessCalendarView() {
       </div>
 
       {/* Pattern registration (below calendar) */}
-      <div className="ub-card" style={{ marginTop: '1rem' }}>
+      <div className="ub-card ub-pattern-section">
         <button
           type="button"
           onClick={() => setPatternOpen(!patternOpen)}
-          className="ub-card-title"
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: 0,
-            width: '100%',
-            textAlign: 'left',
-            color: 'var(--theme-text)',
-          }}
+          className={`ub-pattern-toggle ${patternOpen ? 'ub-pattern-toggle--open' : ''}`}
         >
-          曜日パターンで繰り返し登録 {patternOpen ? '▲' : '▼'}
+          <span className="ub-card-title" style={{ margin: 0 }}>
+            <span className="ub-card-title-icon">🔄</span>
+            曜日パターンで繰り返し登録
+          </span>
+          <span className="ub-pattern-toggle__arrow">
+            {patternOpen ? '▲' : '▼'}
+          </span>
         </button>
         {patternOpen && (
-          <div style={{ marginTop: '1rem' }}>
+          <div style={{ marginTop: '1.25rem' }}>
             {/* Day of week selector */}
             <div className="ub-form-group">
               <label className="ub-form-label">登録する曜日を選択</label>
@@ -574,7 +588,7 @@ export default function BusinessCalendarView() {
                       <span>
                         毎週 {rule.days.sort((a, b) => a - b).map((d) => DAY_LABELS[d]).join('・')}
                       </span>
-                      <span className="ub-muted-text" style={{ fontSize: '0.75rem' }}>
+                      <span className="ub-muted-text" style={{ fontSize: '0.8125rem' }}>
                         {rule.startDate}〜 / {rule.entryIds.length}件
                       </span>
                     </div>
@@ -583,7 +597,7 @@ export default function BusinessCalendarView() {
                       onClick={() => handleDeletePattern(rule.id)}
                       disabled={deletingPattern === rule.id}
                       className="ub-btn ub-btn--danger"
-                      style={{ padding: '0.25rem 0.625rem', fontSize: '0.75rem' }}
+                      style={{ padding: '0.25rem 0.75rem', fontSize: '0.8125rem' }}
                     >
                       {deletingPattern === rule.id ? '削除中...' : '一括削除'}
                     </button>

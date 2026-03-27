@@ -11,6 +11,7 @@ export const Subscriptions: CollectionConfig = {
     group: '商品・注文',
     description: 'お客様ごとの定期便契約状況。次回請求日・ステータス（有効/一時停止/解約）を確認できます。',
     defaultColumns: ['customer', 'plan', 'status', 'nextBillingDate'],
+    listSearchableFields: ['stripeSubscriptionId', 'stripeCustomerId'],
   },
   access: {
     read: isAdminOrOwner('customer'),

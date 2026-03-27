@@ -12,6 +12,7 @@ export const EmailTemplates: CollectionConfig = {
     group: '設定',
     description: '注文確認・発送通知などの自動メール文面を編集できます。{{変数名}} で動的な値を埋め込めます。',
     defaultColumns: ['name', 'slug', 'subject', 'updatedAt'],
+    listSearchableFields: ['name', 'slug', 'subject'],
   },
   access: {
     read: isAdmin,

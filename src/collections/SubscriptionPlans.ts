@@ -12,6 +12,7 @@ export const SubscriptionPlans: CollectionConfig = {
     group: '商品・注文',
     description: '定期便（サブスクリプション）のプラン設定。毎月/隔月/3ヶ月ごとの配送間隔と含まれる商品を設定できます。',
     defaultColumns: ['name', 'interval', 'price', 'status'],
+    listSearchableFields: ['name', 'slug'],
   },
   access: {
     read: anyone,

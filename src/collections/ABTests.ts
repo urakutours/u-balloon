@@ -12,6 +12,7 @@ export const ABTests: CollectionConfig = {
     group: '販促・セール',
     description: '商品ページの見た目を最大4パターンで比較テスト。どのデザインが最もコンバージョンするか検証できます。',
     defaultColumns: ['name', 'product', 'status', 'createdAt'],
+    listSearchableFields: ['name'],
   },
   access: {
     read: isAdmin,
