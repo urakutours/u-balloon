@@ -9,8 +9,8 @@ export const PointTransactions: CollectionConfig = {
   },
   admin: {
     useAsTitle: 'description',
-    group: '顧客管理',
-    description: 'ポイントの付与・使用・調整履歴',
+    group: '顧客',
+    description: 'ポイントの付与・利用・手動調整の全履歴。注文時に自動記録されます。',
     defaultColumns: ['description', 'user', 'type', 'amount', 'balance', 'createdAt'],
   },
   access: {

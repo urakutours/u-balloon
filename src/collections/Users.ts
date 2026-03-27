@@ -11,8 +11,8 @@ export const Users: CollectionConfig = {
   },
   admin: {
     useAsTitle: 'email',
-    group: '顧客管理',
-    description: '顧客情報・管理者アカウントの管理',
+    group: '顧客',
+    description: '会員・管理者アカウントの一覧。ポイント残高の確認・手動調整もここから行えます。',
     defaultColumns: ['email', 'name', 'role', 'points', 'phone', 'createdAt'],
     listSearchableFields: ['email', 'name', 'phone'],
   },

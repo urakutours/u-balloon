@@ -8,8 +8,8 @@ export const Media: CollectionConfig = {
     plural: 'メディア',
   },
   admin: {
-    group: 'システム設定',
-    description: '商品画像・サイト素材の管理',
+    group: '設定',
+    description: '商品画像・バナー・サイト素材のアップロード管理。商品やブログ記事から参照されます。',
   },
   access: {
     read: anyone,

@@ -186,7 +186,39 @@ export function OrderStatusUpdateEmail({
   )
 }
 
-// 4. ポイント付与通知メール
+// 4. フォーム送信通知メール
+type FormNotificationEmailProps = {
+  formTitle: string
+  fields: Array<{ name: string; label: string }>
+  data: Record<string, unknown>
+}
+
+export function FormNotificationEmail({ formTitle, fields, data }: FormNotificationEmailProps) {
+  return (
+    <EmailLayout>
+      <Heading as="h3" style={{ color: '#333' }}>
+        {formTitle} - 新しい送信
+      </Heading>
+      <Section style={{ backgroundColor: '#f0f4f8', padding: '16px', borderRadius: '4px' }}>
+        {fields.map((field) => (
+          <div key={field.name}>
+            <Text style={{ color: '#333', fontWeight: 'bold', margin: '8px 0 2px' }}>
+              {field.label}
+            </Text>
+            <Text style={{ color: '#525f7f', margin: '0 0 8px' }}>
+              {String(data[field.name] ?? '(未入力)')}
+            </Text>
+          </div>
+        ))}
+      </Section>
+      <Text style={{ color: '#8898aa', fontSize: '12px' }}>
+        このメールはuballoonのフォームから自動送信されました。
+      </Text>
+    </EmailLayout>
+  )
+}
+
+// 5. ポイント付与通知メール
 export function PointsEarnedEmail({
   name,
   pointsEarned,
@@ -220,6 +252,124 @@ export function PointsEarnedEmail({
       <Text style={{ color: '#525f7f' }}>
         ポイントは次回以降のお買い物でご利用いただけます（1pt = 1円）。
         有効期限は付与日から1年間です。
+      </Text>
+    </EmailLayout>
+  )
+}
+
+// 6. 管理者アラートメール
+export function AdminAlertEmail({
+  alertType,
+  title,
+  details,
+  urgency = 'normal',
+}: {
+  alertType: string
+  title: string
+  details: string
+  urgency?: 'normal' | 'high'
+}) {
+  const borderColor = urgency === 'high' ? '#e53e3e' : '#ed8936'
+  return (
+    <EmailLayout>
+      <Heading as="h3" style={{ color: '#333' }}>
+        {alertType}
+      </Heading>
+      <Section style={{ borderLeft: `4px solid ${borderColor}`, padding: '12px 16px', backgroundColor: '#f7fafc', borderRadius: '4px' }}>
+        <Text style={{ color: '#333', fontWeight: 'bold', margin: '0 0 8px' }}>
+          {title}
+        </Text>
+        <Text style={{ color: '#525f7f', margin: 0, whiteSpace: 'pre-wrap' as const }}>
+          {details}
+        </Text>
+      </Section>
+      <Text style={{ color: '#8898aa', fontSize: '12px', marginTop: '16px' }}>
+        このメールはuballoon管理システムから自動送信されました。
+      </Text>
+    </EmailLayout>
+  )
+}
+
+// 7. 発送通知メール（追跡情報付き）
+export function ShippingNotificationEmail({
+  name,
+  orderNumber,
+  carrier,
+  trackingNumber,
+  trackingUrl,
+}: {
+  name: string
+  orderNumber: string
+  carrier: string
+  trackingNumber: string
+  trackingUrl?: string
+}) {
+  return (
+    <EmailLayout>
+      <Heading as="h3" style={{ color: '#333' }}>
+        発送のお知らせ
+      </Heading>
+      <Text style={{ color: '#525f7f' }}>
+        {name} 様
+      </Text>
+      <Text style={{ color: '#525f7f' }}>
+        ご注文 {orderNumber} を発送いたしました。
+      </Text>
+      <Section style={{ backgroundColor: '#f0f4f8', padding: '16px', borderRadius: '4px' }}>
+        <Text style={{ color: '#333', fontWeight: 'bold', margin: '0 0 4px' }}>配送業者</Text>
+        <Text style={{ color: '#525f7f', margin: '0 0 12px' }}>{carrier}</Text>
+        <Text style={{ color: '#333', fontWeight: 'bold', margin: '0 0 4px' }}>追跡番号</Text>
+        <Text style={{ color: '#525f7f', margin: '0' }}>{trackingNumber}</Text>
+      </Section>
+      {trackingUrl && (
+        <Section style={{ textAlign: 'center' as const, marginTop: '16px' }}>
+          <a
+            href={trackingUrl}
+            style={{ backgroundColor: '#e91e8c', color: '#fff', padding: '12px 24px', borderRadius: '24px', textDecoration: 'none', fontWeight: 'bold' }}
+          >
+            配送状況を確認する
+          </a>
+        </Section>
+      )}
+    </EmailLayout>
+  )
+}
+
+// 8. 遅延通知メール
+export function DelayNotificationEmail({
+  name,
+  orderNumber,
+  reason,
+  newEstimate,
+}: {
+  name: string
+  orderNumber: string
+  reason: string
+  newEstimate?: string
+}) {
+  return (
+    <EmailLayout>
+      <Heading as="h3" style={{ color: '#333' }}>
+        配送遅延のお知らせ
+      </Heading>
+      <Text style={{ color: '#525f7f' }}>
+        {name} 様
+      </Text>
+      <Text style={{ color: '#525f7f' }}>
+        ご注文 {orderNumber} につきまして、配送に遅延が発生しております。
+        ご迷惑をおかけし大変申し訳ございません。
+      </Text>
+      <Section style={{ backgroundColor: '#fff5f5', padding: '16px', borderRadius: '4px', borderLeft: '4px solid #e53e3e' }}>
+        <Text style={{ color: '#333', fontWeight: 'bold', margin: '0 0 4px' }}>遅延理由</Text>
+        <Text style={{ color: '#525f7f', margin: '0' }}>{reason}</Text>
+      </Section>
+      {newEstimate && (
+        <Text style={{ color: '#525f7f', marginTop: '16px' }}>
+          新しいお届け予定日: <strong>{newEstimate}</strong>
+        </Text>
+      )}
+      <Text style={{ color: '#525f7f' }}>
+        ご不明な点がございましたら、お気軽にお問い合わせください。
       </Text>
     </EmailLayout>
   )

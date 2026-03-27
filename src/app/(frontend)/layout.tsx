@@ -5,6 +5,7 @@ import { AuthProvider } from '@/lib/auth-context'
 import { Header } from '@/components/Header'
 import { Footer } from '@/components/Footer'
 import { CartDrawer } from '@/components/CartDrawer'
+import { GoogleAnalytics } from '@/components/GoogleAnalytics'
 
 const notoSansJP = Noto_Sans_JP({
   subsets: ['latin'],
@@ -29,6 +30,7 @@ export default async function RootLayout(props: { children: React.ReactNode }) {
   return (
     <html lang="ja" className={notoSansJP.variable}>
       <body className="flex min-h-screen flex-col">
+        <GoogleAnalytics />
         <AuthProvider>
           <Header />
           <main className="flex-1">{children}</main>

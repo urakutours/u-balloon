@@ -10,8 +10,8 @@ export const Orders: CollectionConfig = {
   },
   admin: {
     useAsTitle: 'orderNumber',
-    group: 'ショップ管理',
-    description: '注文の確認・ステータス管理・履歴',
+    group: '商品・注文',
+    description: '受注一覧。ステータス変更・発送通知・追跡番号の管理ができます。',
     defaultColumns: ['orderNumber', 'customer', 'totalAmount', 'status', 'desiredArrivalDate', 'createdAt'],
     listSearchableFields: ['orderNumber'],
   },
@@ -115,6 +115,19 @@ export const Orders: CollectionConfig = {
       min: 0,
     },
     {
+      name: 'promotion',
+      type: 'relationship',
+      relationTo: 'promotions',
+      label: '適用プロモーション',
+    },
+    {
+      name: 'discountAmount',
+      type: 'number',
+      label: '割引額',
+      defaultValue: 0,
+      min: 0,
+    },
+    {
       name: 'pointsUsed',
       type: 'number',
       label: '使用ポイント',
@@ -178,6 +191,17 @@ export const Orders: CollectionConfig = {
       label: '備考',
     },
     {
+      name: 'paymentMethod',
+      type: 'select',
+      label: '支払い方法',
+      defaultValue: 'stripe',
+      required: true,
+      options: [
+        { label: 'クレジットカード（Stripe）', value: 'stripe' },
+        { label: '銀行振込', value: 'bank_transfer' },
+      ],
+    },
+    {
       name: 'status',
       type: 'select',
       label: 'ステータス',
@@ -185,6 +209,7 @@ export const Orders: CollectionConfig = {
       required: true,
       options: [
         { label: '保留中', value: 'pending' },
+        { label: '入金待ち', value: 'awaiting_payment' },
         { label: '確認済み', value: 'confirmed' },
         { label: '準備中', value: 'preparing' },
         { label: '発送済み', value: 'shipped' },
@@ -193,11 +218,58 @@ export const Orders: CollectionConfig = {
       ],
     },
     {
+      name: 'bankTransferDeadline',
+      type: 'date',
+      label: '振込期限',
+      admin: {
+        position: 'sidebar',
+        date: { pickerAppearance: 'dayOnly' },
+        condition: (data) => data?.paymentMethod === 'bank_transfer',
+      },
+    },
+    {
+      name: 'bankTransferConfirmedAt',
+      type: 'date',
+      label: '入金確認日',
+      admin: {
+        position: 'sidebar',
+        date: { pickerAppearance: 'dayOnly' },
+        condition: (data) => data?.paymentMethod === 'bank_transfer',
+      },
+    },
+    {
+      name: 'trackingInfo',
+      type: 'group',
+      label: '配送追跡情報',
+      admin: {
+        condition: (data) => ['shipped', 'delivered'].includes(data?.status || ''),
+      },
+      fields: [
+        {
+          name: 'carrier',
+          type: 'select',
+          label: '配送業者',
+          options: [
+            { label: 'ヤマト運輸', value: 'yamato' },
+            { label: 'ゆうパック', value: 'yupack' },
+            { label: '佐川急便', value: 'sagawa' },
+            { label: 'その他', value: 'other' },
+          ],
+        },
+        {
+          name: 'trackingNumber',
+          type: 'text',
+          label: '追跡番号',
+        },
+      ],
+    },
+    {
       name: 'stripeSessionId',
       type: 'text',
       label: 'Stripe Checkout Session ID',
       admin: {
         position: 'sidebar',
+        condition: (data) => data?.paymentMethod === 'stripe',
       },
     },
     {
@@ -206,6 +278,7 @@ export const Orders: CollectionConfig = {
       label: 'Stripe Payment Intent ID',
       admin: {
         position: 'sidebar',
+        condition: (data) => data?.paymentMethod === 'stripe',
       },
     },
   ],

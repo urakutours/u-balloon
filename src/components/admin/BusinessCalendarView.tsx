@@ -78,8 +78,8 @@ export default function BusinessCalendarView() {
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
-    const observer = new ResizeObserver((entries) => {
-      const width = entries[0]?.contentRect.width ?? 900
+    const observer = new ResizeObserver((resizeEntries) => {
+      const width = resizeEntries[0]?.contentRect.width ?? 900
       if (width >= 850) setNumMonths(3)
       else if (width >= 560) setNumMonths(2)
       else setNumMonths(1)
@@ -88,36 +88,26 @@ export default function BusinessCalendarView() {
     return () => observer.disconnect()
   }, [])
 
-  // Hide unwanted Payload UI elements
+  // Hide unwanted Payload UI elements via persistent <style> tag
   useEffect(() => {
-    const hide = (selector: string) => {
-      const els = document.querySelectorAll<HTMLElement>(selector)
-      const originals: Array<{ el: HTMLElement; display: string }> = []
-      els.forEach((el) => {
-        originals.push({ el, display: el.style.display })
-        el.style.display = 'none'
-      })
-      return originals
-    }
+    const styleId = 'ub-calendar-hide-styles'
+    if (document.getElementById(styleId)) return
 
-    // Hide "新規作成" button
-    const createBtns = hide('a[href*="/business-calendar/create"]')
-    // Hide "結果がありません" / list table / search / filters
-    const listTable = hide('.collection-list__wrap, .list-controls, .collection-list__header .search-filter, .collection-list__header .list-controls')
-
-    // Hide the no-results message and table below our component
-    const timer = setTimeout(() => {
-      const noResults = document.querySelectorAll<HTMLElement>('.collection-list .collection-list__no-results, .collection-list table, .collection-list__header .pill, .list-controls')
-      noResults.forEach((el) => {
-        el.style.display = 'none'
-      })
-    }, 100)
+    const style = document.createElement('style')
+    style.id = styleId
+    style.textContent = `
+      /* Hide Payload list UI when calendar view is active */
+      .collection-list .table { display: none !important; }
+      .collection-list .collection-list__no-results { display: none !important; }
+      .list-controls { display: none !important; }
+      a[href*="/business-calendar/create"] { display: none !important; }
+      .collection-list__header .pill { display: none !important; }
+    `
+    document.head.appendChild(style)
 
     return () => {
-      clearTimeout(timer)
-      ;[...createBtns, ...listTable].forEach(({ el, display }) => {
-        el.style.display = display
-      })
+      const el = document.getElementById(styleId)
+      el?.remove()
     }
   }, [])
 

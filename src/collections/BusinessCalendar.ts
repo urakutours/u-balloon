@@ -9,8 +9,8 @@ export const BusinessCalendar: CollectionConfig = {
   },
   admin: {
     useAsTitle: 'date',
-    group: 'システム設定',
-    description: '休業日・発送可否の管理',
+    group: '設定',
+    description: '休業日・発送不可日をカレンダーで管理。曜日パターンでの一括登録にも対応しています。',
     defaultColumns: ['date', 'isHoliday', 'shippingAvailable', 'note'],
     components: {
       beforeListTable: ['@/components/admin/BusinessCalendarView'],

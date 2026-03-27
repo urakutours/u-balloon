@@ -2,6 +2,7 @@ import type { CollectionAfterChangeHook } from 'payload'
 import { earnPoints } from '@/lib/points'
 import { sendEmail } from '@/lib/email'
 import { OrderConfirmEmail, OrderStatusUpdateEmail, PointsEarnedEmail } from '@/lib/email-templates'
+import { sendAdminAlert } from '@/lib/admin-alerts'
 import React from 'react'
 import type { Payload } from 'payload'
 
@@ -46,6 +47,13 @@ async function processOrderCreate(payload: Payload, doc: Record<string, unknown>
       }),
     })
     console.log('[Hook] Order confirm email sent for', doc.orderNumber)
+
+    // Admin alert for new order
+    sendAdminAlert({
+      type: 'new_order',
+      title: `新規注文 ${doc.orderNumber}`,
+      details: `顧客: ${(customer as { name?: string; email: string }).name || (customer as { email: string }).email}\n合計: ¥${(doc.totalAmount as number).toLocaleString()}\n商品数: ${items.length}`,
+    }).catch(console.error)
   } catch (err) {
     console.error('[Hook] Order confirm email error:', err)
   }
@@ -106,8 +114,14 @@ async function processOrderStatusChange(payload: Payload, doc: Record<string, un
       }
     }
 
-    // If cancelled -> return used points
+    // If cancelled -> return used points + admin alert
     if (doc.status === 'cancelled' && previousDoc.status !== 'cancelled') {
+      sendAdminAlert({
+        type: 'order_cancelled',
+        title: `注文キャンセル ${doc.orderNumber}`,
+        details: `顧客: ${customerName}\n合計: ¥${(doc.totalAmount as number).toLocaleString()}`,
+        urgency: 'high',
+      }).catch(console.error)
       const pointsUsed = (doc.pointsUsed as number) ?? 0
       if (pointsUsed > 0) {
         const customerId = typeof doc.customer === 'object'
@@ -149,6 +163,73 @@ async function processOrderStatusChange(payload: Payload, doc: Record<string, un
   }
 }
 
+async function deductStock(payload: Payload, doc: Record<string, unknown>) {
+  try {
+    const items = (doc.items as Array<Record<string, unknown>>) || []
+    for (const item of items) {
+      const productId = typeof item.product === 'object'
+        ? (item.product as { id: string }).id
+        : (item.product as string)
+      const quantity = (item.quantity as number) || 1
+
+      const product = await payload.findByID({ collection: 'products', id: productId })
+      const currentStock = product.stock as number | null | undefined
+
+      // Only deduct if stock tracking is enabled (stock is not null/undefined)
+      if (currentStock != null) {
+        const newStock = Math.max(0, currentStock - quantity)
+        await payload.update({
+          collection: 'products',
+          id: productId,
+          data: { stock: newStock },
+        })
+        console.log(`[Hook] Stock deducted: ${product.title} ${currentStock} -> ${newStock}`)
+
+        // Check low stock threshold
+        const threshold = (product.lowStockThreshold as number) ?? 5
+        if (newStock <= threshold && currentStock > threshold) {
+          console.warn(`[Hook] LOW STOCK ALERT: ${product.title} has ${newStock} remaining (threshold: ${threshold})`)
+          sendAdminAlert({
+            type: 'low_stock',
+            title: `${product.title} の在庫が残り ${newStock} 個`,
+            details: `SKU: ${product.sku || 'N/A'}\n閾値: ${threshold}\n現在の在庫: ${newStock}`,
+            urgency: newStock === 0 ? 'high' : 'normal',
+          }).catch(console.error)
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[Hook] Stock deduction error:', err)
+  }
+}
+
+async function restoreStock(payload: Payload, doc: Record<string, unknown>) {
+  try {
+    const items = (doc.items as Array<Record<string, unknown>>) || []
+    for (const item of items) {
+      const productId = typeof item.product === 'object'
+        ? (item.product as { id: string }).id
+        : (item.product as string)
+      const quantity = (item.quantity as number) || 1
+
+      const product = await payload.findByID({ collection: 'products', id: productId })
+      const currentStock = product.stock as number | null | undefined
+
+      if (currentStock != null) {
+        const newStock = currentStock + quantity
+        await payload.update({
+          collection: 'products',
+          id: productId,
+          data: { stock: newStock },
+        })
+        console.log(`[Hook] Stock restored: ${product.title} ${currentStock} -> ${newStock}`)
+      }
+    }
+  } catch (err) {
+    console.error('[Hook] Stock restore error:', err)
+  }
+}
+
 async function updatePopularityScores(payload: Payload, doc: Record<string, unknown>) {
   try {
     const items = (doc.items as Array<Record<string, unknown>>) || []
@@ -187,6 +268,11 @@ export const afterOrderChange: CollectionAfterChangeHook = async ({
       console.error('[Hook] Unhandled error in processOrderCreate:', err),
     )
 
+    // Deduct stock for ordered products
+    deductStock(payload, doc).catch((err) =>
+      console.error('[Hook] Unhandled error in deductStock:', err),
+    )
+
     // Increment popularity score for each ordered product
     updatePopularityScores(payload, doc).catch((err) =>
       console.error('[Hook] Unhandled error in updatePopularityScores:', err),
@@ -197,6 +283,13 @@ export const afterOrderChange: CollectionAfterChangeHook = async ({
     processOrderStatusChange(payload, doc, previousDoc).catch((err) =>
       console.error('[Hook] Unhandled error in processOrderStatusChange:', err),
     )
+
+    // Restore stock if order is cancelled
+    if (doc.status === 'cancelled' && previousDoc.status !== 'cancelled') {
+      restoreStock(payload, doc).catch((err) =>
+        console.error('[Hook] Unhandled error in restoreStock:', err),
+      )
+    }
   }
 
   return doc

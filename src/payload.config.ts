@@ -2,6 +2,7 @@ import path from 'path'
 import { buildConfig } from 'payload'
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import { s3Storage } from '@payloadcms/storage-s3'
 import { ja } from '@payloadcms/translations/languages/ja'
 import sharp from 'sharp'
 import { fileURLToPath } from 'url'
@@ -12,9 +13,38 @@ import { Products } from './collections/Products'
 import { Orders } from './collections/Orders'
 import { BusinessCalendar } from './collections/BusinessCalendar'
 import { PointTransactions } from './collections/PointTransactions'
+import { Pages } from './collections/Pages'
+import { Posts } from './collections/Posts'
+import { Forms } from './collections/Forms'
+import { FormSubmissions } from './collections/FormSubmissions'
+import { Promotions } from './collections/Promotions'
+import { SecretSales } from './collections/SecretSales'
+import { EmailTemplates } from './collections/EmailTemplates'
+import { NewsletterSubscribers } from './collections/NewsletterSubscribers'
+import { Newsletters } from './collections/Newsletters'
+import { SubscriptionPlans } from './collections/SubscriptionPlans'
+import { Subscriptions } from './collections/Subscriptions'
+import { ABTests } from './collections/ABTests'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
+
+const s3Plugins = process.env.R2_BUCKET
+  ? [
+      s3Storage({
+        collections: { media: true },
+        bucket: process.env.R2_BUCKET,
+        config: {
+          endpoint: process.env.R2_ENDPOINT,
+          credentials: {
+            accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
+            secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
+          },
+          region: 'auto',
+        },
+      }),
+    ]
+  : []
 
 export default buildConfig({
   admin: {
@@ -33,7 +63,7 @@ export default buildConfig({
     supportedLanguages: { ja },
     fallbackLanguage: 'ja',
   },
-  collections: [Users, Media, Products, Orders, BusinessCalendar, PointTransactions],
+  collections: [Users, Media, Products, Orders, BusinessCalendar, PointTransactions, Pages, Posts, Forms, FormSubmissions, Promotions, SecretSales, EmailTemplates, NewsletterSubscribers, Newsletters, SubscriptionPlans, Subscriptions, ABTests],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || 'default-secret-change-me-in-production-32chars',
   typescript: {
@@ -48,5 +78,5 @@ export default buildConfig({
     },
   }),
   sharp,
-  plugins: [],
+  plugins: [...s3Plugins],
 })

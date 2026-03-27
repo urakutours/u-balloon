@@ -9,8 +9,8 @@ export const Products: CollectionConfig = {
   },
   admin: {
     useAsTitle: 'title',
-    group: 'ショップ管理',
-    description: 'バルーンギフト商品の登録・編集・在庫管理',
+    group: '商品・注文',
+    description: 'バルーンギフト商品の登録・編集・在庫管理。商品名・SKU・価格・カスタムオプション・在庫数を管理できます。',
     listSearchableFields: ['title', 'sku', 'slug'],
     defaultColumns: ['title', 'sku', 'price', 'productType', 'popularityScore', 'status'],
   },
@@ -210,6 +210,27 @@ export const Products: CollectionConfig = {
           ],
         },
       ],
+    },
+    {
+      name: 'stock',
+      type: 'number',
+      label: '在庫数',
+      min: 0,
+      admin: {
+        description: '現在の在庫数。0の場合「品切れ」表示になります。未設定の場合は在庫制限なし。',
+        position: 'sidebar',
+      },
+    },
+    {
+      name: 'lowStockThreshold',
+      type: 'number',
+      label: '在庫アラート閾値',
+      min: 0,
+      defaultValue: 5,
+      admin: {
+        description: 'この数以下になるとアラート通知が送られます',
+        position: 'sidebar',
+      },
     },
     {
       name: 'popularityScore',

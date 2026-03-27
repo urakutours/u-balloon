@@ -1,8 +1,9 @@
 import { Resend } from 'resend'
 import React from 'react'
 
-const FROM_EMAIL = 'noreply@uballoon.com'
-const FROM_NAME = 'uballoon'
+const FROM_EMAIL = process.env.EMAIL_FROM_ADDRESS || 'noreply@uballoon.com'
+const FROM_NAME = process.env.EMAIL_FROM_NAME || 'uballoon'
+const REPLY_TO = process.env.EMAIL_REPLY_TO || 'info@uballoon.com'
 
 let resendClient: Resend | null = null
 
@@ -36,6 +37,7 @@ export async function sendEmail({ to, subject, react }: SendEmailParams) {
   try {
     const { data, error } = await resend.emails.send({
       from: `${FROM_NAME} <${FROM_EMAIL}>`,
+      replyTo: REPLY_TO,
       to,
       subject,
       react,
