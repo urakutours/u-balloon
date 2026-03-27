@@ -80,24 +80,10 @@ export const Products: CollectionConfig = {
     },
     {
       name: 'tags',
-      type: 'select',
+      type: 'json',
       label: 'タグ',
-      hasMany: true,
-      options: [
-        { label: '誕生日', value: '誕生日' },
-        { label: '結婚', value: '結婚' },
-        { label: '開店・周年・移転', value: '開店・周年・移転' },
-        { label: '動物', value: '動物' },
-        { label: '季節・イベント', value: '季節・イベント' },
-        { label: 'キッズ', value: 'キッズ' },
-        { label: 'デリバリー', value: 'デリバリー' },
-        { label: 'リリース', value: 'リリース' },
-        { label: 'ギフト', value: 'ギフト' },
-        { label: 'お祝い', value: 'お祝い' },
-        { label: 'オプション', value: 'オプション' },
-      ],
       admin: {
-        description: '商品のカテゴリータグ（複数選択可）',
+        description: 'タグの配列（例: ["誕生日", "結婚式"]）',
       },
     },
     {

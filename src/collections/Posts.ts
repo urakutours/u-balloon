@@ -84,21 +84,10 @@ export const Posts: CollectionConfig = {
     },
     {
       name: 'tags',
-      type: 'select',
+      type: 'json',
       label: 'タグ',
-      hasMany: true,
-      options: [
-        { label: '誕生日', value: '誕生日' },
-        { label: '結婚式', value: '結婚式' },
-        { label: '開店祝い', value: '開店祝い' },
-        { label: 'バルーンアート', value: 'バルーンアート' },
-        { label: 'デコレーション', value: 'デコレーション' },
-        { label: 'ギフト', value: 'ギフト' },
-        { label: 'イベント', value: 'イベント' },
-        { label: 'スタッフ', value: 'スタッフ' },
-      ],
       admin: {
-        description: '記事のタグ（複数選択可）',
+        description: 'タグの配列（例: ["誕生日", "結婚式"]）',
       },
     },
     {
