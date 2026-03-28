@@ -3,4 +3,6 @@ node_modules
 .env
 *.tsbuildinfo
 next-env.d.ts
-src/app/(payload)/admin/importMap.js
+
+
+.vercel
