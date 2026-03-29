@@ -1,0 +1,18 @@
+name = "uballoon-edge"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+# R2 bucket binding
+[[r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "uballoon-media"
+
+# KV namespace for rate limiting
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "bedac11fa5e1411ca5c5668152d0c600"
+preview_id = "7ec4abb2240e43f6b24c21d8ac3916b2"
+
+[vars]
+ORIGIN_URL = "https://u-balloon.vercel.app"
+ALLOWED_ORIGINS = "https://u-balloon.vercel.app,http://localhost:3000"
