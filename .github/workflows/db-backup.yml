@@ -1,0 +1,127 @@
+name: Database Backup
+
+on:
+  schedule:
+    # 毎週日曜 AM3:00 JST (土曜 18:00 UTC)
+    - cron: '0 18 * * 6'
+  workflow_dispatch: # 手動実行も可能
+
+env:
+  R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+  R2_BUCKET: ${{ secrets.R2_BUCKET }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Run pg_dump
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          DATE=$(date +%Y-%m-%d)
+          FILENAME="backup-${DATE}.sql.gz"
+          pg_dump "$DATABASE_URL" | gzip > "$FILENAME"
+          echo "FILENAME=$FILENAME" >> $GITHUB_ENV
+          echo "DATE=$DATE" >> $GITHUB_ENV
+          echo "Backup size: $(du -h $FILENAME | cut -f1)"
+
+      - name: Upload to R2 (weekly)
+        run: |
+          aws s3 cp "$FILENAME" "s3://${R2_BUCKET}/weekly/${FILENAME}" \
+            --endpoint-url "$R2_ENDPOINT"
+
+      - name: Rotate weekly → monthly
+        run: |
+          # 5週以上前の週次バックアップを処理
+          CUTOFF_DATE=$(date -d '35 days ago' +%Y-%m-%d)
+
+          aws s3 ls "s3://${R2_BUCKET}/weekly/" \
+            --endpoint-url "$R2_ENDPOINT" | while read -r line; do
+
+            FILE=$(echo "$line" | awk '{print $4}')
+            if [ -z "$FILE" ]; then continue; fi
+
+            FILE_DATE=$(echo "$FILE" | grep -oP '\d{4}-\d{2}-\d{2}')
+            if [ -z "$FILE_DATE" ]; then continue; fi
+
+            if [[ "$FILE_DATE" < "$CUTOFF_DATE" ]]; then
+              DAY=$(date -d "$FILE_DATE" +%d)
+
+              # 月初(1-7日)のバックアップは monthly/ に移動
+              if [ "$DAY" -le 7 ]; then
+                echo "Moving to monthly: $FILE"
+                aws s3 cp "s3://${R2_BUCKET}/weekly/${FILE}" \
+                  "s3://${R2_BUCKET}/monthly/${FILE}" \
+                  --endpoint-url "$R2_ENDPOINT"
+              else
+                echo "Deleting old weekly: $FILE"
+              fi
+
+              aws s3 rm "s3://${R2_BUCKET}/weekly/${FILE}" \
+                --endpoint-url "$R2_ENDPOINT"
+            fi
+          done
+
+      - name: Rotate monthly → yearly
+        run: |
+          # 12ヶ月以上前の月次バックアップを処理
+          CUTOFF_DATE=$(date -d '365 days ago' +%Y-%m-%d)
+
+          # 年ごとに最古のバックアップを記録
+          declare -A OLDEST_BY_YEAR
+
+          # まず各年の最古ファイルを特定
+          aws s3 ls "s3://${R2_BUCKET}/monthly/" \
+            --endpoint-url "$R2_ENDPOINT" | while read -r line; do
+
+            FILE=$(echo "$line" | awk '{print $4}')
+            if [ -z "$FILE" ]; then continue; fi
+
+            FILE_DATE=$(echo "$FILE" | grep -oP '\d{4}-\d{2}-\d{2}')
+            if [ -z "$FILE_DATE" ]; then continue; fi
+
+            if [[ "$FILE_DATE" < "$CUTOFF_DATE" ]]; then
+              YEAR=$(echo "$FILE_DATE" | cut -d'-' -f1)
+              echo "${YEAR}|${FILE_DATE}|${FILE}"
+            fi
+          done | sort > /tmp/old_monthly.txt
+
+          # 年ごとにグループ化し、最古のものだけ yearly/ に移動、残りは削除
+          if [ -s /tmp/old_monthly.txt ]; then
+            declare -A KEPT_YEAR
+            while IFS='|' read -r YEAR FILE_DATE FILE; do
+              if [ -z "${KEPT_YEAR[$YEAR]:-}" ]; then
+                # この年の最初のエントリ（最古）→ yearly/ に移動
+                echo "Moving to yearly: $FILE"
+                aws s3 cp "s3://${R2_BUCKET}/monthly/${FILE}" \
+                  "s3://${R2_BUCKET}/yearly/${FILE}" \
+                  --endpoint-url "$R2_ENDPOINT"
+                KEPT_YEAR[$YEAR]=1
+              else
+                echo "Deleting old monthly: $FILE"
+              fi
+              aws s3 rm "s3://${R2_BUCKET}/monthly/${FILE}" \
+                --endpoint-url "$R2_ENDPOINT"
+            done < /tmp/old_monthly.txt
+          fi
+
+      - name: Verify backups
+        run: |
+          echo "=== Weekly backups ==="
+          aws s3 ls "s3://${R2_BUCKET}/weekly/" \
+            --endpoint-url "$R2_ENDPOINT" 2>/dev/null || echo "(none)"
+          echo ""
+          echo "=== Monthly backups ==="
+          aws s3 ls "s3://${R2_BUCKET}/monthly/" \
+            --endpoint-url "$R2_ENDPOINT" 2>/dev/null || echo "(none)"
+          echo ""
+          echo "=== Yearly backups ==="
+          aws s3 ls "s3://${R2_BUCKET}/yearly/" \
+            --endpoint-url "$R2_ENDPOINT" 2>/dev/null || echo "(none)"
