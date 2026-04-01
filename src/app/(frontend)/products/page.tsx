@@ -42,8 +42,8 @@ export async function generateMetadata({ searchParams }: { searchParams: SearchP
   }
 }
 
-// ISR: 60秒キャッシュ
-export const revalidate = 60
+// searchParams による動的ページ — キャッシュ無効化でカテゴリ切替を確実に
+export const dynamic = 'force-dynamic'
 
 export default async function ProductsPage({ searchParams }: { searchParams: SearchParams }) {
   const { tag } = await searchParams
@@ -89,6 +89,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Sea
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">
       <Suspense fallback={<div className="py-10 text-center text-sm text-foreground/50">読み込み中...</div>}>
         <ProductListClient
+          key={tag || 'all'}
           initialProducts={initialProducts}
           totalDocs={totalDocs}
           totalPages={totalPages}

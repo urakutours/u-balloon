@@ -47,6 +47,15 @@ export function ProductListClient({
   const addItem = useCartStore((s) => s.addItem)
   const openCartDrawer = useCartDrawer((s) => s.open)
 
+  // タグ（カテゴリ）切替時に状態をリセット
+  // key propによるremountが効かないケースへの安全策
+  useEffect(() => {
+    setProducts(initialProducts)
+    setCurrentPage(1)
+    setSortOrder('recommended')
+    setAllLoaded(false)
+  }, [currentTag, initialProducts])
+
   // Store current URL in sessionStorage so product detail can link back here
   useEffect(() => {
     const url = currentTag
