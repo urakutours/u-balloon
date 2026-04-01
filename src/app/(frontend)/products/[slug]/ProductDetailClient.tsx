@@ -96,10 +96,10 @@ export function ProductDetailClient({ product }: { product: ProductData }) {
     const extras: ExtraOption[] = [...product.extraOptions]
     if (showHeliumOption) {
       extras.unshift({
-        name: '補充用ヘリウムガス缶',
+        name: 'バルーンが長持ちするヘリウムガス缶',
         price: heliumGasPrice,
-        description: '届いたバルーンのヘリウムが少なくなった時に補充できます',
-        imageUrl: 'https://uballoon-edge.urakutours.workers.dev/helium-gas-option.webp',
+        description: '夏冬のお届けや、長く楽しみたい場合には、ヘリウムガスの合せ買いがおススメです',
+        imageUrl: '/images/helium-gas-option.webp',
       })
     }
     return extras
