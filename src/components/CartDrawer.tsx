@@ -119,16 +119,21 @@ export function CartDrawer() {
                       </div>
 
                       {/* Options summary */}
-                      {item.options.selections && item.options.selections.length > 0 && (
+                      {(item.options.selections?.length || item.options.extras?.length) ? (
                         <div className="mt-1 space-y-0.5">
-                          {item.options.selections.map((sel, i) => (
+                          {item.options.selections?.map((sel, i) => (
                             <p key={i} className="text-[11px] text-muted-foreground">
                               {sel.name}: {sel.value}
                               {sel.additionalPrice ? ` (+¥${sel.additionalPrice.toLocaleString()})` : ''}
                             </p>
                           ))}
+                          {item.options.extras?.map((ext, i) => (
+                            <p key={`ext-${i}`} className="text-[11px] text-muted-foreground">
+                              {ext.name} (+¥{ext.price.toLocaleString()})
+                            </p>
+                          ))}
                         </div>
-                      )}
+                      ) : null}
 
                       <div className="mt-auto flex items-center justify-between pt-2">
                         {/* Quantity controls */}

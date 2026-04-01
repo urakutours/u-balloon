@@ -100,6 +100,11 @@ export default function CartPage() {
                             {tv.name}: {tv.value}
                           </div>
                         ))}
+                        {item.options.extras?.map((ext, i) => (
+                          <div key={i} className="truncate">
+                            {ext.name} (+¥{ext.price.toLocaleString()})
+                          </div>
+                        ))}
                       </div>
                     </div>
                     {/* Delete button */}

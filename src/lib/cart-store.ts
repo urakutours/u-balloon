@@ -6,6 +6,7 @@ import { persist } from 'zustand/middleware'
 export type CartItemOption = {
   selections?: { name: string; value: string; additionalPrice?: number }[]
   textValues?: { name: string; value: string; price?: number }[]
+  extras?: { name: string; price: number }[]
 }
 
 export type CartItem = {

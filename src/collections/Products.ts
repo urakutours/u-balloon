@@ -174,6 +174,49 @@ export const Products: CollectionConfig = {
           ],
         },
         {
+          name: 'extraOptions',
+          type: 'array',
+          label: '追加オプション',
+          admin: {
+            description: 'チェックボックス形式の追加オプション（例: ヘリウムガス補充缶、ラッピング等）',
+          },
+          fields: [
+            {
+              name: 'name',
+              type: 'text',
+              label: 'オプション名',
+              required: true,
+              admin: {
+                description: '例: "補充用ヘリウムガス缶", "ギフトラッピング"',
+              },
+            },
+            {
+              name: 'price',
+              type: 'number',
+              label: '追加料金',
+              required: true,
+              min: 0,
+              admin: {
+                description: 'チェック時に加算される金額（税込）',
+              },
+            },
+            {
+              name: 'description',
+              type: 'text',
+              label: '説明文',
+              admin: {
+                description: '商品ページに表示される短い説明',
+              },
+            },
+            {
+              name: 'image',
+              type: 'upload',
+              relationTo: 'media',
+              label: '画像',
+            },
+          ],
+        },
+        {
           name: 'textInputs',
           type: 'array',
           label: 'テキスト入力',

@@ -46,6 +46,13 @@ export default async function ProductDetailPage({ params }: Props) {
       choices: { label: string; additionalPrice?: number; id?: string }[]
       id?: string
     }[]
+    extraOptions?: {
+      name: string
+      price: number
+      description?: string
+      image?: { url?: string; alt?: string } | string
+      id?: string
+    }[]
     textInputs?: {
       name: string
       required: boolean
@@ -72,6 +79,14 @@ export default async function ProductDetailPage({ params }: Props) {
         label: c.label,
         additionalPrice: c.additionalPrice || 0,
       })),
+    })),
+    extraOptions: (customOptions?.extraOptions || []).map((ext) => ({
+      name: ext.name,
+      price: ext.price,
+      description: ext.description || '',
+      imageUrl: ext.image && typeof ext.image === 'object' && 'url' in ext.image
+        ? (ext.image.url as string)
+        : null,
     })),
     textInputs: (customOptions?.textInputs || []).map((inp) => ({
       name: inp.name,

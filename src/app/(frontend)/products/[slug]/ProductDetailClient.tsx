@@ -24,8 +24,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { ProductInfoAccordion } from '@/components/product/ProductInfoAccordion'
-import { HeliumBanner } from '@/components/product/HeliumBanner'
 import { OptionProductsSlider } from '@/components/product/OptionProductsSlider'
+import { detectProductType, shouldShowHeliumBanner } from '@/lib/product-types'
 
 type SelectOption = {
   name: string
@@ -40,6 +40,13 @@ type TextInput = {
   price?: number
 }
 
+type ExtraOption = {
+  name: string
+  price: number
+  description?: string
+  imageUrl?: string | null
+}
+
 type ProductData = {
   id: string
   title: string
@@ -51,6 +58,7 @@ type ProductData = {
   bodyHtml?: string
   images: { url: string; alt: string }[]
   selectOptions: SelectOption[]
+  extraOptions: ExtraOption[]
   textInputs: TextInput[]
 }
 
@@ -73,6 +81,29 @@ export function ProductDetailClient({ product }: { product: ProductData }) {
   const [selections, setSelections] = useState<Record<string, string>>({})
   const [textValues, setTextValues] = useState<Record<string, string>>({})
   const [added, setAdded] = useState(false)
+  const [extrasChecked, setExtrasChecked] = useState<Record<string, boolean>>({})
+
+  // Helium gas option eligibility (built-in extra)
+  const heliumGasPrice = 900
+  const showHeliumOption = useMemo(() => {
+    const typeInfo = detectProductType(product.sku, product.tags || [])
+    const { showRecommend, showPartial } = shouldShowHeliumBanner(product.sku, typeInfo)
+    return showRecommend || showPartial
+  }, [product.sku, product.tags])
+
+  // Merge built-in helium gas option + DB extra options
+  const allExtras: ExtraOption[] = useMemo(() => {
+    const extras: ExtraOption[] = [...product.extraOptions]
+    if (showHeliumOption) {
+      extras.unshift({
+        name: '補充用ヘリウムガス缶',
+        price: heliumGasPrice,
+        description: '届いたバルーンのヘリウムが少なくなった時に補充できます',
+        imageUrl: 'https://uballoon-edge.urakutours.workers.dev/helium-gas-option.webp',
+      })
+    }
+    return extras
+  }, [product.extraOptions, showHeliumOption])
 
   // Calculate option total
   const optionTotal = useMemo(() => {
@@ -89,8 +120,11 @@ export function ProductDetailClient({ product }: { product: ProductData }) {
         total += inp.price
       }
     }
+    for (const ext of allExtras) {
+      if (extrasChecked[ext.name]) total += ext.price
+    }
     return total
-  }, [selections, textValues, product.selectOptions, product.textInputs])
+  }, [selections, textValues, product.selectOptions, product.textInputs, extrasChecked, allExtras])
 
   const unitPrice = product.price + optionTotal
 
@@ -124,6 +158,11 @@ export function ProductDetailClient({ product }: { product: ProductData }) {
       })
     if (txts.length > 0) options.textValues = txts
 
+    const checkedExtras = allExtras.filter((ext) => extrasChecked[ext.name])
+    if (checkedExtras.length > 0) {
+      options.extras = checkedExtras.map((ext) => ({ name: ext.name, price: ext.price }))
+    }
+
     addItem({
       productId: product.id,
       productSlug: product.slug,
@@ -153,7 +192,7 @@ export function ProductDetailClient({ product }: { product: ProductData }) {
     }
   }
 
-  const hasOptions = product.selectOptions.length > 0 || product.textInputs.length > 0
+  const hasOptions = product.selectOptions.length > 0 || product.textInputs.length > 0 || allExtras.length > 0
 
   return (
     <>
@@ -274,10 +313,7 @@ export function ProductDetailClient({ product }: { product: ProductData }) {
             />
           </div>
 
-          {/* Helium banner */}
-          <HeliumBanner sku={product.sku} tags={product.tags || []} />
-
-          {hasOptions && <Separator className="my-6" />}
+          {(hasOptions || showHeliumOption) && <Separator className="my-6" />}
 
           {/* Select Options */}
           {product.selectOptions.map((opt) => (
@@ -328,6 +364,48 @@ export function ProductDetailClient({ product }: { product: ProductData }) {
                 }
                 className="text-base sm:text-sm"
               />
+            </div>
+          ))}
+
+          {/* Extra Options (checkbox items: helium gas, etc.) */}
+          {allExtras.map((ext) => (
+            <div key={ext.name} className="mb-3">
+              <label
+                className="group flex cursor-pointer items-center gap-4 rounded-xl border border-border/60 p-4 transition-all hover:border-brand-teal/30 hover:bg-muted/30 has-[:checked]:border-brand-teal/50 has-[:checked]:bg-brand-teal/5"
+              >
+                <input
+                  type="checkbox"
+                  checked={extrasChecked[ext.name] || false}
+                  onChange={(e) =>
+                    setExtrasChecked((prev) => ({ ...prev, [ext.name]: e.target.checked }))
+                  }
+                  className="h-4.5 w-4.5 accent-brand-teal"
+                />
+                {ext.imageUrl ? (
+                  <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
+                    <Image
+                      src={ext.imageUrl}
+                      alt={ext.name}
+                      width={56}
+                      height={56}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-muted text-xl">
+                    ＋
+                  </div>
+                )}
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-brand-dark">{ext.name}</p>
+                  {ext.description && (
+                    <p className="mt-0.5 text-xs leading-relaxed text-foreground/50">
+                      {ext.description}
+                    </p>
+                  )}
+                </div>
+                <span className="text-sm font-bold text-brand-teal">+¥{ext.price.toLocaleString()}</span>
+              </label>
             </div>
           ))}
 
