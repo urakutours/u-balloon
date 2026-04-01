@@ -382,17 +382,17 @@ export function ProductDetailClient({ product }: { product: ProductData }) {
                   className="h-4.5 w-4.5 accent-brand-teal"
                 />
                 {ext.imageUrl ? (
-                  <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
+                  <div className="h-[72px] w-[72px] flex-shrink-0 overflow-hidden rounded-lg">
                     <Image
                       src={ext.imageUrl}
                       alt={ext.name}
-                      width={56}
-                      height={56}
-                      className="h-full w-full object-cover"
+                      width={72}
+                      height={72}
+                      className="h-full w-full object-contain"
                     />
                   </div>
                 ) : (
-                  <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-muted text-xl">
+                  <div className="flex h-[72px] w-[72px] flex-shrink-0 items-center justify-center rounded-lg bg-muted text-xl">
                     ＋
                   </div>
                 )}
