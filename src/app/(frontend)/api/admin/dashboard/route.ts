@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@payload-config'
+import { getConversionRate } from '@/lib/ga4-data'
+import {
+  getRevenueSummary,
+  getStatusDistribution,
+  getCustomerMetrics,
+  getDailyRevenue,
+  getTopProducts,
+  getNewMembersCount,
+  getPendingCount,
+  getShippingCounts,
+  getDeliverySlotCounts,
+} from '@/lib/dashboard-queries'
 import {
   startOfDay,
   endOfDay,
@@ -8,10 +20,37 @@ import {
   endOfWeek,
   startOfMonth,
   endOfMonth,
-  eachDayOfInterval,
+  subDays,
+  subWeeks,
+  subMonths,
+  differenceInDays,
   format,
 } from 'date-fns'
 
+// ============================================================
+// Helper: calculate change rate (%)
+// ============================================================
+function calcChangeRate(current: number, previous: number): number | null {
+  if (previous === 0 && current === 0) return 0
+  if (previous === 0) return current > 0 ? 100 : 0
+  return Math.round(((current - previous) / previous) * 1000) / 10
+}
+
+// ============================================================
+// Helper: previous period label
+// ============================================================
+function prevPeriodLabel(period: string): string {
+  switch (period) {
+    case 'today': return '前日比'
+    case 'week': return '前週比'
+    case 'month': return '前月比'
+    default: return '前期比'
+  }
+}
+
+// ============================================================
+// Main handler
+// ============================================================
 export async function GET(req: NextRequest) {
   const payload = await getPayload({ config })
 
@@ -39,139 +78,117 @@ export async function GET(req: NextRequest) {
       periodStart = startOfMonth(now)
       periodEnd = endOfMonth(now)
       break
-    case 'custom':
-      periodStart = customStart ? startOfDay(new Date(customStart)) : startOfDay(now)
-      periodEnd = customEnd ? endOfDay(new Date(customEnd)) : endOfDay(now)
+    case 'custom': {
+      const cs = customStart ? startOfDay(new Date(customStart)) : startOfDay(now)
+      const ce = customEnd ? endOfDay(new Date(customEnd)) : endOfDay(now)
+      if (cs > ce) {
+        return NextResponse.json({ error: '開始日は終了日より前に設定してください' }, { status: 400 })
+      }
+      periodStart = cs
+      periodEnd = ce < endOfDay(now) ? ce : endOfDay(now)
       break
+    }
     default: // today
       periodStart = startOfDay(now)
       periodEnd = endOfDay(now)
   }
 
-  const todayStart = startOfDay(now)
-  const todayEnd = endOfDay(now)
+  // ---- Previous period ----
+  let prevStart: Date
+  let prevEnd: Date
+  switch (period) {
+    case 'today':
+      prevStart = startOfDay(subDays(now, 1))
+      prevEnd = endOfDay(subDays(now, 1))
+      break
+    case 'week':
+      prevStart = startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 })
+      prevEnd = endOfWeek(subWeeks(now, 1), { weekStartsOn: 1 })
+      break
+    case 'month':
+      prevStart = startOfMonth(subMonths(now, 1))
+      prevEnd = endOfMonth(subMonths(now, 1))
+      break
+    default: { // custom
+      const spanDays = differenceInDays(periodEnd, periodStart) + 1
+      prevEnd = subDays(periodStart, 1)
+      prevStart = startOfDay(subDays(periodStart, spanDays))
+      break
+    }
+  }
 
+  // ============================================================
+  // Parallel SQL queries — no limit:2000 constraint
+  // ============================================================
   const [
-    periodOrders,
-    pendingOrders,
+    current,
+    previous,
+    statusDist,
+    customerMetrics,
+    dailyRevenue,
+    topProducts,
+    newMembers,
+    pendingCount,
+    shipping,
+    deliverySlots,
+    // Non-aggregation queries still use payload.find (small result sets)
     recentOrders,
-    periodUsers,
     upcomingHolidays,
-    allOrdersForStats,
+    lowStockResult,
+    siteSettings,
   ] = await Promise.all([
-    // Period orders
-    payload.find({
-      collection: 'orders',
-      where: {
-        createdAt: {
-          greater_than_equal: periodStart.toISOString(),
-          less_than_equal: periodEnd.toISOString(),
-        },
-      },
-      limit: 500,
-      sort: 'createdAt',
-      depth: 0,
-    }),
-    // Pending orders count
-    payload.find({
-      collection: 'orders',
-      where: { status: { equals: 'pending' } },
-      limit: 0,
-    }),
-    // Recent 5 orders
+    getRevenueSummary(payload, periodStart, periodEnd),
+    getRevenueSummary(payload, prevStart, prevEnd),
+    getStatusDistribution(payload),
+    getCustomerMetrics(payload),
+    getDailyRevenue(payload, periodStart, periodEnd),
+    getTopProducts(payload),
+    getNewMembersCount(payload, periodStart, periodEnd),
+    getPendingCount(payload),
+    getShippingCounts(payload),
+    getDeliverySlotCounts(payload),
+    // Recent 5 orders — small result, keep as payload.find for depth resolution
     payload.find({
       collection: 'orders',
       sort: '-createdAt',
       limit: 5,
       depth: 1,
     }),
-    // Period new users
-    payload.find({
-      collection: 'users',
-      where: {
-        createdAt: {
-          greater_than_equal: periodStart.toISOString(),
-          less_than_equal: periodEnd.toISOString(),
-        },
-      },
-      limit: 0,
-    }),
-    // Upcoming holidays (next 14 days)
+    // Upcoming holidays — needs business-calendar collection
     payload.find({
       collection: 'business-calendar',
       where: {
         and: [
-          { date: { greater_than_equal: todayStart.toISOString() } },
-          {
-            date: {
-              less_than: new Date(
-                todayStart.getTime() + 14 * 24 * 60 * 60 * 1000,
-              ).toISOString(),
-            },
-          },
-          {
-            or: [
-              { isHoliday: { equals: true } },
-              { shippingAvailable: { equals: false } },
-            ],
-          },
+          { date: { greater_than_equal: startOfDay(now).toISOString() } },
+          { date: { less_than: new Date(startOfDay(now).getTime() + 14 * 24 * 60 * 60 * 1000).toISOString() } },
+          { or: [{ isHoliday: { equals: true } }, { shippingAvailable: { equals: false } }] },
         ],
       },
       sort: 'date',
       limit: 20,
     }),
-    // All orders for status counts
+    // Low stock products — needs products collection
     payload.find({
-      collection: 'orders',
-      limit: 0,
+      collection: 'products',
+      where: {
+        and: [
+          { status: { equals: 'published' } },
+          { stock: { exists: true } },
+          { stock: { less_than_equal: 10 } },
+        ],
+      },
+      sort: 'stock',
+      limit: 10,
+      depth: 0,
     }),
+    payload.findGlobal({ slug: 'site-settings' }),
   ])
 
-  // Calculate summary
-  const revenue = periodOrders.docs.reduce(
-    (sum, order) => sum + ((order.totalAmount as number) || 0),
-    0,
-  )
-
-  // Status counts
-  const statusCounts: Record<string, number> = {
-    pending: 0,
-    confirmed: 0,
-    preparing: 0,
-    shipped: 0,
-    delivered: 0,
-    cancelled: 0,
-  }
-  for (const order of allOrdersForStats.docs) {
-    const s = order.status as string
-    if (s in statusCounts) statusCounts[s]++
-  }
-
-  // Daily trend data
-  const days = eachDayOfInterval({ start: periodStart, end: periodEnd })
-  const dailyTrend = days.map((day) => {
-    const dayStr = format(day, 'yyyy-MM-dd')
-    const dayOrders = periodOrders.docs.filter((o) => {
-      const orderDate = format(new Date(o.createdAt), 'yyyy-MM-dd')
-      return orderDate === dayStr
-    })
-    return {
-      date: dayStr,
-      orders: dayOrders.length,
-      revenue: dayOrders.reduce(
-        (sum, o) => sum + ((o.totalAmount as number) || 0),
-        0,
-      ),
-    }
-  })
-
-  // Format recent orders for client
+  // ============================================================
+  // Format recent orders
+  // ============================================================
   const formattedRecentOrders = recentOrders.docs.map((order) => {
-    const customer = order.customer as {
-      id: string
-      name?: string
-      email: string
-    } | null
+    const customer = order.customer as { id: string; name?: string; email: string } | null
     return {
       id: order.id,
       orderNumber: order.orderNumber as string,
@@ -182,7 +199,9 @@ export async function GET(req: NextRequest) {
     }
   })
 
+  // ============================================================
   // Format holidays
+  // ============================================================
   const holidays = upcomingHolidays.docs.map((entry) => ({
     id: entry.id,
     date: entry.date as string,
@@ -191,18 +210,81 @@ export async function GET(req: NextRequest) {
     holidayReason: (entry.holidayReason as string) || '',
   }))
 
+  // ============================================================
+  // Status counts — convert StatusDistribution to Record<string, number>
+  // ============================================================
+  const statusCounts: Record<string, number> = {
+    pending: statusDist.pending,
+    awaiting_payment: statusDist.awaiting_payment,
+    confirmed: statusDist.confirmed,
+    preparing: statusDist.preparing,
+    shipped: statusDist.shipped,
+    delivered: statusDist.delivered,
+    cancelled: statusDist.cancelled,
+  }
+
+  // ============================================================
+  // GA4 conversion rate
+  // ============================================================
+  const conversionRate = await (async () => {
+    try {
+      const propId = (siteSettings as { ga4PropertyId?: string })?.ga4PropertyId
+      if (!propId) return null
+      return await getConversionRate(
+        propId,
+        format(periodStart, 'yyyy-MM-dd'),
+        format(periodEnd, 'yyyy-MM-dd'),
+        current.orderCount,
+      )
+    } catch { return null }
+  })()
+
+  // ============================================================
+  // Response
+  // ============================================================
   return NextResponse.json({
     summary: {
-      orderCount: periodOrders.totalDocs,
-      revenue,
-      pendingCount: pendingOrders.totalDocs,
-      newUserCount: periodUsers.totalDocs,
-      totalOrders: allOrdersForStats.totalDocs,
+      orderCount: current.orderCount,
+      revenue: current.revenue,
+      pendingCount,
+      newUserCount: newMembers,
+      totalOrders: statusDist.pending + statusDist.awaiting_payment + statusDist.confirmed +
+        statusDist.preparing + statusDist.shipped + statusDist.delivered + statusDist.cancelled,
+      todayDeliveryCount: shipping.today,
+      tomorrowDeliveryCount: shipping.tomorrow,
     },
-    dailyTrend,
+    comparison: {
+      prevRevenue: previous.revenue,
+      prevOrderCount: previous.orderCount,
+      revenueChangeRate: calcChangeRate(current.revenue, previous.revenue),
+      orderChangeRate: calcChangeRate(current.orderCount, previous.orderCount),
+      label: prevPeriodLabel(period),
+    },
+    dailyTrend: dailyRevenue,
     recentOrders: formattedRecentOrders,
     statusCounts,
+    deliverySlotCounts: {
+      morning: deliverySlots.morning,
+      afternoon: deliverySlots.afternoon,
+      evening: deliverySlots.evening,
+      night: deliverySlots.night,
+      unspecified: deliverySlots.unspecified,
+    },
     upcomingHolidays: holidays,
+    lowStockProducts: lowStockResult.docs.map((p) => ({
+      id: String(p.id),
+      title: p.title as string,
+      stock: p.stock as number | null,
+      lowStockThreshold: p.lowStockThreshold as number | null | undefined,
+    })),
+    topProducts,
+    quickStats: {
+      conversionRate,
+      avgOrderValue: customerMetrics.avgOrderValue,
+      repeatRate: customerMetrics.repeatRate,
+      avgLTV: customerMetrics.avgLTV,
+      newMembersCount: newMembers,
+    },
     period: {
       type: period,
       start: periodStart.toISOString(),

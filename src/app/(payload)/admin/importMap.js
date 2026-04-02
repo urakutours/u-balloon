@@ -23,8 +23,9 @@ import { BoldFeatureClient as BoldFeatureClient_e70f5e05f09f93e00b997edb1ef0c864
 import { ItalicFeatureClient as ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { default as default_1b9afc9bd09a552d73a21821fb08c0da } from '@/components/admin/FormSubmissionDataCell'
 import { default as default_50332e17a35cc67bb397274c257d7ca9 } from '@/components/admin/BusinessCalendarView'
-import { default as default_0e7b23c75ea046975e1784ba01f82886 } from '@/components/admin/Dashboard'
+import { default as default_9870fd18da5f585b086dac7c5b924c68 } from '@/components/admin/CustomNav'
 import { S3ClientUploadHandler as S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24 } from '@payloadcms/storage-s3/client'
+import { default as default_0e7b23c75ea046975e1784ba01f82886 } from '@/components/admin/Dashboard'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 
 export const importMap = {
@@ -53,7 +54,8 @@ export const importMap = {
   "@payloadcms/richtext-lexical/client#ItalicFeatureClient": ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@/components/admin/FormSubmissionDataCell#default": default_1b9afc9bd09a552d73a21821fb08c0da,
   "@/components/admin/BusinessCalendarView#default": default_50332e17a35cc67bb397274c257d7ca9,
-  "@/components/admin/Dashboard#default": default_0e7b23c75ea046975e1784ba01f82886,
+  "@/components/admin/CustomNav#default": default_9870fd18da5f585b086dac7c5b924c68,
   "@payloadcms/storage-s3/client#S3ClientUploadHandler": S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24,
+  "@/components/admin/Dashboard#default": default_0e7b23c75ea046975e1784ba01f82886,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1
 }

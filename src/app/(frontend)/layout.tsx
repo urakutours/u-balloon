@@ -1,6 +1,8 @@
 import React from 'react'
 import { Noto_Sans_JP } from 'next/font/google'
 import './globals.css'
+import { getPayload } from 'payload'
+import config from '@payload-config'
 import { AuthProvider } from '@/lib/auth-context'
 import { Header } from '@/components/Header'
 import { Footer } from '@/components/Footer'
@@ -27,10 +29,20 @@ export const metadata: Metadata = {
 export default async function RootLayout(props: { children: React.ReactNode }) {
   const { children } = props
 
+  // Fetch GA4 measurement ID from SiteSettings (safe: returns null if not configured)
+  let ga4Id: string | null = null
+  try {
+    const payload = await getPayload({ config })
+    const settings = await payload.findGlobal({ slug: 'site-settings' })
+    ga4Id = (settings?.ga4MeasurementId as string) || null
+  } catch {
+    // SiteSettings not yet initialized — fall back to env var
+  }
+
   return (
     <html lang="ja" className={notoSansJP.variable}>
       <body className="flex min-h-screen flex-col">
-        <GoogleAnalytics />
+        <GoogleAnalytics ga4Id={ga4Id} />
         <AuthProvider>
           <Header />
           <main className="flex-1">{children}</main>

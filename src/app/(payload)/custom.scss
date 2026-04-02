@@ -1,7 +1,47 @@
 /* =============================================
-   U BALLOON Admin — Brand Theme System
-   Brand Colors: Teal #04929c / Coral #fff1ed / Pink #e369a7
+   U BALLOON Admin — Dashboard V2 Theme System
+   Accent: Indigo #6366f1 (light) / #818cf8 (dark)
    ============================================= */
+
+/* ---- Payload Admin Layout Overrides ---- */
+
+/* Layout fix: force 220px sidebar grid + override Payload nav state logic */
+[data-theme] .template-default,
+[data-theme] .template-default.template-default--nav-hydrated,
+[data-theme] .template-default.template-default--nav-open,
+[data-theme] .template-default.template-default--nav-animate {
+  grid-template-columns: 220px 1fr !important;
+  transition: none !important;
+}
+/* Override Payload's --nav-width variable */
+:root {
+  --nav-width: 220px !important;
+}
+[data-theme="light"] .template-default {
+  background: #f8fafc !important;
+}
+[data-theme="dark"] .template-default {
+  background: #0f172a !important;
+}
+
+/* Main content area padding + background */
+[data-theme="light"] .template-default__wrap {
+  padding: 28px 32px !important;
+  max-height: 100vh;
+  overflow: auto;
+  background: #f8fafc !important;
+}
+[data-theme="dark"] .template-default__wrap {
+  padding: 28px 32px !important;
+  max-height: 100vh;
+  overflow: auto;
+  background: #0f172a !important;
+}
+
+/* Hide Payload's default app bar (top bar) — custom dashboard has its own header */
+[data-theme] .template-default .app-header {
+  display: none !important;
+}
 
 /* ---- Brand CSS Variables ---- */
 :root,

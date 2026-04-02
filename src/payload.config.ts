@@ -26,6 +26,7 @@ import { Newsletters } from './collections/Newsletters'
 import { SubscriptionPlans } from './collections/SubscriptionPlans'
 import { Subscriptions } from './collections/Subscriptions'
 import { ABTests } from './collections/ABTests'
+import { SiteSettings } from './globals/SiteSettings'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -58,7 +59,12 @@ export default buildConfig({
       titleSuffix: ' | U BALLOON 管理画面',
     },
     components: {
-      beforeDashboard: ['@/components/admin/Dashboard'],
+      Nav: '@/components/admin/CustomNav',
+      views: {
+        dashboard: {
+          Component: '@/components/admin/Dashboard',
+        },
+      },
     },
   },
   i18n: {
@@ -66,6 +72,7 @@ export default buildConfig({
     fallbackLanguage: 'ja',
   },
   collections: [Products, Orders, OrderAuditLogs, SubscriptionPlans, Subscriptions, Users, PointTransactions, Pages, Posts, Forms, FormSubmissions, Promotions, SecretSales, ABTests, NewsletterSubscribers, Newsletters, Media, BusinessCalendar, EmailTemplates],
+  globals: [SiteSettings],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || 'default-secret-change-me-in-production-32chars',
   typescript: {
