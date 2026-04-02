@@ -48,7 +48,7 @@ export async function getRevenueSummary(
       COALESCE(SUM(total_amount), 0)::numeric  AS revenue,
       COUNT(*)::int                             AS order_count
     FROM orders
-    WHERE status != 'cancelled'
+    WHERE status::text != 'cancelled'
       AND created_at >= ${startDate.toISOString()}::timestamptz
       AND created_at <= ${endDate.toISOString()}::timestamptz
   `)
@@ -116,7 +116,7 @@ export async function getCustomerMetrics(
         COUNT(*)::int          AS order_count,
         SUM(total_amount)::numeric AS total_spent
       FROM orders
-      WHERE status != 'cancelled'
+      WHERE status::text != 'cancelled'
         AND customer_id IS NOT NULL
       GROUP BY customer_id
     )
@@ -125,7 +125,7 @@ export async function getCustomerMetrics(
       COUNT(*) FILTER (WHERE order_count >= 2)::int                   AS repeat_customers,
       COALESCE(AVG(total_spent), 0)::numeric                          AS avg_ltv,
       COALESCE(
-        (SELECT AVG(total_amount) FROM orders WHERE status != 'cancelled'),
+        (SELECT AVG(total_amount) FROM orders WHERE status::text != 'cancelled'),
         0
       )::numeric                                                       AS avg_order_value
     FROM customer_stats
@@ -181,7 +181,7 @@ export async function getDailyRevenue(
     FROM date_series ds
     LEFT JOIN orders o
       ON DATE(o.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Tokyo') = ds.day
-      AND o.status != 'cancelled'
+      AND o.status::text != 'cancelled'
     GROUP BY ds.day
     ORDER BY ds.day
   `)
@@ -215,7 +215,7 @@ export async function getTopProducts(
     FROM orders_items oi
     JOIN orders o  ON o.id = oi._parent_id
     JOIN products p ON p.id = oi.product_id
-    WHERE o.status != 'cancelled'
+    WHERE o.status::text != 'cancelled'
     GROUP BY p.id, p.title
     ORDER BY revenue DESC
     LIMIT ${limit}
@@ -254,7 +254,7 @@ export async function getPendingCount(payload: Payload): Promise<number> {
   const result = await db(payload).execute(sql`
     SELECT COUNT(*)::int AS count
     FROM orders
-    WHERE status IN ('pending', 'awaiting_payment')
+    WHERE status::text IN ('pending', 'awaiting_payment')
   `)
   return Number((result.rows[0] as { count: number } | undefined)?.count ?? 0)
 }
@@ -280,7 +280,7 @@ export async function getShippingCounts(payload: Payload): Promise<ShippingCount
               = (CURRENT_DATE AT TIME ZONE 'Asia/Tokyo') + INTERVAL '1 day'
       )::int AS tomorrow
     FROM orders
-    WHERE status NOT IN ('cancelled', 'delivered')
+    WHERE status::text NOT IN ('cancelled', 'delivered')
       AND desired_arrival_date IS NOT NULL
   `)
   const row = result.rows[0] as { today: number | null; tomorrow: number | null } | undefined
@@ -305,10 +305,10 @@ export interface DeliverySlotCounts {
 export async function getDeliverySlotCounts(payload: Payload): Promise<DeliverySlotCounts> {
   const result = await db(payload).execute(sql`
     SELECT
-      COALESCE(desired_time_slot, 'unspecified') AS slot,
+      COALESCE(desired_time_slot::text, 'unspecified') AS slot,
       COUNT(*)::int AS count
     FROM orders
-    WHERE status NOT IN ('cancelled', 'delivered')
+    WHERE status::text NOT IN ('cancelled', 'delivered')
       AND DATE(desired_arrival_date AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Tokyo')
           = CURRENT_DATE AT TIME ZONE 'Asia/Tokyo'
     GROUP BY desired_time_slot
