@@ -4,6 +4,7 @@ import config from '@payload-config'
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, subWeeks, eachDayOfInterval } from 'date-fns'
 import DashboardClient from './DashboardClient'
 import {
+  ensureGA4Client,
   getConversionRate,
   getGA4Metrics,
   getGA4DailyMetrics,
@@ -139,7 +140,8 @@ export default async function Dashboard() {
     cancelled: statusDist.cancelled,
   }
 
-  // GA4 — resolve propId then call all functions in parallel
+  // GA4 — init client from DB, then parallel queries
+  await ensureGA4Client(payload)
   const propId = (siteSettings as { ga4PropertyId?: string })?.ga4PropertyId ?? null
   const ga4Start = format(weekStart, 'yyyy-MM-dd')
   const ga4End = format(todayEnd, 'yyyy-MM-dd')

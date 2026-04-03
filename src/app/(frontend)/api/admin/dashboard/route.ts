@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import {
+  ensureGA4Client,
   getConversionRate,
   getGA4Metrics,
   getGA4DailyMetrics,
@@ -229,8 +230,9 @@ export async function GET(req: NextRequest) {
   }
 
   // ============================================================
-  // GA4 — all calls in one parallel batch (propId resolved first)
+  // GA4 — init client from DB, then parallel queries
   // ============================================================
+  await ensureGA4Client(payload)
   const propId = (siteSettings as { ga4PropertyId?: string })?.ga4PropertyId ?? null
   const ga4Start = format(periodStart, 'yyyy-MM-dd')
   const ga4End = format(periodEnd, 'yyyy-MM-dd')

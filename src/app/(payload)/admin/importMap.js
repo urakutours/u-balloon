@@ -30,6 +30,7 @@ import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } f
 import { default as default_db688bcb0cf5a6bb12d05e9453ebda65 } from '@/components/admin/fields/GA4MeasurementIdHelp'
 import { default as default_7083d8fa0d0e4281ff7562b4b04e148e } from '@/components/admin/fields/GA4PropertyIdHelp'
 import { default as default_1423373cb5c257baa9402bd58349b71b } from '@/components/admin/fields/GA4ServiceAccountHelp'
+import { default as default_dc6744229da1d9236bd65d2326b49a7a } from '@/components/admin/fields/EncryptedTextField'
 
 export const importMap = {
   "@payloadcms/richtext-lexical/rsc#RscEntryLexicalCell": RscEntryLexicalCell_44fe37237e0ebf4470c9990d8cb7b07e,
@@ -63,5 +64,6 @@ export const importMap = {
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1,
   "@/components/admin/fields/GA4MeasurementIdHelp#default": default_db688bcb0cf5a6bb12d05e9453ebda65,
   "@/components/admin/fields/GA4PropertyIdHelp#default": default_7083d8fa0d0e4281ff7562b4b04e148e,
-  "@/components/admin/fields/GA4ServiceAccountHelp#default": default_1423373cb5c257baa9402bd58349b71b
+  "@/components/admin/fields/GA4ServiceAccountHelp#default": default_1423373cb5c257baa9402bd58349b71b,
+  "@/components/admin/fields/EncryptedTextField#default": default_dc6744229da1d9236bd65d2326b49a7a
 }

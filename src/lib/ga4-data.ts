@@ -1,47 +1,84 @@
 /**
  * GA4 Data API — Server-side only
  *
- * Fetches session count from Google Analytics 4 via the Data API.
- * Used by the dashboard endpoint to calculate conversion rate.
+ * Fetches analytics data from Google Analytics 4 via the Data API.
+ * The service account JSON key is stored encrypted in SiteSettings (DB).
  *
- * Prerequisites (manual setup):
+ * Prerequisites:
  *   1. Enable "Google Analytics Data API" in Google Cloud Console
  *   2. Create a service account and download the JSON key
  *   3. Grant "Viewer" access to the service account in GA4 admin
- *   4. Set env var: GA4_SERVICE_ACCOUNT_KEY=<JSON key contents>
- *   5. Set ga4PropertyId in Payload SiteSettings
+ *   4. Paste the JSON key into SiteSettings → GA4 → サービスアカウント秘密鍵
+ *   5. Set ga4PropertyId in SiteSettings
+ *   6. Set ENCRYPTION_KEY env var (for key encryption at rest)
  */
 
 import { BetaAnalyticsDataClient } from '@google-analytics/data'
+import type { Payload } from 'payload'
+import { decrypt, isEncrypted } from '@/lib/encryption'
 
 let client: BetaAnalyticsDataClient | null = null
+let clientInitialized = false
 
-function getGA4Client(): BetaAnalyticsDataClient | null {
-  if (client) return client
+/**
+ * Ensure the GA4 client singleton is initialised.
+ *
+ * Reads the encrypted service account key from SiteSettings, decrypts it,
+ * and creates the BetaAnalyticsDataClient. Falls back to the
+ * GA4_SERVICE_ACCOUNT_KEY env var for backwards compatibility.
+ *
+ * Must be called once per request before using any GA4 query function.
+ */
+export async function ensureGA4Client(payload: Payload): Promise<void> {
+  if (clientInitialized) return
+  clientInitialized = true
 
-  const keyJson = process.env.GA4_SERVICE_ACCOUNT_KEY
-  if (!keyJson) return null
-
+  // 1. Try DB (SiteSettings)
   try {
-    const credentials = JSON.parse(keyJson)
-    client = new BetaAnalyticsDataClient({ credentials })
-    return client
+    const settings = await payload.findGlobal({
+      slug: 'site-settings',
+      context: { rawSecrets: true }, // bypass afterRead mask
+    })
+    const rawKey = (settings as Record<string, unknown>)?.ga4ServiceAccountKey as
+      | string
+      | undefined
+    if (rawKey && rawKey.length > 0) {
+      const keyJson = isEncrypted(rawKey) ? decrypt(rawKey) : rawKey
+      const credentials = JSON.parse(keyJson)
+      client = new BetaAnalyticsDataClient({ credentials })
+      return
+    }
   } catch (err) {
-    console.error('[GA4] Service account credentials parse error:', err)
-    return null
+    console.error('[GA4] DB key read/decrypt error:', err)
+  }
+
+  // 2. Fallback to env var
+  const envKey = process.env.GA4_SERVICE_ACCOUNT_KEY
+  if (envKey) {
+    try {
+      const credentials = JSON.parse(envKey)
+      client = new BetaAnalyticsDataClient({ credentials })
+    } catch (err) {
+      console.error('[GA4] Env var parse error:', err)
+    }
   }
 }
 
-/**
- * Fetch total sessions for a date range from GA4.
- * Returns null if GA4 is not configured or an error occurs.
- */
+/** Internal getter — returns cached client or null. */
+function getClient(): BetaAnalyticsDataClient | null {
+  return client
+}
+
+// ============================================================
+// Session count
+// ============================================================
+
 export async function getGA4Sessions(
   propertyId: string,
-  startDate: string, // 'YYYY-MM-DD'
-  endDate: string,   // 'YYYY-MM-DD'
+  startDate: string,
+  endDate: string,
 ): Promise<number | null> {
-  const ga4 = getGA4Client()
+  const ga4 = getClient()
   if (!ga4 || !propertyId) return null
 
   try {
@@ -59,10 +96,10 @@ export async function getGA4Sessions(
   }
 }
 
-/**
- * Calculate conversion rate using GA4 sessions and order count.
- * Returns null if GA4 data is unavailable.
- */
+// ============================================================
+// Conversion rate
+// ============================================================
+
 export async function getConversionRate(
   propertyId: string | undefined | null,
   startDate: string,
@@ -78,15 +115,15 @@ export async function getConversionRate(
 }
 
 // ============================================================
-// Aggregate metrics for a date range
+// Aggregate metrics
 // ============================================================
 
 export interface GA4Metrics {
   sessions: number
   totalUsers: number
   pageviews: number
-  bounceRate: number          // % (0–100)
-  avgSessionDuration: number  // seconds
+  bounceRate: number
+  avgSessionDuration: number
   pagesPerSession: number
   addToCarts: number
   ecommercePurchases: number
@@ -97,7 +134,7 @@ export async function getGA4Metrics(
   startDate: string,
   endDate: string,
 ): Promise<GA4Metrics | null> {
-  const ga4 = getGA4Client()
+  const ga4 = getClient()
   if (!ga4 || !propertyId) return null
 
   try {
@@ -116,9 +153,6 @@ export async function getGA4Metrics(
       ],
     })
 
-    // GA4 returns empty rows[] when there is no data for the period
-    // (e.g. today with 0 traffic). Return zeros rather than null so the
-    // dashboard shows real metrics instead of the "未設定" placeholder.
     const row = response.rows?.[0]?.metricValues ?? []
 
     return {
@@ -138,11 +172,11 @@ export async function getGA4Metrics(
 }
 
 // ============================================================
-// Daily session counts for a date range (sparkline data)
+// Daily session counts (sparkline data)
 // ============================================================
 
 export interface GA4DailyMetric {
-  date: string   // 'yyyy-MM-dd'
+  date: string
   sessions: number
 }
 
@@ -151,7 +185,7 @@ export async function getGA4DailyMetrics(
   startDate: string,
   endDate: string,
 ): Promise<GA4DailyMetric[] | null> {
-  const ga4 = getGA4Client()
+  const ga4 = getClient()
   if (!ga4 || !propertyId) return null
 
   try {
@@ -165,12 +199,12 @@ export async function getGA4DailyMetrics(
 
     if (!response.rows) return []
 
-    return response.rows.map(row => {
-      // GA4 returns dates as 'YYYYMMDD'
+    return response.rows.map((row) => {
       const raw = row.dimensionValues?.[0]?.value ?? ''
-      const date = raw.length === 8
-        ? `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`
-        : raw
+      const date =
+        raw.length === 8
+          ? `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`
+          : raw
       return {
         date,
         sessions: parseInt(row.metricValues?.[0]?.value ?? '0', 10),
@@ -183,7 +217,7 @@ export async function getGA4DailyMetrics(
 }
 
 // ============================================================
-// Returning visitor rate (newVsReturning dimension)
+// Returning visitor rate
 // ============================================================
 
 export async function getReturningVisitorRate(
@@ -191,7 +225,7 @@ export async function getReturningVisitorRate(
   startDate: string,
   endDate: string,
 ): Promise<number | null> {
-  const ga4 = getGA4Client()
+  const ga4 = getClient()
   if (!ga4 || !propertyId) return null
 
   try {
@@ -223,7 +257,7 @@ export async function getReturningVisitorRate(
 }
 
 // ============================================================
-// Helper: format seconds into Japanese human-readable string
+// Helper: format seconds → Japanese human-readable
 // ============================================================
 
 export function formatDuration(seconds: number): string {
