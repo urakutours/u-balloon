@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@payload-config'
-import { getConversionRate } from '@/lib/ga4-data'
+import {
+  getConversionRate,
+  getGA4Metrics,
+  getGA4DailyMetrics,
+  getReturningVisitorRate,
+} from '@/lib/ga4-data'
 import {
   getRevenueSummary,
   getStatusDistribution,
@@ -224,20 +229,18 @@ export async function GET(req: NextRequest) {
   }
 
   // ============================================================
-  // GA4 conversion rate
+  // GA4 — all calls in one parallel batch (propId resolved first)
   // ============================================================
-  const conversionRate = await (async () => {
-    try {
-      const propId = (siteSettings as { ga4PropertyId?: string })?.ga4PropertyId
-      if (!propId) return null
-      return await getConversionRate(
-        propId,
-        format(periodStart, 'yyyy-MM-dd'),
-        format(periodEnd, 'yyyy-MM-dd'),
-        current.orderCount,
-      )
-    } catch { return null }
-  })()
+  const propId = (siteSettings as { ga4PropertyId?: string })?.ga4PropertyId ?? null
+  const ga4Start = format(periodStart, 'yyyy-MM-dd')
+  const ga4End = format(periodEnd, 'yyyy-MM-dd')
+
+  const [conversionRate, ga4Metrics, ga4Daily, returningVisitorRate] = await Promise.all([
+    propId ? getConversionRate(propId, ga4Start, ga4End, current.orderCount).catch(() => null) : Promise.resolve(null),
+    propId ? getGA4Metrics(propId, ga4Start, ga4End).catch(() => null) : Promise.resolve(null),
+    propId ? getGA4DailyMetrics(propId, ga4Start, ga4End).catch(() => null) : Promise.resolve(null),
+    propId ? getReturningVisitorRate(propId, ga4Start, ga4End).catch(() => null) : Promise.resolve(null),
+  ])
 
   // ============================================================
   // Response
@@ -284,6 +287,27 @@ export async function GET(req: NextRequest) {
       repeatRate: customerMetrics.repeatRate,
       avgLTV: customerMetrics.avgLTV,
       newMembersCount: newMembers,
+    },
+    siteTraffic: ga4Metrics ? {
+      sessions: ga4Metrics.sessions,
+      totalUsers: ga4Metrics.totalUsers,
+      pageviews: ga4Metrics.pageviews,
+      bounceRate: ga4Metrics.bounceRate,
+      avgSessionDuration: ga4Metrics.avgSessionDuration,
+      pagesPerSession: ga4Metrics.pagesPerSession,
+      dailyChart: ga4Daily ?? null,
+    } : null,
+    conversionFunnel: {
+      sessions: ga4Metrics?.sessions ?? null,
+      addToCarts: ga4Metrics?.addToCarts ?? null,
+      purchases: current.orderCount,
+    },
+    customerInsights: {
+      repeatRate: customerMetrics.repeatRate,
+      avgLTV: customerMetrics.avgLTV,
+      avgOrderValue: customerMetrics.avgOrderValue,
+      newMembersCount: newMembers,
+      returningVisitorRate: returningVisitorRate ?? null,
     },
     period: {
       type: period,

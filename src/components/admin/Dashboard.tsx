@@ -1,9 +1,14 @@
 import React from 'react'
 import { getPayload } from 'payload'
 import config from '@payload-config'
-import { format, startOfDay, endOfDay, addDays, startOfWeek, endOfWeek, subWeeks, eachDayOfInterval } from 'date-fns'
+import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, subWeeks, eachDayOfInterval } from 'date-fns'
 import DashboardClient from './DashboardClient'
-import { getConversionRate } from '@/lib/ga4-data'
+import {
+  getConversionRate,
+  getGA4Metrics,
+  getGA4DailyMetrics,
+  getReturningVisitorRate,
+} from '@/lib/ga4-data'
 import {
   getRevenueSummary,
   getStatusDistribution,
@@ -134,6 +139,18 @@ export default async function Dashboard() {
     cancelled: statusDist.cancelled,
   }
 
+  // GA4 — resolve propId then call all functions in parallel
+  const propId = (siteSettings as { ga4PropertyId?: string })?.ga4PropertyId ?? null
+  const ga4Start = format(weekStart, 'yyyy-MM-dd')
+  const ga4End = format(todayEnd, 'yyyy-MM-dd')
+
+  const [conversionRate, ga4Metrics, ga4Daily, returningVisitorRate] = await Promise.all([
+    propId ? getConversionRate(propId, ga4Start, ga4End, weekRevenue.orderCount).catch(() => null) : Promise.resolve(null),
+    propId ? getGA4Metrics(propId, ga4Start, ga4End).catch(() => null) : Promise.resolve(null),
+    propId ? getGA4DailyMetrics(propId, ga4Start, ga4End).catch(() => null) : Promise.resolve(null),
+    propId ? getReturningVisitorRate(propId, ga4Start, ga4End).catch(() => null) : Promise.resolve(null),
+  ])
+
   const initialData = {
     summary: {
       orderCount: weekRevenue.orderCount,
@@ -170,22 +187,32 @@ export default async function Dashboard() {
     })),
     topProducts,
     quickStats: {
-      conversionRate: await (async (): Promise<number | null> => {
-        try {
-          const propId = (siteSettings as { ga4PropertyId?: string })?.ga4PropertyId
-          if (!propId) return null
-          return await getConversionRate(
-            propId,
-            format(weekStart, 'yyyy-MM-dd'),
-            format(todayEnd, 'yyyy-MM-dd'),
-            weekRevenue.orderCount,
-          )
-        } catch { return null }
-      })(),
+      conversionRate,
       avgOrderValue: customerMetrics.avgOrderValue,
       repeatRate: customerMetrics.repeatRate,
       avgLTV: customerMetrics.avgLTV,
       newMembersCount: todayNewMembers,
+    },
+    siteTraffic: ga4Metrics ? {
+      sessions: ga4Metrics.sessions,
+      totalUsers: ga4Metrics.totalUsers,
+      pageviews: ga4Metrics.pageviews,
+      bounceRate: ga4Metrics.bounceRate,
+      avgSessionDuration: ga4Metrics.avgSessionDuration,
+      pagesPerSession: ga4Metrics.pagesPerSession,
+      dailyChart: ga4Daily ?? null,
+    } : null,
+    conversionFunnel: {
+      sessions: ga4Metrics?.sessions ?? null,
+      addToCarts: ga4Metrics?.addToCarts ?? null,
+      purchases: weekRevenue.orderCount,
+    },
+    customerInsights: {
+      repeatRate: customerMetrics.repeatRate,
+      avgLTV: customerMetrics.avgLTV,
+      avgOrderValue: customerMetrics.avgOrderValue,
+      newMembersCount: todayNewMembers,
+      returningVisitorRate: returningVisitorRate ?? null,
     },
     period: {
       type: 'week',

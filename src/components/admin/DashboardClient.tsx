@@ -176,6 +176,27 @@ export interface DashboardData {
     avgLTV: number
     newMembersCount: number
   }
+  siteTraffic?: {
+    sessions: number | null
+    totalUsers: number | null
+    pageviews: number | null
+    bounceRate: number | null
+    avgSessionDuration: number | null
+    pagesPerSession: number | null
+    dailyChart: Array<{ date: string; sessions: number }> | null
+  } | null
+  conversionFunnel?: {
+    sessions: number | null
+    addToCarts: number | null
+    purchases: number
+  } | null
+  customerInsights?: {
+    repeatRate: number
+    avgLTV: number
+    avgOrderValue: number
+    newMembersCount: number
+    returningVisitorRate: number | null
+  } | null
   period: { type: string; start: string; end: string }
 }
 
@@ -221,6 +242,26 @@ function CardHeader({ title, sub, right, t }: { title: string; sub?: string; rig
         {sub && <p style={{ fontSize: 11, color: t.textMuted, margin: '2px 0 0' }}>{sub}</p>}
       </div>
       {right}
+    </div>
+  )
+}
+
+/** Key metric mini-card (2×2 grid in 重要指標 section) */
+function KeyMetricCard({ label, value, accent, t }: {
+  label: string; value: string; accent?: boolean; t: T
+}) {
+  return (
+    <div style={{
+      background: accent ? t.accentBg : t.surface,
+      borderRadius: 12, padding: '14px 16px',
+      border: `1px solid ${t.border}`,
+    }}>
+      <div style={{ fontSize: 10.5, fontWeight: 500, color: t.textMuted, marginBottom: 8, letterSpacing: 0.3 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: -0.5, color: accent ? t.accent : t.text }}>
+        {value}
+      </div>
     </div>
   )
 }
@@ -271,6 +312,7 @@ interface BarItem {
   labelBottom: string // e.g. "月" (DOW) or "" for aggregated
   showLabel: boolean
   value: number
+  isToday?: boolean   // highlight today's bar regardless of max value
 }
 
 function Bars({ data, t }: { data: BarItem[]; t: T }) {
@@ -282,13 +324,16 @@ function Bars({ data, t }: { data: BarItem[]; t: T }) {
   const fontSize2 = compact ? 8 : 10
   const labelH = 26 // fixed height reserved for 2-line label area
 
+  // Today's bar takes priority for highlight; fall back to max-value bar
+  const anyToday = data.some(d => d.isToday)
+
   return (
     <div style={{ width: '100%', overflow: 'hidden', minWidth: 0 }}>
       {/* Bar area */}
       <div style={{ display: 'flex', alignItems: 'flex-end', gap, height: 110, width: '100%' }}>
         {data.map((d, i) => {
           const h = (d.value / max) * 100
-          const best = d.value === max && d.value > 0
+          const highlighted = anyToday ? !!d.isToday : (d.value === max && d.value > 0)
           return (
             <div key={i} style={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               {!compact && (
@@ -299,7 +344,7 @@ function Bars({ data, t }: { data: BarItem[]; t: T }) {
               <div style={{
                 width: '100%', height: `${Math.max(h, 3)}%`, minHeight: 3,
                 borderRadius: compact ? '3px 3px 1px 1px' : '6px 6px 3px 3px',
-                background: best ? t.barActive : t.barDefault,
+                background: highlighted ? t.barActive : t.barDefault,
                 transition: 'height 0.6s cubic-bezier(0.34,1.56,0.64,1)',
               }} />
             </div>
@@ -309,12 +354,12 @@ function Bars({ data, t }: { data: BarItem[]; t: T }) {
       {/* Label area — same flex layout so labels align to bars */}
       <div style={{ display: 'flex', gap, height: labelH, marginTop: 6, width: '100%' }}>
         {data.map((d, i) => {
-          const best = d.value === max && d.value > 0
+          const highlighted = anyToday ? !!d.isToday : (d.value === max && d.value > 0)
           return (
             <div key={i} style={{ flex: '1 1 0', minWidth: 0, textAlign: 'center', overflow: 'hidden' }}>
               {d.showLabel && (
                 <>
-                  <div style={{ fontSize: fontSize1, fontWeight: best ? 700 : 500, color: best ? t.accent : t.textMuted, whiteSpace: 'nowrap', lineHeight: 1.3 }}>
+                  <div style={{ fontSize: fontSize1, fontWeight: highlighted ? 700 : 500, color: highlighted ? t.accent : t.textMuted, whiteSpace: 'nowrap', lineHeight: 1.3 }}>
                     {d.labelTop}
                   </div>
                   {d.labelBottom && (
@@ -376,6 +421,44 @@ function Donut({ data, t }: { data: Record<string, number>; t: T }) {
       </div>
     </div>
   )
+}
+
+/** Mini SVG area sparkline */
+function MiniAreaChart({ data, color }: { data: number[]; color: string }) {
+  if (!data || data.length < 2) return null
+  const max = Math.max(...data, 1)
+  const W = 100, H = 36
+  const pts = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * W
+    const y = H - (v / max) * H
+    return `${x.toFixed(1)},${y.toFixed(1)}`
+  })
+  const linePath = `M ${pts.join(' L ')}`
+  const areaPath = `${linePath} L ${W},${H} L 0,${H} Z`
+  const gradId = `mg-${color.replace('#', '')}`
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 36, display: 'block' }} preserveAspectRatio="none">
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity={0.25} />
+          <stop offset="100%" stopColor={color} stopOpacity={0.02} />
+        </linearGradient>
+      </defs>
+      <path d={areaPath} fill={`url(#${gradId})`} />
+      <path d={linePath} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+/** Format seconds into Japanese human-readable string */
+function formatDuration(sec: number): string {
+  if (sec < 60) return `${sec}秒`
+  const m = Math.floor(sec / 60)
+  const s = sec % 60
+  if (m < 60) return s > 0 ? `${m}分${s}秒` : `${m}分`
+  const h = Math.floor(m / 60)
+  const rem = m % 60
+  return rem > 0 ? `${h}時間${rem}分` : `${h}時間`
 }
 
 // ============================================================
@@ -462,14 +545,14 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
       // Show M/ prefix only when month changes from previous entry
       const prevMonth = idx > 0 ? new Date(arr[idx - 1].date).getMonth() + 1 : m
       const showMonth = idx === 0 || m !== prevMonth
-      return { labelTop: showMonth ? `${m}/${day}` : `${day}`, labelBottom: dow, showLabel: true, value: d.revenue }
+      return { labelTop: showMonth ? `${m}/${day}` : `${day}`, labelBottom: dow, showLabel: true, value: d.revenue, isToday: d.date === todayStr }
     }
 
     // === "today" ===
     if (period === 'today') {
       return data.dailyTrend.map(d => {
         const dt = new Date(d.date)
-        return { labelTop: `${dt.getMonth() + 1}/${dt.getDate()}`, labelBottom: DAY_NAMES[dt.getDay()], showLabel: true, value: d.revenue }
+        return { labelTop: `${dt.getMonth() + 1}/${dt.getDate()}`, labelBottom: DAY_NAMES[dt.getDay()], showLabel: true, value: d.revenue, isToday: d.date === todayStr }
       })
     }
 
@@ -478,15 +561,22 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
       return data.dailyTrend.map((d, i, arr) => buildDayItem(d, i, arr))
     }
 
-    // === month / custom ≤62 days: thin labels to 1,5,10,15,20,25,last ===
+    // === month / custom ≤62 days: thin labels; add M/ prefix on month boundary ===
     if (period === 'month' || (period === 'custom' && numDays <= 62 && numDays > 14)) {
       const SHOW_DAYS = new Set([1, 5, 10, 15, 20, 25])
       const lastIdx = data.dailyTrend.length - 1
+      let prevShownMonth = -1
       return data.dailyTrend.map((d, i) => {
         const dt = new Date(d.date)
         const day = dt.getDate()
+        const m = dt.getMonth() + 1
         const show = SHOW_DAYS.has(day) || i === lastIdx
-        return { labelTop: `${day}`, labelBottom: DAY_NAMES[dt.getDay()], showLabel: show, value: d.revenue }
+        let labelTop = `${day}`
+        if (show && m !== prevShownMonth) {
+          labelTop = `${m}/${day}`
+          prevShownMonth = m
+        }
+        return { labelTop, labelBottom: DAY_NAMES[dt.getDay()], showLabel: show, value: d.revenue, isToday: d.date === todayStr }
       })
     }
 
@@ -518,7 +608,7 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
         const m = dt.getMonth() + 1
         const showLabel = m !== prevM
         prevM = m
-        return { labelTop: showLabel ? `${m}月` : '', labelBottom: '', showLabel, value: w.revenue }
+        return { labelTop: showLabel ? `${m}月` : '', labelBottom: '', showLabel, value: w.revenue, isToday: false }
       })
     }
 
@@ -542,11 +632,11 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
         const showYear = m.year !== prevYear
         prevYear = m.year
         const label = showYear ? `${m.year}/${m.month}月` : `${m.month}月`
-        return { labelTop: label, labelBottom: '', showLabel: true, value: m.revenue }
+        return { labelTop: label, labelBottom: '', showLabel: true, value: m.revenue, isToday: false }
       })
     }
 
-    // Fallback: show all with labels
+    // Fallback: show all with labels (same as week)
     return data.dailyTrend.map((d, i, arr) => buildDayItem(d, i, arr))
   }
 
@@ -569,6 +659,11 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
     conversionRate: null, avgOrderValue: 0, repeatRate: 0, avgLTV: 0,
     newMembersCount: data.summary.newUserCount ?? 0,
   }
+
+  // Analytics section data (with fallback to initial)
+  const siteTrafficData = data.siteTraffic ?? initialData.siteTraffic ?? null
+  const funnelData = data.conversionFunnel ?? initialData.conversionFunnel ?? null
+  const insightsData = data.customerInsights ?? initialData.customerInsights ?? null
 
   // #3: safe delivery counts (API may not return these for some periods)
   const todayDeliveryCount = data.summary.todayDeliveryCount ?? initialData.summary.todayDeliveryCount ?? 0
@@ -817,6 +912,35 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
         {/* Right column */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
+          {/* Key Metrics 2×2 grid */}
+          <Card t={t} style={{ padding: 20 }}>
+            <h3 style={{ fontSize: 13, fontWeight: 700, margin: '0 0 3px', color: t.text }}>重要指標</h3>
+            <p style={{ fontSize: 11, color: t.textMuted, margin: '0 0 14px' }}>クイック統計</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <KeyMetricCard
+                label="コンバージョン率"
+                value={qs.conversionRate != null ? `${qs.conversionRate}%` : '--'}
+                accent
+                t={t}
+              />
+              <KeyMetricCard
+                label="平均注文額"
+                value={yen(qs.avgOrderValue)}
+                t={t}
+              />
+              <KeyMetricCard
+                label="リピート率"
+                value={`${qs.repeatRate}%`}
+                t={t}
+              />
+              <KeyMetricCard
+                label="平均LTV"
+                value={yen(qs.avgLTV)}
+                t={t}
+              />
+            </div>
+          </Card>
+
           {/* Popular products — from topProducts API data */}
           <Card t={t} style={{ padding: 24 }}>
             <h3 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 4px', color: t.text }}>人気商品</h3>
@@ -874,26 +998,123 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
               </div>
             </Card>
           )}
-
-          {/* #4/#5: Quick Metrics gradient card */}
-          <div style={{ background: t.kpiGradient, borderRadius: 16, padding: 24, color: 'white' }}>
-            <h3 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 16px', opacity: 0.9 }}>クイック指標</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {[
-                { l: 'コンバージョン率', v: qs.conversionRate != null ? `${qs.conversionRate}%` : '--' },
-                { l: '平均注文額', v: yen(qs.avgOrderValue) },
-                { l: 'リピート率', v: `${qs.repeatRate}%` },
-                { l: '平均LTV', v: yen(qs.avgLTV) },
-                { l: `${periodLabel}の新規会員`, v: `${qs.newMembersCount}人` },
-              ].map((item, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 12.5, opacity: 0.8 }}>{item.l}</span>
-                  <span style={{ fontSize: 15, fontWeight: 800 }}>{item.v}</span>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
+      </div>
+
+      {/* ===== Analytics Row ===== */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginTop: 16 }}>
+
+        {/* サイトトラフィック */}
+        <Card t={t} style={{ padding: 24 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+            <div>
+              <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0, color: t.text }}>サイトトラフィック</h3>
+              <p style={{ fontSize: 11, color: t.textMuted, margin: '2px 0 0' }}>GA4 Analytics</p>
+            </div>
+            <span style={{
+              fontSize: 10, fontWeight: 700, letterSpacing: 0.5,
+              padding: '3px 8px', borderRadius: 6,
+              background: t.accentBg, color: t.accent,
+            }}>GA4</span>
+          </div>
+          {siteTrafficData ? (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 16px', marginBottom: 14 }}>
+                {[
+                  { l: 'セッション', v: (siteTrafficData.sessions ?? 0).toLocaleString() },
+                  { l: 'ユーザー', v: (siteTrafficData.totalUsers ?? 0).toLocaleString() },
+                  { l: 'ページビュー', v: (siteTrafficData.pageviews ?? 0).toLocaleString() },
+                  { l: '直帰率', v: siteTrafficData.bounceRate != null ? `${siteTrafficData.bounceRate}%` : '--' },
+                  { l: '平均滞在', v: siteTrafficData.avgSessionDuration != null ? formatDuration(siteTrafficData.avgSessionDuration) : '--' },
+                  { l: 'PV/セッション', v: siteTrafficData.pagesPerSession != null ? `${siteTrafficData.pagesPerSession}` : '--' },
+                ].map((item, i) => (
+                  <div key={i}>
+                    <div style={{ fontSize: 10.5, color: t.textMuted, marginBottom: 2 }}>{item.l}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: t.text }}>{item.v}</div>
+                  </div>
+                ))}
+              </div>
+              {siteTrafficData.dailyChart && siteTrafficData.dailyChart.length > 1 && (
+                <MiniAreaChart
+                  data={siteTrafficData.dailyChart.map(d => d.sessions)}
+                  color={t.accent}
+                />
+              )}
+            </>
+          ) : (
+            <div style={{ padding: '24px 0', textAlign: 'center', color: t.textMuted, fontSize: 12 }}>
+              <div style={{ fontSize: 22, marginBottom: 8 }}>📊</div>
+              <div>GA4 Data API 未設定</div>
+              <div style={{ fontSize: 11, marginTop: 4 }}>SiteSettings で GA4 Property ID を設定してください</div>
+            </div>
+          )}
+        </Card>
+
+        {/* コンバージョンファネル */}
+        <Card t={t} style={{ padding: 24 }}>
+          <CardHeader title="コンバージョンファネル" sub="訪問から購入まで" t={t} />
+          {(() => {
+            const steps = [
+              { label: 'セッション', value: funnelData?.sessions ?? null },
+              { label: 'カート追加', value: funnelData?.addToCarts ?? null },
+              { label: '購入完了', value: funnelData?.purchases ?? 0 },
+            ]
+            const topVal = steps[0].value ?? 1
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {steps.map((step, i) => {
+                  const val = step.value
+                  const pct = val != null && topVal > 0 ? Math.round((val / topVal) * 100) : null
+                  return (
+                    <div key={i}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
+                        <span style={{ fontSize: 12.5, color: t.textSecondary }}>{step.label}</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: t.text }}>
+                          {val != null ? val.toLocaleString() : '--'}
+                          {pct != null && <span style={{ fontSize: 11, fontWeight: 500, color: t.textMuted, marginLeft: 6 }}>({pct}%)</span>}
+                        </span>
+                      </div>
+                      <div style={{ height: 6, background: t.borderLight, borderRadius: 4, overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%', borderRadius: 4,
+                          width: `${pct ?? 0}%`,
+                          background: i === 0
+                            ? `linear-gradient(90deg, ${t.accent}, ${t.accentLight})`
+                            : `rgba(99,102,241,${0.7 - i * 0.2})`,
+                          transition: 'width .8s',
+                        }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })()}
+        </Card>
+
+        {/* カスタマーインサイト */}
+        <Card t={t} style={{ padding: 24 }}>
+          <CardHeader title="カスタマーインサイト" sub="顧客行動" t={t} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {[
+              { label: 'リピート率', value: insightsData ? `${insightsData.repeatRate}%` : '--', color: t.success },
+              { label: '平均LTV', value: insightsData ? yen(insightsData.avgLTV) : '--', color: undefined },
+              { label: '平均注文額', value: insightsData ? yen(insightsData.avgOrderValue) : '--', color: undefined },
+              { label: `${periodLabel}の新規会員`, value: insightsData ? `${insightsData.newMembersCount}人` : '--', color: t.accent },
+              { label: 'リターン訪問者率', value: insightsData?.returningVisitorRate != null ? `${insightsData.returningVisitorRate}%` : '--', color: undefined },
+            ].map((row, i, arr) => (
+              <div key={i} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '11px 0',
+                borderBottom: i < arr.length - 1 ? `1px solid ${t.borderLight}` : 'none',
+              }}>
+                <span style={{ fontSize: 12.5, color: t.textSecondary }}>{row.label}</span>
+                <span style={{ fontSize: 15, fontWeight: 800, color: row.color ?? t.text }}>{row.value}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+
       </div>
 
       <style>{`@keyframes ub-spin { to { transform: rotate(360deg); } }`}</style>
