@@ -64,7 +64,7 @@ export function HelpToggle({ buttonLabel = '設定方法を見る', content }: H
   const panelBorder = dark ? '#334155' : '#e2e8f0'
 
   return (
-    <div style={{ marginTop: 8, marginBottom: 4 }}>
+    <div style={{ marginTop: 4, marginBottom: 20 }}>
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
