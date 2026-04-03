@@ -27,6 +27,9 @@ import { default as default_9870fd18da5f585b086dac7c5b924c68 } from '@/component
 import { S3ClientUploadHandler as S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24 } from '@payloadcms/storage-s3/client'
 import { default as default_0e7b23c75ea046975e1784ba01f82886 } from '@/components/admin/Dashboard'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
+import { default as default_db688bcb0cf5a6bb12d05e9453ebda65 } from '@/components/admin/fields/GA4MeasurementIdHelp'
+import { default as default_7083d8fa0d0e4281ff7562b4b04e148e } from '@/components/admin/fields/GA4PropertyIdHelp'
+import { default as default_1423373cb5c257baa9402bd58349b71b } from '@/components/admin/fields/GA4ServiceAccountHelp'
 
 export const importMap = {
   "@payloadcms/richtext-lexical/rsc#RscEntryLexicalCell": RscEntryLexicalCell_44fe37237e0ebf4470c9990d8cb7b07e,
@@ -57,5 +60,8 @@ export const importMap = {
   "@/components/admin/CustomNav#default": default_9870fd18da5f585b086dac7c5b924c68,
   "@payloadcms/storage-s3/client#S3ClientUploadHandler": S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24,
   "@/components/admin/Dashboard#default": default_0e7b23c75ea046975e1784ba01f82886,
-  "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1
+  "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1,
+  "@/components/admin/fields/GA4MeasurementIdHelp#default": default_db688bcb0cf5a6bb12d05e9453ebda65,
+  "@/components/admin/fields/GA4PropertyIdHelp#default": default_7083d8fa0d0e4281ff7562b4b04e148e,
+  "@/components/admin/fields/GA4ServiceAccountHelp#default": default_1423373cb5c257baa9402bd58349b71b
 }
