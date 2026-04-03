@@ -37,6 +37,15 @@ export const SiteSettings: GlobalConfig = {
           },
         },
         {
+          name: 'ga4MeasurementIdHelp',
+          type: 'ui',
+          admin: {
+            components: {
+              Field: '@/components/admin/fields/GA4MeasurementIdHelp',
+            },
+          },
+        },
+        {
           name: 'ga4PropertyId',
           label: 'GA4 プロパティID',
           type: 'text',
@@ -44,13 +53,21 @@ export const SiteSettings: GlobalConfig = {
             placeholder: '123456789',
             description:
               'GA4 Data API でデータ取得するためのプロパティID（数字のみ）。Google Analytics の管理画面 > プロパティ設定で確認できます。',
-            condition: (data) => !!data?.ga4MeasurementId,
           },
           validate: (value: string | null | undefined) => {
             if (value && !/^\d+$/.test(value)) {
               return 'プロパティIDは数字のみです'
             }
             return true
+          },
+        },
+        {
+          name: 'ga4PropertyIdHelp',
+          type: 'ui',
+          admin: {
+            components: {
+              Field: '@/components/admin/fields/GA4PropertyIdHelp',
+            },
           },
         },
         {
@@ -61,7 +78,15 @@ export const SiteSettings: GlobalConfig = {
             placeholder: 'xxxxx@project-id.iam.gserviceaccount.com',
             description:
               'GA4 Data API 用のサービスアカウントメールアドレス。秘密鍵は環境変数 GA4_SERVICE_ACCOUNT_KEY で設定してください。',
-            condition: (data) => !!data?.ga4PropertyId,
+          },
+        },
+        {
+          name: 'ga4ServiceAccountEmailHelp',
+          type: 'ui',
+          admin: {
+            components: {
+              Field: '@/components/admin/fields/GA4ServiceAccountHelp',
+            },
           },
         },
       ],
