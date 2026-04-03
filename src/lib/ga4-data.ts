@@ -116,8 +116,10 @@ export async function getGA4Metrics(
       ],
     })
 
-    const row = response.rows?.[0]?.metricValues
-    if (!row) return null
+    // GA4 returns empty rows[] when there is no data for the period
+    // (e.g. today with 0 traffic). Return zeros rather than null so the
+    // dashboard shows real metrics instead of the "未設定" placeholder.
+    const row = response.rows?.[0]?.metricValues ?? []
 
     return {
       sessions: parseInt(row[0]?.value ?? '0', 10),

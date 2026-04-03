@@ -1043,9 +1043,27 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
             </>
           ) : (
             <div style={{ padding: '24px 0', textAlign: 'center', color: t.textMuted, fontSize: 12 }}>
-              <div style={{ fontSize: 22, marginBottom: 8 }}>📊</div>
-              <div>GA4 Data API 未設定</div>
-              <div style={{ fontSize: 11, marginTop: 4 }}>SiteSettings で GA4 Property ID を設定してください</div>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/>
+                </svg>
+              </div>
+              <div style={{ fontWeight: 500, marginBottom: 4 }}>GA4 Data API 未設定</div>
+              <div style={{ fontSize: 11, marginBottom: 12 }}>GA4 プロパティID とサービスアカウントを設定してください</div>
+              <a
+                href="/admin/globals/site-settings"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  fontSize: 11, fontWeight: 600, color: '#6366f1',
+                  textDecoration: 'none', padding: '5px 12px',
+                  border: '1px solid #6366f1', borderRadius: 6,
+                  transition: 'background 0.15s',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(99,102,241,0.08)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                サイト設定を開く →
+              </a>
             </div>
           )}
         </Card>
