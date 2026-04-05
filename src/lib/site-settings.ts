@@ -6,7 +6,6 @@
  */
 
 import { getPayload } from 'payload'
-import config from '@payload-config'
 import { decrypt } from './encryption'
 
 // ---------------------------------------------------------------------------
@@ -44,6 +43,9 @@ export async function getSiteSettings(): Promise<SiteSettingsData> {
   const now = Date.now()
   if (_cache && now < _cacheExpiresAt) return _cache
 
+  // Lazy import to avoid circular dependency:
+  // SiteSettings.ts (Payload global) → site-settings.ts → @payload-config → SiteSettings.ts
+  const { default: config } = await import('@payload-config')
   const payload = await getPayload({ config })
   const doc = await payload.findGlobal({
     slug: 'site-settings',
