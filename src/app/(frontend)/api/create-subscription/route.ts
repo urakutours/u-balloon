@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import Stripe from 'stripe'
+import { getSiteSettings } from '@/lib/site-settings'
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,7 +12,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'planId and customerId are required' }, { status: 400 })
     }
 
-    const stripeKey = process.env.STRIPE_SECRET_KEY
+    const settings = await getSiteSettings()
+    const stripeKey = settings.stripeSecretKey || process.env.STRIPE_SECRET_KEY
     if (!stripeKey) {
       return NextResponse.json({ error: 'Stripe not configured' }, { status: 500 })
     }

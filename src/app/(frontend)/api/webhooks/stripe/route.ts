@@ -2,20 +2,22 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import Stripe from 'stripe'
-
-const stripe = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY)
-  : null
-
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+import { getSiteSettings } from '@/lib/site-settings'
 
 export async function POST(req: NextRequest) {
-  if (!stripe || !webhookSecret) {
+  const settings = await getSiteSettings()
+  const stripeKey = settings.stripeSecretKey || process.env.STRIPE_SECRET_KEY
+  const webhookSecret =
+    settings.stripeWebhookSecret || process.env.STRIPE_WEBHOOK_SECRET
+
+  if (!stripeKey || !webhookSecret) {
     return NextResponse.json(
       { error: 'Stripe is not configured' },
       { status: 500 },
     )
   }
+
+  const stripe = new Stripe(stripeKey)
 
   const body = await req.text()
   const signature = req.headers.get('stripe-signature')

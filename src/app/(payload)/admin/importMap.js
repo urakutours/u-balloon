@@ -31,6 +31,9 @@ import { default as default_db688bcb0cf5a6bb12d05e9453ebda65 } from '@/component
 import { default as default_7083d8fa0d0e4281ff7562b4b04e148e } from '@/components/admin/fields/GA4PropertyIdHelp'
 import { default as default_1423373cb5c257baa9402bd58349b71b } from '@/components/admin/fields/GA4ServiceAccountHelp'
 import { default as default_dc6744229da1d9236bd65d2326b49a7a } from '@/components/admin/fields/EncryptedTextField'
+import { default as default_b873a42c1a999b7a0cf70d3867f61bfb } from '@/components/admin/fields/StripeHelp'
+import { default as default_fbcfaf38993f683faf05dcbf7a250fcc } from '@/components/admin/fields/EmailHelp'
+import { default as default_f3930a59cd3828f2f419e58c47bc3521 } from '@/components/admin/fields/GoogleMapsHelp'
 
 export const importMap = {
   "@payloadcms/richtext-lexical/rsc#RscEntryLexicalCell": RscEntryLexicalCell_44fe37237e0ebf4470c9990d8cb7b07e,
@@ -65,5 +68,8 @@ export const importMap = {
   "@/components/admin/fields/GA4MeasurementIdHelp#default": default_db688bcb0cf5a6bb12d05e9453ebda65,
   "@/components/admin/fields/GA4PropertyIdHelp#default": default_7083d8fa0d0e4281ff7562b4b04e148e,
   "@/components/admin/fields/GA4ServiceAccountHelp#default": default_1423373cb5c257baa9402bd58349b71b,
-  "@/components/admin/fields/EncryptedTextField#default": default_dc6744229da1d9236bd65d2326b49a7a
+  "@/components/admin/fields/EncryptedTextField#default": default_dc6744229da1d9236bd65d2326b49a7a,
+  "@/components/admin/fields/StripeHelp#default": default_b873a42c1a999b7a0cf70d3867f61bfb,
+  "@/components/admin/fields/EmailHelp#default": default_fbcfaf38993f683faf05dcbf7a250fcc,
+  "@/components/admin/fields/GoogleMapsHelp#default": default_f3930a59cd3828f2f419e58c47bc3521
 }

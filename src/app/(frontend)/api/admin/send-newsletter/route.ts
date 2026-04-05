@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { Resend } from 'resend'
+import { getSiteSettings } from '@/lib/site-settings'
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,14 +25,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Newsletter not found' }, { status: 404 })
     }
 
-    const resendApiKey = process.env.RESEND_API_KEY
+    const siteSettings = await getSiteSettings()
+    const resendApiKey = siteSettings.resendApiKey || process.env.RESEND_API_KEY
     if (!resendApiKey) {
-      return NextResponse.json({ error: 'RESEND_API_KEY not configured' }, { status: 500 })
+      return NextResponse.json({ error: 'Resend API キーが設定されていません' }, { status: 500 })
     }
 
     const resend = new Resend(resendApiKey)
-    const fromEmail = process.env.EMAIL_FROM_ADDRESS || 'noreply@uballoon.com'
-    const fromName = process.env.EMAIL_FROM_NAME || 'uballoon'
+    const fromEmail =
+      siteSettings.emailFromAddress || process.env.EMAIL_FROM_ADDRESS || 'noreply@uballoon.com'
+    const fromName =
+      siteSettings.emailFromName || process.env.EMAIL_FROM_NAME || 'uballoon'
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://uballoon.com'
 
     // Test send

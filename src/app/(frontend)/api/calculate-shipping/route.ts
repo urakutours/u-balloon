@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getSiteSettings } from '@/lib/site-settings'
 
 // 起点: 東京都港区（uballoon拠点）
 const ORIGIN = '東京都港区'
@@ -13,11 +14,9 @@ type ShippingRequest = {
  * Google Maps Distance Matrix API を使って距離を取得
  * API KEY未設定時は10kmの固定値を返す
  */
-async function getDistanceKm(destination: string): Promise<{ distanceKm: number; isMock: boolean }> {
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY
-
+async function getDistanceKm(destination: string, apiKey: string | null): Promise<{ distanceKm: number; isMock: boolean }> {
   if (!apiKey) {
-    console.log('[Shipping] GOOGLE_MAPS_API_KEY未設定 → モックモード (10km固定)')
+    console.log('[Shipping] Google Maps APIキー未設定 → モックモード (10km固定)')
     return { distanceKm: 10, isMock: true }
   }
 
@@ -131,7 +130,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'cartSubtotal は0以上の数値を指定してください' }, { status: 400 })
     }
 
-    const { distanceKm, isMock } = await getDistanceKm(destinationAddress)
+    const settings = await getSiteSettings()
+    const apiKey = settings.googleMapsApiKey || process.env.GOOGLE_MAPS_API_KEY || null
+    const { distanceKm, isMock } = await getDistanceKm(destinationAddress, apiKey)
     const { shippingFee, breakdown } = calculateShippingFee(distanceKm, productType, cartSubtotal)
 
     return NextResponse.json({

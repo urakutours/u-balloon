@@ -1,16 +1,18 @@
 import { Resend } from 'resend'
 import React from 'react'
+import { getSiteSettings } from './site-settings'
 
-const FROM_EMAIL = process.env.EMAIL_FROM_ADDRESS || 'noreply@uballoon.com'
-const FROM_NAME = process.env.EMAIL_FROM_NAME || 'uballoon'
-const REPLY_TO = process.env.EMAIL_REPLY_TO || 'info@uballoon.com'
-
+// Module-level Resend client cache — re-created if the API key changes.
 let resendClient: Resend | null = null
+let resendApiKeyCache: string | null = null
 
-function getResend(): Resend | null {
-  if (!process.env.RESEND_API_KEY) return null
-  if (!resendClient) {
-    resendClient = new Resend(process.env.RESEND_API_KEY)
+async function getResend(): Promise<Resend | null> {
+  const settings = await getSiteSettings()
+  const apiKey = settings.resendApiKey || process.env.RESEND_API_KEY || null
+  if (!apiKey) return null
+  if (apiKey !== resendApiKeyCache) {
+    resendClient = new Resend(apiKey)
+    resendApiKeyCache = apiKey
   }
   return resendClient
 }
@@ -22,10 +24,11 @@ type SendEmailParams = {
 }
 
 export async function sendEmail({ to, subject, react }: SendEmailParams) {
-  const resend = getResend()
+  const settings = await getSiteSettings()
+  const resend = await getResend()
 
   if (!resend) {
-    // Fallback: console log when RESEND_API_KEY is not set
+    // Fallback: console log when Resend is not configured
     console.log('=== EMAIL (Resend未設定 - コンソール出力) ===')
     console.log(`To: ${to}`)
     console.log(`Subject: ${subject}`)
@@ -34,10 +37,19 @@ export async function sendEmail({ to, subject, react }: SendEmailParams) {
     return { success: true, fallback: true }
   }
 
+  const fromEmail =
+    settings.emailFromAddress ||
+    process.env.EMAIL_FROM_ADDRESS ||
+    'noreply@uballoon.com'
+  const fromName =
+    settings.emailFromName || process.env.EMAIL_FROM_NAME || 'uballoon'
+  const replyTo =
+    settings.emailReplyTo || process.env.EMAIL_REPLY_TO || 'info@uballoon.com'
+
   try {
     const { data, error } = await resend.emails.send({
-      from: `${FROM_NAME} <${FROM_EMAIL}>`,
-      replyTo: REPLY_TO,
+      from: `${fromName} <${fromEmail}>`,
+      replyTo,
       to,
       subject,
       react,

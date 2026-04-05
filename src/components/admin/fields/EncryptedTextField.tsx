@@ -2,21 +2,34 @@
 
 import React, { useState, useCallback } from 'react'
 import { useField, useTheme } from '@payloadcms/ui'
-import type { TextareaFieldClientComponent } from 'payload'
 
 const MASK_PREFIX = '••••'
 
+// Generic props accepted by both TextFieldClientComponent and TextareaFieldClientComponent
+type EncryptedFieldProps = {
+  path?: string
+  field?: {
+    label?: string | Record<string, string>
+    type?: string
+    admin?: {
+      description?: string
+      placeholder?: string
+    }
+  }
+}
+
 /**
- * Custom Field component for encrypted textarea fields.
+ * Custom Field component for AES-256-GCM encrypted fields.
  *
+ * Works with both `type: 'text'` and `type: 'textarea'` fields.
  * - When a value is saved (masked by afterRead hook), shows masked display
  *   with a "変更する" button.
- * - When editing or no value exists, shows a normal textarea.
+ * - When editing or no value exists, shows an input or textarea.
  * - On save, the beforeChange hook in SiteSettings encrypts new plaintext
  *   values and preserves the original when the mask is submitted unchanged.
  */
-const EncryptedTextField: TextareaFieldClientComponent = ({ path, field }) => {
-  const { value, setValue } = useField<string>({ path })
+const EncryptedTextField = ({ path, field }: EncryptedFieldProps) => {
+  const { value, setValue } = useField<string>({ path: path ?? '' })
   const { theme } = useTheme()
   const dark = theme === 'dark'
 
@@ -34,8 +47,10 @@ const EncryptedTextField: TextareaFieldClientComponent = ({ path, field }) => {
     setValue(MASK_PREFIX) // sentinel — beforeChange preserves original
   }, [setValue])
 
-  const label = field?.label ?? 'サービスアカウント秘密鍵（JSON）'
+  const label = field?.label ?? 'シークレット値'
   const description = field?.admin?.description
+  const placeholder = field?.admin?.placeholder ?? ''
+  const isTextarea = field?.type === 'textarea'
 
   const borderColor = dark ? '#334155' : '#d1d5db'
   const bgColor = dark ? '#1e293b' : '#ffffff'
@@ -86,7 +101,7 @@ const EncryptedTextField: TextareaFieldClientComponent = ({ path, field }) => {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={successColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12" />
             </svg>
-            秘密鍵が設定されています
+            設定済みです
           </span>
         </div>
       </div>
@@ -94,30 +109,52 @@ const EncryptedTextField: TextareaFieldClientComponent = ({ path, field }) => {
   }
 
   // ── Edit / new input mode ──
+  const inputValue = hasValue && !isMasked ? (value ?? '') : ''
+
   return (
     <div style={{ marginBottom: 24 }}>
       <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: textColor, marginBottom: 8 }}>
         {label as string}
       </label>
-      <textarea
-        value={hasValue && !isMasked ? (value ?? '') : ''}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder='{"type":"service_account","project_id":"...","private_key":"..."}'
-        rows={5}
-        style={{
-          width: '100%',
-          padding: '10px 14px',
-          border: `1px solid ${borderColor}`,
-          borderRadius: 6,
-          background: bgColor,
-          color: textColor,
-          fontFamily: 'monospace',
-          fontSize: 12,
-          lineHeight: 1.6,
-          resize: 'vertical',
-          boxSizing: 'border-box',
-        }}
-      />
+      {isTextarea ? (
+        <textarea
+          value={inputValue}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder={placeholder}
+          rows={5}
+          style={{
+            width: '100%',
+            padding: '10px 14px',
+            border: `1px solid ${borderColor}`,
+            borderRadius: 6,
+            background: bgColor,
+            color: textColor,
+            fontFamily: 'monospace',
+            fontSize: 12,
+            lineHeight: 1.6,
+            resize: 'vertical',
+            boxSizing: 'border-box',
+          }}
+        />
+      ) : (
+        <input
+          type="text"
+          value={inputValue}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder={placeholder}
+          style={{
+            width: '100%',
+            padding: '10px 14px',
+            border: `1px solid ${borderColor}`,
+            borderRadius: 6,
+            background: bgColor,
+            color: textColor,
+            fontFamily: 'monospace',
+            fontSize: 13,
+            boxSizing: 'border-box',
+          }}
+        />
+      )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6 }}>
         {editing && (
           <button
@@ -137,9 +174,11 @@ const EncryptedTextField: TextareaFieldClientComponent = ({ path, field }) => {
             キャンセル
           </button>
         )}
-        <span style={{ fontSize: 11, color: mutedColor }}>
-          {description as string ?? 'JSON キーを貼り付けてください。保存時に暗号化されます。'}
-        </span>
+        {description && (
+          <span style={{ fontSize: 11, color: mutedColor }}>
+            {description as string}
+          </span>
+        )}
       </div>
     </div>
   )

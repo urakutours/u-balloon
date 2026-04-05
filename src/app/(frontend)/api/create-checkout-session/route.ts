@@ -3,13 +3,14 @@ import { getPayload } from 'payload'
 import config from '@payload-config'
 import { usePoints } from '@/lib/points'
 import Stripe from 'stripe'
-
-const stripe = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY)
-  : null
+import { getSiteSettings } from '@/lib/site-settings'
 
 export async function POST(req: NextRequest) {
   try {
+    const settings = await getSiteSettings()
+    const stripeKey = settings.stripeSecretKey || process.env.STRIPE_SECRET_KEY
+    const stripe = stripeKey ? new Stripe(stripeKey) : null
+
     const payload = await getPayload({ config })
 
     // Authenticate user

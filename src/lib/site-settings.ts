@@ -1,0 +1,91 @@
+/**
+ * Cached helper for reading SiteSettings from DB.
+ *
+ * DB values take priority over environment variables.
+ * Cache TTL: 60 seconds (invalidated immediately on afterChange hook).
+ */
+
+import { getPayload } from 'payload'
+import config from '@payload-config'
+import { decrypt } from './encryption'
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export type SiteSettingsData = {
+  // Stripe
+  stripeSecretKey: string | null
+  stripeWebhookSecret: string | null
+  // Resend / email
+  resendApiKey: string | null
+  emailFromAddress: string | null
+  emailFromName: string | null
+  emailReplyTo: string | null
+  adminAlertEmail: string | null
+  // Google Maps
+  googleMapsApiKey: string | null
+}
+
+// ---------------------------------------------------------------------------
+// In-memory cache
+// ---------------------------------------------------------------------------
+
+let _cache: SiteSettingsData | null = null
+let _cacheExpiresAt = 0
+const CACHE_TTL_MS = 60_000
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+/** Read settings from DB (cached for 60 s). DB values override env vars. */
+export async function getSiteSettings(): Promise<SiteSettingsData> {
+  const now = Date.now()
+  if (_cache && now < _cacheExpiresAt) return _cache
+
+  const payload = await getPayload({ config })
+  const doc = await payload.findGlobal({
+    slug: 'site-settings',
+    context: { rawSecrets: true },
+  })
+
+  _cache = {
+    stripeSecretKey: decryptField(doc.stripeSecretKey),
+    stripeWebhookSecret: decryptField(doc.stripeWebhookSecret),
+    resendApiKey: decryptField(doc.resendApiKey),
+    googleMapsApiKey: decryptField(doc.googleMapsApiKey),
+    emailFromAddress: stringField(doc.emailFromAddress),
+    emailFromName: stringField(doc.emailFromName),
+    emailReplyTo: stringField(doc.emailReplyTo),
+    adminAlertEmail: stringField(doc.adminAlertEmail),
+  }
+  _cacheExpiresAt = now + CACHE_TTL_MS
+  return _cache
+}
+
+/** Immediately invalidate the in-memory cache. Called from SiteSettings afterChange hook. */
+export function clearSiteSettingsCache(): void {
+  _cache = null
+  _cacheExpiresAt = 0
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Decrypt an encrypted field; return null if absent or decryption fails. */
+function decryptField(value: unknown): string | null {
+  if (!value || typeof value !== 'string') return null
+  try {
+    const result = decrypt(value)
+    return result || null
+  } catch {
+    return null
+  }
+}
+
+/** Coerce a plain string field to string | null. */
+function stringField(value: unknown): string | null {
+  return typeof value === 'string' && value.length > 0 ? value : null
+}

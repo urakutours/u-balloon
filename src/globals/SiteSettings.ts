@@ -1,9 +1,16 @@
 import type { GlobalConfig } from 'payload'
 import { isAdmin } from '../access'
 import { encrypt, isEncrypted, maskSecret } from '@/lib/encryption'
+import { clearSiteSettingsCache } from '@/lib/site-settings'
 
 /** Fields whose values are AES-256-GCM encrypted in the DB. */
-const ENCRYPTED_FIELDS = ['ga4ServiceAccountKey']
+const ENCRYPTED_FIELDS = [
+  'ga4ServiceAccountKey',
+  'stripeSecretKey',
+  'stripeWebhookSecret',
+  'resendApiKey',
+  'googleMapsApiKey',
+]
 
 export const SiteSettings: GlobalConfig = {
   slug: 'site-settings',
@@ -33,6 +40,12 @@ export const SiteSettings: GlobalConfig = {
           // Already encrypted — leave as-is
         }
         return data
+      },
+    ],
+    // ── Invalidate in-memory cache when settings are saved ──
+    afterChange: [
+      async () => {
+        clearSiteSettingsCache()
       },
     ],
     // ── Mask secrets for admin UI (unless server-side asks for raw) ──
@@ -139,6 +152,175 @@ export const SiteSettings: GlobalConfig = {
               'Google Cloud Console からダウンロードした JSON キーの内容を貼り付けてください。保存時に自動で暗号化されます。',
             components: {
               Field: '@/components/admin/fields/EncryptedTextField',
+            },
+          },
+        },
+      ],
+    },
+    // ─────────────────────────────────────────────────────────────────
+    // 決済設定 (Stripe)
+    // ─────────────────────────────────────────────────────────────────
+    {
+      type: 'collapsible',
+      label: '決済設定（Stripe）',
+      admin: {
+        initCollapsed: true,
+      },
+      fields: [
+        {
+          name: 'stripeSecretKey',
+          label: 'Stripe シークレットキー',
+          type: 'text',
+          admin: {
+            placeholder: 'sk_live_... または sk_test_...',
+            description:
+              'Stripe のシークレットキー。保存時に自動で暗号化されます。',
+            components: {
+              Field: '@/components/admin/fields/EncryptedTextField',
+            },
+          },
+        },
+        {
+          name: 'stripeWebhookSecret',
+          label: 'Stripe Webhook シークレット',
+          type: 'text',
+          admin: {
+            placeholder: 'whsec_...',
+            description:
+              'Stripe Webhook の署名シークレット。保存時に自動で暗号化されます。',
+            components: {
+              Field: '@/components/admin/fields/EncryptedTextField',
+            },
+          },
+        },
+        {
+          name: 'stripeHelp',
+          type: 'ui',
+          admin: {
+            components: {
+              Field: '@/components/admin/fields/StripeHelp',
+            },
+          },
+        },
+      ],
+    },
+    // ─────────────────────────────────────────────────────────────────
+    // メール配信設定 (Resend)
+    // ─────────────────────────────────────────────────────────────────
+    {
+      type: 'collapsible',
+      label: 'メール配信設定（Resend）',
+      admin: {
+        initCollapsed: true,
+      },
+      fields: [
+        {
+          name: 'resendApiKey',
+          label: 'Resend API キー',
+          type: 'text',
+          admin: {
+            placeholder: 're_...',
+            description:
+              'Resend のトランザクションメール送信用 API キー。保存時に自動で暗号化されます。',
+            components: {
+              Field: '@/components/admin/fields/EncryptedTextField',
+            },
+          },
+        },
+        {
+          name: 'emailFromAddress',
+          label: '送信元メールアドレス',
+          type: 'text',
+          admin: {
+            placeholder: 'noreply@u-balloon.com',
+            description: 'メール送信時の From アドレス。Resend でドメイン認証済みのアドレスを設定してください。',
+          },
+          validate: (value: string | null | undefined) => {
+            if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+              return '有効なメールアドレスを入力してください'
+            }
+            return true
+          },
+        },
+        {
+          name: 'emailFromName',
+          label: '送信者表示名',
+          type: 'text',
+          admin: {
+            placeholder: 'uballoon',
+            description: 'メール送信時の差出人名（例: uballoon）。',
+          },
+        },
+        {
+          name: 'emailReplyTo',
+          label: '返信先メールアドレス',
+          type: 'text',
+          admin: {
+            placeholder: 'info@u-balloon.com',
+            description: '顧客がメールに返信したときの宛先アドレス。',
+          },
+          validate: (value: string | null | undefined) => {
+            if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+              return '有効なメールアドレスを入力してください'
+            }
+            return true
+          },
+        },
+        {
+          name: 'adminAlertEmail',
+          label: '管理者通知先メールアドレス',
+          type: 'text',
+          admin: {
+            placeholder: 'admin@u-balloon.com',
+            description: '在庫アラート・注文通知などの管理者向けメールを受け取るアドレス。',
+          },
+          validate: (value: string | null | undefined) => {
+            if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+              return '有効なメールアドレスを入力してください'
+            }
+            return true
+          },
+        },
+        {
+          name: 'emailHelp',
+          type: 'ui',
+          admin: {
+            components: {
+              Field: '@/components/admin/fields/EmailHelp',
+            },
+          },
+        },
+      ],
+    },
+    // ─────────────────────────────────────────────────────────────────
+    // 外部サービス設定 (Google Maps)
+    // ─────────────────────────────────────────────────────────────────
+    {
+      type: 'collapsible',
+      label: '外部サービス設定',
+      admin: {
+        initCollapsed: true,
+      },
+      fields: [
+        {
+          name: 'googleMapsApiKey',
+          label: 'Google Maps API キー',
+          type: 'text',
+          admin: {
+            placeholder: 'AIza...',
+            description:
+              'Distance Matrix API 用のキー。配送料の距離計算に使用します。保存時に自動で暗号化されます。',
+            components: {
+              Field: '@/components/admin/fields/EncryptedTextField',
+            },
+          },
+        },
+        {
+          name: 'googleMapsHelp',
+          type: 'ui',
+          admin: {
+            components: {
+              Field: '@/components/admin/fields/GoogleMapsHelp',
             },
           },
         },
