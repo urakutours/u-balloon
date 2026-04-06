@@ -91,7 +91,7 @@ export default async function Dashboard() {
       limit: 10,
       depth: 0,
     }),
-    payload.findGlobal({ slug: 'site-settings' }),
+    payload.findGlobal({ slug: 'site-settings' }).catch(() => null),
   ])
 
   // Pad daily trend to full Mon–Sun week (SQL may return fewer days if week hasn't ended)
