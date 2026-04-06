@@ -34,6 +34,7 @@ import { default as default_dc6744229da1d9236bd65d2326b49a7a } from '@/component
 import { default as default_b873a42c1a999b7a0cf70d3867f61bfb } from '@/components/admin/fields/StripeHelp'
 import { default as default_fbcfaf38993f683faf05dcbf7a250fcc } from '@/components/admin/fields/EmailHelp'
 import { default as default_f3930a59cd3828f2f419e58c47bc3521 } from '@/components/admin/fields/GoogleMapsHelp'
+import { default as default_09b11ce5004b0ab5026998c080ad05c8 } from '@/components/admin/fields/StripeModeSwitch'
 
 export const importMap = {
   "@payloadcms/richtext-lexical/rsc#RscEntryLexicalCell": RscEntryLexicalCell_44fe37237e0ebf4470c9990d8cb7b07e,
@@ -71,5 +72,6 @@ export const importMap = {
   "@/components/admin/fields/EncryptedTextField#default": default_dc6744229da1d9236bd65d2326b49a7a,
   "@/components/admin/fields/StripeHelp#default": default_b873a42c1a999b7a0cf70d3867f61bfb,
   "@/components/admin/fields/EmailHelp#default": default_fbcfaf38993f683faf05dcbf7a250fcc,
-  "@/components/admin/fields/GoogleMapsHelp#default": default_f3930a59cd3828f2f419e58c47bc3521
+  "@/components/admin/fields/GoogleMapsHelp#default": default_f3930a59cd3828f2f419e58c47bc3521,
+  "@/components/admin/fields/StripeModeSwitch#default": default_09b11ce5004b0ab5026998c080ad05c8,
 }
