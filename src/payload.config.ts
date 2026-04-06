@@ -27,7 +27,6 @@ import { SubscriptionPlans } from './collections/SubscriptionPlans'
 import { Subscriptions } from './collections/Subscriptions'
 import { ABTests } from './collections/ABTests'
 import { SiteSettings } from './globals/SiteSettings'
-import * as addStripeModeFields from './migrations/add_stripe_mode_fields'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -86,13 +85,6 @@ export default buildConfig({
         rejectUnauthorized: false,
       },
     },
-    prodMigrations: [
-      {
-        name: '20260406_000000_add_stripe_mode_fields',
-        up: addStripeModeFields.up,
-        down: addStripeModeFields.down,
-      },
-    ],
   }),
   sharp,
   plugins: [...s3Plugins],
