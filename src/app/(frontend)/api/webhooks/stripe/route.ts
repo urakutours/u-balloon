@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import Stripe from 'stripe'
-import { getSiteSettings } from '@/lib/site-settings'
+import { getActiveStripeKeys } from '@/lib/site-settings'
 
 export async function POST(req: NextRequest) {
-  const settings = await getSiteSettings()
-  const stripeKey = settings.stripeSecretKey || process.env.STRIPE_SECRET_KEY
-  const webhookSecret =
-    settings.stripeWebhookSecret || process.env.STRIPE_WEBHOOK_SECRET
+  const activeKeys = await getActiveStripeKeys()
+  const stripeKey = activeKeys.secretKey || null
+  const webhookSecret = activeKeys.webhookSecret || null
 
   if (!stripeKey || !webhookSecret) {
     return NextResponse.json(

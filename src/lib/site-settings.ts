@@ -13,7 +13,16 @@ import { decrypt } from './encryption'
 // ---------------------------------------------------------------------------
 
 export type SiteSettingsData = {
-  // Stripe
+  // Stripe mode
+  stripeMode: 'test' | 'live'
+  // Stripe (test/live keys)
+  stripeTestPublishableKey: string | null
+  stripeTestSecretKey: string | null
+  stripeTestWebhookSecret: string | null
+  stripeLivePublishableKey: string | null
+  stripeLiveSecretKey: string | null
+  stripeLiveWebhookSecret: string | null
+  // Stripe (legacy — fallback)
   stripeSecretKey: string | null
   stripeWebhookSecret: string | null
   // Resend / email
@@ -24,6 +33,13 @@ export type SiteSettingsData = {
   adminAlertEmail: string | null
   // Google Maps
   googleMapsApiKey: string | null
+}
+
+export type ActiveStripeKeys = {
+  publishableKey: string
+  secretKey: string
+  webhookSecret: string
+  mode: 'test' | 'live'
 }
 
 // ---------------------------------------------------------------------------
@@ -53,6 +69,13 @@ export async function getSiteSettings(): Promise<SiteSettingsData> {
   })
 
   _cache = {
+    stripeMode: ((doc.stripeMode as string) === 'live' ? 'live' : 'test'),
+    stripeTestPublishableKey: decryptField(doc.stripeTestPublishableKey),
+    stripeTestSecretKey: decryptField(doc.stripeTestSecretKey),
+    stripeTestWebhookSecret: decryptField(doc.stripeTestWebhookSecret),
+    stripeLivePublishableKey: decryptField(doc.stripeLivePublishableKey),
+    stripeLiveSecretKey: decryptField(doc.stripeLiveSecretKey),
+    stripeLiveWebhookSecret: decryptField(doc.stripeLiveWebhookSecret),
     stripeSecretKey: decryptField(doc.stripeSecretKey),
     stripeWebhookSecret: decryptField(doc.stripeWebhookSecret),
     resendApiKey: decryptField(doc.resendApiKey),
@@ -64,6 +87,51 @@ export async function getSiteSettings(): Promise<SiteSettingsData> {
   }
   _cacheExpiresAt = now + CACHE_TTL_MS
   return _cache
+}
+
+/**
+ * Returns the active Stripe keys based on the current stripeMode setting.
+ *
+ * Fallback order for each key:
+ *   1. Mode-specific key (test or live)
+ *   2. Legacy stripeSecretKey / stripeWebhookSecret (old field)
+ *   3. Environment variables STRIPE_SECRET_KEY / STRIPE_WEBHOOK_SECRET
+ */
+export async function getActiveStripeKeys(): Promise<ActiveStripeKeys> {
+  const settings = await getSiteSettings()
+  const mode = settings.stripeMode
+
+  if (mode === 'live') {
+    return {
+      publishableKey: settings.stripeLivePublishableKey || '',
+      secretKey:
+        settings.stripeLiveSecretKey ||
+        settings.stripeSecretKey ||
+        process.env.STRIPE_SECRET_KEY ||
+        '',
+      webhookSecret:
+        settings.stripeLiveWebhookSecret ||
+        settings.stripeWebhookSecret ||
+        process.env.STRIPE_WEBHOOK_SECRET ||
+        '',
+      mode: 'live',
+    }
+  }
+
+  return {
+    publishableKey: settings.stripeTestPublishableKey || '',
+    secretKey:
+      settings.stripeTestSecretKey ||
+      settings.stripeSecretKey ||
+      process.env.STRIPE_SECRET_KEY ||
+      '',
+    webhookSecret:
+      settings.stripeTestWebhookSecret ||
+      settings.stripeWebhookSecret ||
+      process.env.STRIPE_WEBHOOK_SECRET ||
+      '',
+    mode: 'test',
+  }
 }
 
 /** Immediately invalidate the in-memory cache. Called from SiteSettings afterChange hook. */

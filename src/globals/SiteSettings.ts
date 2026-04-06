@@ -8,6 +8,12 @@ const ENCRYPTED_FIELDS = [
   'ga4ServiceAccountKey',
   'stripeSecretKey',
   'stripeWebhookSecret',
+  'stripeTestPublishableKey',
+  'stripeTestSecretKey',
+  'stripeTestWebhookSecret',
+  'stripeLivePublishableKey',
+  'stripeLiveSecretKey',
+  'stripeLiveWebhookSecret',
   'resendApiKey',
   'googleMapsApiKey',
 ]
@@ -28,6 +34,24 @@ export const SiteSettings: GlobalConfig = {
     beforeChange: [
       async ({ data, originalDoc }) => {
         if (!data) return data
+
+        // ── Validate: switching to live requires all live keys ──
+        if (data.stripeMode === 'live') {
+          const liveKeyFields = ['stripeLiveSecretKey', 'stripeLiveWebhookSecret', 'stripeLivePublishableKey']
+          const isKeyConfigured = (f: string): boolean => {
+            const val = data[f]
+            const orig = (originalDoc as Record<string, unknown> | null)?.[f]
+            // New plaintext input (not masked)
+            if (typeof val === 'string' && val.length > 0 && !val.startsWith('••••')) return true
+            // Preserved masked value AND original exists in DB
+            if (typeof orig === 'string' && orig.length > 0) return true
+            return false
+          }
+          if (!liveKeyFields.every(isKeyConfigured)) {
+            throw new Error('本番モードに切り替えるには、本番環境の全てのキーを設定してください')
+          }
+        }
+
         for (const field of ENCRYPTED_FIELDS) {
           const value = data[field]
           if (!value || (typeof value === 'string' && value.startsWith('••••'))) {
@@ -168,13 +192,128 @@ export const SiteSettings: GlobalConfig = {
       },
       fields: [
         {
+          name: 'stripeMode',
+          type: 'select',
+          label: '決済モード',
+          defaultValue: 'test',
+          options: [
+            { label: 'テストモード', value: 'test' },
+            { label: '本番モード', value: 'live' },
+          ],
+          admin: {
+            description: 'テストモードでは Stripe のテスト環境を使用します。実際の決済は行われません。',
+            components: {
+              Field: '@/components/admin/fields/StripeModeSwitch',
+            },
+          },
+        },
+        // ─── テスト環境 ───
+        {
+          name: 'stripeTestPublishableKey',
+          label: 'テスト公開可能キー',
+          type: 'text',
+          admin: {
+            placeholder: 'pk_test_...',
+            description: 'Stripe テスト環境の公開可能キー（pk_test_ で始まる）。保存時に自動で暗号化されます。',
+            components: {
+              Field: '@/components/admin/fields/EncryptedTextField',
+            },
+          },
+          validate: (value: string | null | undefined) => {
+            if (!value || typeof value !== 'string') return true
+            if (value.startsWith('••••') || isEncrypted(value)) return true
+            if (!value.startsWith('pk_test_')) return 'テスト用公開可能キーには pk_test_ で始まるキーを入力してください'
+            return true
+          },
+        },
+        {
+          name: 'stripeTestSecretKey',
+          label: 'テストシークレットキー',
+          type: 'text',
+          admin: {
+            placeholder: 'sk_test_...',
+            description: 'Stripe テスト環境のシークレットキー（sk_test_ で始まる）。保存時に自動で暗号化されます。',
+            components: {
+              Field: '@/components/admin/fields/EncryptedTextField',
+            },
+          },
+          validate: (value: string | null | undefined) => {
+            if (!value || typeof value !== 'string') return true
+            if (value.startsWith('••••') || isEncrypted(value)) return true
+            if (!value.startsWith('sk_test_')) return 'テストシークレットキーには sk_test_ で始まるキーを入力してください'
+            return true
+          },
+        },
+        {
+          name: 'stripeTestWebhookSecret',
+          label: 'テスト Webhook シークレット',
+          type: 'text',
+          admin: {
+            placeholder: 'whsec_...',
+            description: 'Stripe テスト環境の Webhook シークレット（whsec_ で始まる）。保存時に自動で暗号化されます。',
+            components: {
+              Field: '@/components/admin/fields/EncryptedTextField',
+            },
+          },
+        },
+        // ─── 本番環境 ───
+        {
+          name: 'stripeLivePublishableKey',
+          label: '本番公開可能キー',
+          type: 'text',
+          admin: {
+            placeholder: 'pk_live_...',
+            description: 'Stripe 本番環境の公開可能キー（pk_live_ で始まる）。保存時に自動で暗号化されます。',
+            components: {
+              Field: '@/components/admin/fields/EncryptedTextField',
+            },
+          },
+          validate: (value: string | null | undefined) => {
+            if (!value || typeof value !== 'string') return true
+            if (value.startsWith('••••') || isEncrypted(value)) return true
+            if (!value.startsWith('pk_live_')) return '本番用公開可能キーには pk_live_ で始まるキーを入力してください'
+            return true
+          },
+        },
+        {
+          name: 'stripeLiveSecretKey',
+          label: '本番シークレットキー',
+          type: 'text',
+          admin: {
+            placeholder: 'sk_live_...',
+            description: 'Stripe 本番環境のシークレットキー（sk_live_ で始まる）。保存時に自動で暗号化されます。',
+            components: {
+              Field: '@/components/admin/fields/EncryptedTextField',
+            },
+          },
+          validate: (value: string | null | undefined) => {
+            if (!value || typeof value !== 'string') return true
+            if (value.startsWith('••••') || isEncrypted(value)) return true
+            if (!value.startsWith('sk_live_')) return '本番シークレットキーには sk_live_ で始まるキーを入力してください'
+            return true
+          },
+        },
+        {
+          name: 'stripeLiveWebhookSecret',
+          label: '本番 Webhook シークレット',
+          type: 'text',
+          admin: {
+            placeholder: 'whsec_...',
+            description: 'Stripe 本番環境の Webhook シークレット（whsec_ で始まる）。保存時に自動で暗号化されます。',
+            components: {
+              Field: '@/components/admin/fields/EncryptedTextField',
+            },
+          },
+        },
+        // ─── 旧設定（フォールバック用） ───
+        {
           name: 'stripeSecretKey',
-          label: 'Stripe シークレットキー',
+          label: 'Stripe シークレットキー（旧・フォールバック）',
           type: 'text',
           admin: {
             placeholder: 'sk_live_... または sk_test_...',
             description:
-              'Stripe のシークレットキー。保存時に自動で暗号化されます。',
+              '旧フィールド。上記テスト/本番キーが設定されるまでのフォールバックとして機能します。',
             components: {
               Field: '@/components/admin/fields/EncryptedTextField',
             },
@@ -182,12 +321,12 @@ export const SiteSettings: GlobalConfig = {
         },
         {
           name: 'stripeWebhookSecret',
-          label: 'Stripe Webhook シークレット',
+          label: 'Stripe Webhook シークレット（旧・フォールバック）',
           type: 'text',
           admin: {
             placeholder: 'whsec_...',
             description:
-              'Stripe Webhook の署名シークレット。保存時に自動で暗号化されます。',
+              '旧フィールド。上記テスト/本番 Webhook シークレットが設定されるまでのフォールバックとして機能します。',
             components: {
               Field: '@/components/admin/fields/EncryptedTextField',
             },

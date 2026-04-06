@@ -3,12 +3,12 @@ import { getPayload } from 'payload'
 import config from '@payload-config'
 import { usePoints } from '@/lib/points'
 import Stripe from 'stripe'
-import { getSiteSettings } from '@/lib/site-settings'
+import { getActiveStripeKeys } from '@/lib/site-settings'
 
 export async function POST(req: NextRequest) {
   try {
-    const settings = await getSiteSettings()
-    const stripeKey = settings.stripeSecretKey || process.env.STRIPE_SECRET_KEY
+    const activeKeys = await getActiveStripeKeys()
+    const stripeKey = activeKeys.secretKey || null
     const stripe = stripeKey ? new Stripe(stripeKey) : null
 
     const payload = await getPayload({ config })

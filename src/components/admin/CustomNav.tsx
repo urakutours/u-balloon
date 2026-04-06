@@ -134,6 +134,7 @@ export default function CustomNav() {
 
   const [hoveredIdx, setHoveredIdx] = useState<string | null>(null)
   const [pendingCount, setPendingCount] = useState(0)
+  const [stripeMode, setStripeMode] = useState<'test' | 'live'>('test')
   const pathname = usePathname() ?? '/admin'
 
   // Restore open sections from localStorage + auto-expand active group
@@ -154,6 +155,14 @@ export default function CustomNav() {
     fetch('/api/admin/dashboard?period=today', { credentials: 'include' })
       .then(res => res.ok ? res.json() : null)
       .then(data => { if (data?.summary?.pendingCount != null) setPendingCount(data.summary.pendingCount) })
+      .catch(() => {})
+  }, [])
+
+  // Fetch Stripe mode for badge
+  useEffect(() => {
+    fetch('/api/admin/stripe-mode', { credentials: 'include' })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data?.mode) setStripeMode(data.mode) })
       .catch(() => {})
   }, [])
 
@@ -209,7 +218,7 @@ export default function CustomNav() {
     }}>
 
       {/* Logo */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 12px', marginBottom: 32 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 12px', marginBottom: stripeMode === 'test' ? 10 : 32 }}>
         <div style={{
           width: 32, height: 32, borderRadius: 10,
           background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
@@ -221,6 +230,26 @@ export default function CustomNav() {
           <div style={{ fontSize: 10, color: t.textMuted, fontWeight: 500 }}>管理画面</div>
         </div>
       </div>
+
+      {/* Stripe test mode badge — shown only when not in production */}
+      {stripeMode === 'test' && (
+        <div style={{
+          margin: '0 12px 22px',
+          padding: '5px 10px',
+          borderRadius: 7,
+          background: themeKey === 'dark' ? '#451a03' : '#fef3c7',
+          border: `1px solid ${themeKey === 'dark' ? '#92400e' : '#f59e0b'}`,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 5,
+          fontSize: 11,
+          fontWeight: 600,
+          color: themeKey === 'dark' ? '#fcd34d' : '#92400e',
+        }}>
+          <span>⚠</span>
+          <span>Stripe テスト中</span>
+        </div>
+      )}
 
       {/* Nav groups */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
