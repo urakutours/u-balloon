@@ -22,9 +22,6 @@ export type SiteSettingsData = {
   stripeLivePublishableKey: string | null
   stripeLiveSecretKey: string | null
   stripeLiveWebhookSecret: string | null
-  // Stripe (legacy — fallback)
-  stripeSecretKey: string | null
-  stripeWebhookSecret: string | null
   // Resend / email
   resendApiKey: string | null
   emailFromAddress: string | null
@@ -76,8 +73,6 @@ export async function getSiteSettings(): Promise<SiteSettingsData> {
     stripeLivePublishableKey: decryptField(doc.stripeLivePublishableKey),
     stripeLiveSecretKey: decryptField(doc.stripeLiveSecretKey),
     stripeLiveWebhookSecret: decryptField(doc.stripeLiveWebhookSecret),
-    stripeSecretKey: decryptField(doc.stripeSecretKey),
-    stripeWebhookSecret: decryptField(doc.stripeWebhookSecret),
     resendApiKey: decryptField(doc.resendApiKey),
     googleMapsApiKey: decryptField(doc.googleMapsApiKey),
     emailFromAddress: stringField(doc.emailFromAddress),
@@ -91,11 +86,6 @@ export async function getSiteSettings(): Promise<SiteSettingsData> {
 
 /**
  * Returns the active Stripe keys based on the current stripeMode setting.
- *
- * Fallback order for each key:
- *   1. Mode-specific key (test or live)
- *   2. Legacy stripeSecretKey / stripeWebhookSecret (old field)
- *   3. Environment variables STRIPE_SECRET_KEY / STRIPE_WEBHOOK_SECRET
  */
 export async function getActiveStripeKeys(): Promise<ActiveStripeKeys> {
   const settings = await getSiteSettings()
@@ -104,32 +94,16 @@ export async function getActiveStripeKeys(): Promise<ActiveStripeKeys> {
   if (mode === 'live') {
     return {
       publishableKey: settings.stripeLivePublishableKey || '',
-      secretKey:
-        settings.stripeLiveSecretKey ||
-        settings.stripeSecretKey ||
-        process.env.STRIPE_SECRET_KEY ||
-        '',
-      webhookSecret:
-        settings.stripeLiveWebhookSecret ||
-        settings.stripeWebhookSecret ||
-        process.env.STRIPE_WEBHOOK_SECRET ||
-        '',
+      secretKey: settings.stripeLiveSecretKey || '',
+      webhookSecret: settings.stripeLiveWebhookSecret || '',
       mode: 'live',
     }
   }
 
   return {
     publishableKey: settings.stripeTestPublishableKey || '',
-    secretKey:
-      settings.stripeTestSecretKey ||
-      settings.stripeSecretKey ||
-      process.env.STRIPE_SECRET_KEY ||
-      '',
-    webhookSecret:
-      settings.stripeTestWebhookSecret ||
-      settings.stripeWebhookSecret ||
-      process.env.STRIPE_WEBHOOK_SECRET ||
-      '',
+    secretKey: settings.stripeTestSecretKey || '',
+    webhookSecret: settings.stripeTestWebhookSecret || '',
     mode: 'test',
   }
 }

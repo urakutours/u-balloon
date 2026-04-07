@@ -6,8 +6,6 @@ import { clearSiteSettingsCache } from '@/lib/site-settings'
 /** Fields whose values are AES-256-GCM encrypted in the DB. */
 const ENCRYPTED_FIELDS = [
   'ga4ServiceAccountKey',
-  'stripeSecretKey',
-  'stripeWebhookSecret',
   'stripeTestPublishableKey',
   'stripeTestSecretKey',
   'stripeTestWebhookSecret',
@@ -300,33 +298,6 @@ export const SiteSettings: GlobalConfig = {
           admin: {
             placeholder: 'whsec_...',
             description: 'Stripe 本番環境の Webhook シークレット（whsec_ で始まる）。保存時に自動で暗号化されます。',
-            components: {
-              Field: '@/components/admin/fields/EncryptedTextField',
-            },
-          },
-        },
-        // ─── 旧設定（フォールバック用） ───
-        {
-          name: 'stripeSecretKey',
-          label: 'Stripe シークレットキー（旧・フォールバック）',
-          type: 'text',
-          admin: {
-            placeholder: 'sk_live_... または sk_test_...',
-            description:
-              '旧フィールド。上記テスト/本番キーが設定されるまでのフォールバックとして機能します。',
-            components: {
-              Field: '@/components/admin/fields/EncryptedTextField',
-            },
-          },
-        },
-        {
-          name: 'stripeWebhookSecret',
-          label: 'Stripe Webhook シークレット（旧・フォールバック）',
-          type: 'text',
-          admin: {
-            placeholder: 'whsec_...',
-            description:
-              '旧フィールド。上記テスト/本番 Webhook シークレットが設定されるまでのフォールバックとして機能します。',
             components: {
               Field: '@/components/admin/fields/EncryptedTextField',
             },
