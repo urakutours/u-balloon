@@ -232,7 +232,7 @@ export const SiteSettings: GlobalConfig = {
           type: 'text',
           admin: {
             placeholder: 'sk_test_...',
-            description: 'Stripe テスト環境のシークレットキー（sk_test_ で始まる）。保存時に自動で暗号化されます。',
+            description: 'Stripe テスト環境のシークレットキー（sk_test_ または rk_test_ で始まる）。セキュリティ強化のため、制限付きキー（rk_test_）の使用を推奨します。保存時に自動で暗号化されます。',
             components: {
               Field: '@/components/admin/fields/EncryptedTextField',
             },
@@ -240,7 +240,7 @@ export const SiteSettings: GlobalConfig = {
           validate: (value: string | null | undefined) => {
             if (!value || typeof value !== 'string') return true
             if (value.startsWith('••••') || isEncrypted(value)) return true
-            if (!value.startsWith('sk_test_')) return 'テストシークレットキーには sk_test_ で始まるキーを入力してください'
+            if (!value.startsWith('sk_test_') && !value.startsWith('rk_test_')) return 'テストシークレットキーには sk_test_ または rk_test_ で始まるキーを入力してください'
             return true
           },
         },
@@ -281,7 +281,7 @@ export const SiteSettings: GlobalConfig = {
           type: 'text',
           admin: {
             placeholder: 'sk_live_...',
-            description: 'Stripe 本番環境のシークレットキー（sk_live_ で始まる）。保存時に自動で暗号化されます。',
+            description: 'Stripe 本番環境のシークレットキー（sk_live_ または rk_live_ で始まる）。セキュリティ強化のため、制限付きキー（rk_live_）の使用を推奨します。保存時に自動で暗号化されます。',
             components: {
               Field: '@/components/admin/fields/EncryptedTextField',
             },
@@ -289,7 +289,7 @@ export const SiteSettings: GlobalConfig = {
           validate: (value: string | null | undefined) => {
             if (!value || typeof value !== 'string') return true
             if (value.startsWith('••••') || isEncrypted(value)) return true
-            if (!value.startsWith('sk_live_')) return '本番シークレットキーには sk_live_ で始まるキーを入力してください'
+            if (!value.startsWith('sk_live_') && !value.startsWith('rk_live_')) return '本番シークレットキーには sk_live_ または rk_live_ で始まるキーを入力してください'
             return true
           },
         },
