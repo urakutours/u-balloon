@@ -1,11 +1,22 @@
+// Build-time env var (fallback). Primary source is window.GA4_MEASUREMENT_ID
+// set by GoogleAnalytics component from DB (SiteSettings.ga4MeasurementId).
 export const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID || ''
 
-export const isGaEnabled = () => !!GA_MEASUREMENT_ID
+function getGa4Id(): string {
+  if (typeof window !== 'undefined') {
+    const id = (window as Window & { GA4_MEASUREMENT_ID?: string }).GA4_MEASUREMENT_ID
+    if (id) return id
+  }
+  return GA_MEASUREMENT_ID
+}
+
+export const isGaEnabled = () => !!getGa4Id()
 
 // https://developers.google.com/analytics/devguides/collection/gtagjs/pages
 export const pageview = (url: string) => {
-  if (!isGaEnabled()) return
-  window.gtag('config', GA_MEASUREMENT_ID, { page_path: url })
+  const id = getGa4Id()
+  if (!id) return
+  window.gtag('config', id, { page_path: url })
 }
 
 // https://developers.google.com/analytics/devguides/collection/ga4/ecommerce
@@ -15,7 +26,7 @@ type GtagEvent = {
 }
 
 export const event = ({ action, params }: GtagEvent) => {
-  if (!isGaEnabled()) return
+  if (!getGa4Id()) return
   window.gtag('event', action, params)
 }
 

@@ -52,6 +52,7 @@ export function GoogleAnalytics({ ga4Id: propId }: GoogleAnalyticsProps) {
             gtag('config', '${ga4Id}', {
               page_path: window.location.pathname,
             });
+            window.GA4_MEASUREMENT_ID = '${ga4Id}';
           `,
         }}
       />
