@@ -2,10 +2,15 @@ import React from 'react'
 import Link from 'next/link'
 import { FileText, ChevronRight, Home } from 'lucide-react'
 import type { Metadata } from 'next'
+import { getStaticPage } from '@/lib/get-static-page'
+import { BlockRenderer } from '@/components/blocks/BlockRenderer'
 
-export const metadata: Metadata = {
-  title: '利用規約',
-  description: '利用規約 - uballoon（ユーバルーン）',
+export async function generateMetadata(): Promise<Metadata> {
+  const page = await getStaticPage('terms')
+  return {
+    title: page?.meta?.title || page?.title || '利用規約',
+    description: page?.meta?.description || '利用規約 - uballoon（ユーバルーン）',
+  }
 }
 
 const sections = [
@@ -46,7 +51,32 @@ const sections = [
   },
 ]
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const cmsPage = await getStaticPage('terms')
+
+  if (cmsPage?.layout?.length) {
+    return (
+      <div className="min-h-screen bg-white">
+        <div className="bg-brand-pink-light">
+          <div className="mx-auto flex max-w-4xl items-center gap-2 px-4 py-3 text-sm text-brand-dark/60">
+            <Link href="/" className="flex items-center gap-1 transition-colors hover:text-brand-dark">
+              <Home className="h-3.5 w-3.5" />
+              ホーム
+            </Link>
+            <ChevronRight className="h-3.5 w-3.5" />
+            <span className="text-brand-dark">{cmsPage.title}</span>
+          </div>
+        </div>
+        <div className="mx-auto max-w-4xl px-4 py-10 sm:py-14">
+          <div className="mb-8 text-center">
+            <h1 className="text-2xl font-bold text-brand-teal sm:text-3xl">{cmsPage.title}</h1>
+          </div>
+          <BlockRenderer blocks={cmsPage.layout} />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-white">
       {/* Breadcrumb */}

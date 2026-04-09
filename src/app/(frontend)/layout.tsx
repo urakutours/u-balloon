@@ -29,12 +29,26 @@ export async function generateMetadata(): Promise<Metadata> {
   } catch {
     // DB columns may not be ready yet
   }
+  const title = settings?.siteTitle || DEFAULT_TITLE
+  const description = settings?.siteDescription || DEFAULT_DESCRIPTION
+  const ogImage = settings?.siteOgImageUrl
   return {
     title: {
-      default: settings?.siteTitle || DEFAULT_TITLE,
+      default: title,
       template: '%s | uballoon',
     },
-    description: settings?.siteDescription || DEFAULT_DESCRIPTION,
+    description,
+    openGraph: {
+      title,
+      description,
+      ...(ogImage && { images: [{ url: ogImage, width: 1200, height: 630 }] }),
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      ...(ogImage && { images: [ogImage] }),
+    },
   }
 }
 

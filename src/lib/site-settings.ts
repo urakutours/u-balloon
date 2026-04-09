@@ -72,6 +72,12 @@ export type SiteSettingsData = {
   snsYoutubeUrl: string | null
   // 地域別送料テーブル
   shippingRegionalFees: ShippingRegionalFee[] | null
+  // 配送不可エリア
+  shippingRestrictedAreas: string | null
+  // OGP画像
+  siteOgImageUrl: string | null
+  // 決済方法一覧
+  paymentMethodsText: string | null
 }
 
 export type ActiveStripeKeys = {
@@ -152,6 +158,9 @@ export async function getSiteSettings(): Promise<SiteSettingsData> {
     snsYoutubeUrl: stringField(doc.snsYoutubeUrl),
     // 地域別送料テーブル
     shippingRegionalFees: arrayField<ShippingRegionalFee>(doc.shippingRegionalFees),
+    shippingRestrictedAreas: stringField(doc.shippingRestrictedAreas),
+    siteOgImageUrl: stringField(doc.siteOgImageUrl),
+    paymentMethodsText: stringField(doc.paymentMethodsText),
     emailFromAddress: stringField(doc.emailFromAddress),
     emailFromName: stringField(doc.emailFromName),
     emailReplyTo: stringField(doc.emailReplyTo),

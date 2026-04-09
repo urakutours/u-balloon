@@ -67,6 +67,10 @@ export default async function LegalPage() {
 
   // 地域別送料テーブル
   const regionalFees = settings?.shippingRegionalFees
+  // 配送不可エリア
+  const restrictedAreas = settings?.shippingRestrictedAreas || '沖縄県'
+  // 決済方法一覧
+  const paymentMethodsText = settings?.paymentMethodsText
 
   const legalItems: { label: string; value: React.ReactNode }[] = [
     { label: '販売業者', value: companyName },
@@ -105,7 +109,23 @@ export default async function LegalPage() {
     },
     {
       label: 'お支払い方法',
-      value: (
+      value: paymentMethodsText ? (
+        <>
+          {paymentMethodsText.split('\n').filter(Boolean).map((method, i) => (
+            <React.Fragment key={i}>
+              {method}
+              {i < paymentMethodsText.split('\n').filter(Boolean).length - 1 && <br />}
+            </React.Fragment>
+          ))}
+          <br />
+          <br />
+          <strong>銀行振込（前払い）</strong>
+          <br />
+          {bankName} {bankBranchName} {bankAccountTypeLabel} {bankAccountNumber} {bankAccountHolder}
+          <br />
+          ※振込手数料はお客様のご負担となります
+        </>
+      ) : (
         <>
           <strong>クレジットカード</strong>
           <br />
@@ -167,7 +187,7 @@ export default async function LegalPage() {
           ))}
           <br />
           <br />
-          <strong>※沖縄県への配送はお受けできません。</strong>
+          <strong>※{restrictedAreas}への配送はお受けできません。</strong>
           バルーンはヘリウムガスで膨らませているため、気圧の変化により破裂する恐れがあります。
           <br />
           ※離島へのお届けはお受けできない場合がございます。事前にお問い合わせください。
@@ -185,7 +205,7 @@ export default async function LegalPage() {
           九州：800円（税込）
           <br />
           <br />
-          <strong>※沖縄県への配送はお受けできません。</strong>
+          <strong>※{restrictedAreas}への配送はお受けできません。</strong>
           バルーンはヘリウムガスで膨らませているため、気圧の変化により破裂する恐れがあります。
           <br />
           ※離島へのお届けはお受けできない場合がございます。事前にお問い合わせください。
