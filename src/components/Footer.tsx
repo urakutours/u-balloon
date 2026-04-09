@@ -53,15 +53,20 @@ function YouTubeIcon({ className }: { className?: string }) {
 }
 
 export async function Footer() {
-  const settings = await getSiteSettings()
+  let settings: Awaited<ReturnType<typeof getSiteSettings>> | null = null
+  try {
+    settings = await getSiteSettings()
+  } catch {
+    // DB columns may not exist yet (e.g. first deploy after migration)
+  }
 
   const allLinks = [
-    settings.snsInstagramUrl ? { url: settings.snsInstagramUrl, label: 'Instagram', icon: <InstagramIcon className="h-5 w-5" /> } : null,
-    settings.snsLineUrl ? { url: settings.snsLineUrl, label: 'LINE', icon: <LineIcon className="h-4.5 w-4.5" /> } : null,
-    settings.snsXUrl ? { url: settings.snsXUrl, label: 'X', icon: <XIcon className="h-4.5 w-4.5" /> } : null,
-    settings.snsFacebookUrl ? { url: settings.snsFacebookUrl, label: 'Facebook', icon: <FacebookIcon className="h-5 w-5" /> } : null,
-    settings.snsTiktokUrl ? { url: settings.snsTiktokUrl, label: 'TikTok', icon: <TikTokIcon className="h-5 w-5" /> } : null,
-    settings.snsYoutubeUrl ? { url: settings.snsYoutubeUrl, label: 'YouTube', icon: <YouTubeIcon className="h-5 w-5" /> } : null,
+    settings?.snsInstagramUrl ? { url: settings.snsInstagramUrl, label: 'Instagram', icon: <InstagramIcon className="h-5 w-5" /> } : null,
+    settings?.snsLineUrl ? { url: settings.snsLineUrl, label: 'LINE', icon: <LineIcon className="h-4.5 w-4.5" /> } : null,
+    settings?.snsXUrl ? { url: settings.snsXUrl, label: 'X', icon: <XIcon className="h-4.5 w-4.5" /> } : null,
+    settings?.snsFacebookUrl ? { url: settings.snsFacebookUrl, label: 'Facebook', icon: <FacebookIcon className="h-5 w-5" /> } : null,
+    settings?.snsTiktokUrl ? { url: settings.snsTiktokUrl, label: 'TikTok', icon: <TikTokIcon className="h-5 w-5" /> } : null,
+    settings?.snsYoutubeUrl ? { url: settings.snsYoutubeUrl, label: 'YouTube', icon: <YouTubeIcon className="h-5 w-5" /> } : null,
   ]
   const snsLinks = allLinks.filter(Boolean) as { url: string; label: string; icon: React.JSX.Element }[]
 
