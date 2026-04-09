@@ -30,6 +30,28 @@ export type SiteSettingsData = {
   adminAlertEmail: string | null
   // Google Maps
   googleMapsApiKey: string | null
+  // Shipping
+  shippingOriginAddress: string | null
+  shippingStandardBaseFee: number | null
+  shippingStandardFreeDistanceKm: number | null
+  shippingDeliveryBaseFee: number | null
+  shippingDeliveryFreeDistanceKm: number | null
+  shippingExtraPerKmFee: number | null
+  shippingDeliveryFreeThreshold: number | null
+  // Bank transfer
+  bankName: string | null
+  bankBranchName: string | null
+  bankAccountType: string | null
+  bankAccountNumber: string | null
+  bankAccountHolder: string | null
+  bankTransferDeadlineDays: number | null
+  // SNS
+  snsInstagramUrl: string | null
+  snsLineUrl: string | null
+  snsXUrl: string | null
+  snsFacebookUrl: string | null
+  snsTiktokUrl: string | null
+  snsYoutubeUrl: string | null
 }
 
 export type ActiveStripeKeys = {
@@ -75,6 +97,28 @@ export async function getSiteSettings(): Promise<SiteSettingsData> {
     stripeLiveWebhookSecret: decryptField(doc.stripeLiveWebhookSecret),
     resendApiKey: decryptField(doc.resendApiKey),
     googleMapsApiKey: decryptField(doc.googleMapsApiKey),
+    // Shipping
+    shippingOriginAddress: stringField(doc.shippingOriginAddress),
+    shippingStandardBaseFee: numberField(doc.shippingStandardBaseFee),
+    shippingStandardFreeDistanceKm: numberField(doc.shippingStandardFreeDistanceKm),
+    shippingDeliveryBaseFee: numberField(doc.shippingDeliveryBaseFee),
+    shippingDeliveryFreeDistanceKm: numberField(doc.shippingDeliveryFreeDistanceKm),
+    shippingExtraPerKmFee: numberField(doc.shippingExtraPerKmFee),
+    shippingDeliveryFreeThreshold: numberField(doc.shippingDeliveryFreeThreshold),
+    // Bank transfer
+    bankName: stringField(doc.bankName),
+    bankBranchName: stringField(doc.bankBranchName),
+    bankAccountType: stringField(doc.bankAccountType),
+    bankAccountNumber: stringField(doc.bankAccountNumber),
+    bankAccountHolder: stringField(doc.bankAccountHolder),
+    bankTransferDeadlineDays: numberField(doc.bankTransferDeadlineDays),
+    // SNS
+    snsInstagramUrl: stringField(doc.snsInstagramUrl),
+    snsLineUrl: stringField(doc.snsLineUrl),
+    snsXUrl: stringField(doc.snsXUrl),
+    snsFacebookUrl: stringField(doc.snsFacebookUrl),
+    snsTiktokUrl: stringField(doc.snsTiktokUrl),
+    snsYoutubeUrl: stringField(doc.snsYoutubeUrl),
     emailFromAddress: stringField(doc.emailFromAddress),
     emailFromName: stringField(doc.emailFromName),
     emailReplyTo: stringField(doc.emailReplyTo),
@@ -132,4 +176,10 @@ function decryptField(value: unknown): string | null {
 /** Coerce a plain string field to string | null. */
 function stringField(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null
+}
+
+/** Coerce a numeric field to number | null. */
+function numberField(value: unknown): number | null {
+  if (typeof value === 'number' && !Number.isNaN(value)) return value
+  return null
 }

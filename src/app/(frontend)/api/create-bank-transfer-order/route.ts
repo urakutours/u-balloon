@@ -2,16 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { addDays } from 'date-fns'
-
-const BANK_INFO = {
-  bankName: '三菱UFJ銀行',
-  branchName: '渋谷支店',
-  accountType: '普通',
-  accountNumber: '1234567',
-  accountHolder: 'ユーバルーン（カ',
-}
-
-const TRANSFER_DEADLINE_DAYS = 7
+import { getSiteSettings } from '@/lib/site-settings'
 
 export async function POST(req: NextRequest) {
   try {
@@ -34,6 +25,25 @@ export async function POST(req: NextRequest) {
     if (!customerId || !items?.length) {
       return NextResponse.json({ error: 'customerId and items are required' }, { status: 400 })
     }
+
+    const settings = await getSiteSettings()
+
+    const bankInfo = {
+      bankName: settings.bankName || '',
+      branchName: settings.bankBranchName || '',
+      accountType: settings.bankAccountType === 'checking' ? '当座' : '普通',
+      accountNumber: settings.bankAccountNumber || '',
+      accountHolder: settings.bankAccountHolder || '',
+    }
+
+    if (!bankInfo.bankName || !bankInfo.accountNumber) {
+      return NextResponse.json(
+        { error: '銀行振込の設定が完了していません。管理者にお問い合わせください。' },
+        { status: 503 },
+      )
+    }
+
+    const deadlineDays = settings.bankTransferDeadlineDays ?? 7
 
     const payload = await getPayload({ config })
 
@@ -65,7 +75,7 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    const deadline = addDays(new Date(), TRANSFER_DEADLINE_DAYS)
+    const deadline = addDays(new Date(), deadlineDays)
 
     const order = await payload.create({
       collection: 'orders',
@@ -92,7 +102,7 @@ export async function POST(req: NextRequest) {
       success: true,
       orderNumber: order.orderNumber,
       orderId: order.id,
-      bankInfo: BANK_INFO,
+      bankInfo,
       deadline: deadline.toISOString(),
       totalAmount,
     })

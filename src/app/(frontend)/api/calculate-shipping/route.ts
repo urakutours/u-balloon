@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSiteSettings } from '@/lib/site-settings'
-
-// 起点: 東京都港区（uballoon拠点）
-const ORIGIN = '東京都港区'
+import { getSiteSettings, type SiteSettingsData } from '@/lib/site-settings'
 
 type ShippingRequest = {
   destinationAddress: string
@@ -14,7 +11,11 @@ type ShippingRequest = {
  * Google Maps Distance Matrix API を使って距離を取得
  * API KEY未設定時は10kmの固定値を返す
  */
-async function getDistanceKm(destination: string, apiKey: string | null): Promise<{ distanceKm: number; isMock: boolean }> {
+async function getDistanceKm(
+  destination: string,
+  origin: string,
+  apiKey: string | null,
+): Promise<{ distanceKm: number; isMock: boolean }> {
   if (!apiKey) {
     console.log('[Shipping] Google Maps APIキー未設定 → モックモード (10km固定)')
     return { distanceKm: 10, isMock: true }
@@ -22,7 +23,7 @@ async function getDistanceKm(destination: string, apiKey: string | null): Promis
 
   try {
     const url = new URL('https://maps.googleapis.com/maps/api/distancematrix/json')
-    url.searchParams.set('origins', ORIGIN)
+    url.searchParams.set('origins', origin)
     url.searchParams.set('destinations', destination)
     url.searchParams.set('mode', 'driving')
     url.searchParams.set('language', 'ja')
@@ -52,66 +53,68 @@ async function getDistanceKm(destination: string, apiKey: string | null): Promis
 }
 
 /**
- * 送料計算ロジック
+ * 送料計算ロジック — 料金パラメータは SiteSettings から取得
  */
 function calculateShippingFee(
   distanceKm: number,
   productType: 'standard' | 'delivery',
   cartSubtotal: number,
+  settings: SiteSettingsData,
 ): { shippingFee: number; breakdown: string } {
+  const perKmFee = settings.shippingExtraPerKmFee ?? 200
+
   if (productType === 'standard') {
-    // 通常商品
-    // 5km以内: 基本料1,200円
-    // 5km超過: 1,200円 + (超過km × 200円)
-    const baseFee = 1200
-    if (distanceKm <= 5) {
+    const baseFee = settings.shippingStandardBaseFee ?? 1200
+    const freeKm = settings.shippingStandardFreeDistanceKm ?? 5
+
+    if (distanceKm <= freeKm) {
       return {
         shippingFee: baseFee,
-        breakdown: `基本料 ¥${baseFee.toLocaleString()}（${distanceKm}km / 5km以内）`,
+        breakdown: `基本料 ¥${baseFee.toLocaleString()}（${distanceKm}km / ${freeKm}km以内）`,
       }
     }
-    const excessKm = distanceKm - 5
-    const excessFee = excessKm * 200
+    const excessKm = distanceKm - freeKm
+    const excessFee = excessKm * perKmFee
     const total = baseFee + excessFee
     return {
       shippingFee: total,
-      breakdown: `基本料 ¥${baseFee.toLocaleString()} + 超過${excessKm}km × ¥200 = ¥${total.toLocaleString()}`,
+      breakdown: `基本料 ¥${baseFee.toLocaleString()} + 超過${excessKm}km × ¥${perKmFee} = ¥${total.toLocaleString()}`,
     }
   }
 
   // デリバリー限定商品
-  const baseFee = 4500
+  const baseFee = settings.shippingDeliveryBaseFee ?? 4500
+  const freeKm = settings.shippingDeliveryFreeDistanceKm ?? 10
+  const freeThreshold = settings.shippingDeliveryFreeThreshold ?? 30000
 
-  if (distanceKm <= 10) {
-    // 10km以内: 基本料4,500円 (30,000円以上で送料無料)
-    if (cartSubtotal >= 30000) {
+  if (distanceKm <= freeKm) {
+    if (freeThreshold > 0 && cartSubtotal >= freeThreshold) {
       return {
         shippingFee: 0,
-        breakdown: `送料無料（商品合計 ¥${cartSubtotal.toLocaleString()} ≥ ¥30,000 / ${distanceKm}km / 10km以内）`,
+        breakdown: `送料無料（商品合計 ¥${cartSubtotal.toLocaleString()} ≥ ¥${freeThreshold.toLocaleString()} / ${distanceKm}km / ${freeKm}km以内）`,
       }
     }
     return {
       shippingFee: baseFee,
-      breakdown: `基本料 ¥${baseFee.toLocaleString()}（${distanceKm}km / 10km以内）`,
+      breakdown: `基本料 ¥${baseFee.toLocaleString()}（${distanceKm}km / ${freeKm}km以内）`,
     }
   }
 
-  // 10km超過
-  const excessKm = distanceKm - 10
-  const excessFee = excessKm * 200
+  // 無料距離超過
+  const excessKm = distanceKm - freeKm
+  const excessFee = excessKm * perKmFee
 
-  if (cartSubtotal >= 30000) {
-    // 送料無料は10km以内のみ。超過分は必ず発生
+  if (freeThreshold > 0 && cartSubtotal >= freeThreshold) {
     return {
       shippingFee: excessFee,
-      breakdown: `基本料無料（¥30,000以上）+ 超過${excessKm}km × ¥200 = ¥${excessFee.toLocaleString()}`,
+      breakdown: `基本料無料（¥${freeThreshold.toLocaleString()}以上）+ 超過${excessKm}km × ¥${perKmFee} = ¥${excessFee.toLocaleString()}`,
     }
   }
 
   const total = baseFee + excessFee
   return {
     shippingFee: total,
-    breakdown: `基本料 ¥${baseFee.toLocaleString()} + 超過${excessKm}km × ¥200 = ¥${total.toLocaleString()}`,
+    breakdown: `基本料 ¥${baseFee.toLocaleString()} + 超過${excessKm}km × ¥${perKmFee} = ¥${total.toLocaleString()}`,
   }
 }
 
@@ -131,15 +134,16 @@ export async function POST(req: NextRequest) {
     }
 
     const settings = await getSiteSettings()
-    const apiKey = settings.googleMapsApiKey || process.env.GOOGLE_MAPS_API_KEY || null
-    const { distanceKm, isMock } = await getDistanceKm(destinationAddress, apiKey)
-    const { shippingFee, breakdown } = calculateShippingFee(distanceKm, productType, cartSubtotal)
+    const origin = settings.shippingOriginAddress || '東京都港区'
+    const apiKey = settings.googleMapsApiKey || null
+    const { distanceKm, isMock } = await getDistanceKm(destinationAddress, origin, apiKey)
+    const { shippingFee, breakdown } = calculateShippingFee(distanceKm, productType, cartSubtotal, settings)
 
     return NextResponse.json({
       distanceKm,
       shippingFee,
       breakdown,
-      ...(isMock ? { note: 'GOOGLE_MAPS_API_KEY未設定のためモックデータ（10km固定）を使用' } : {}),
+      ...(isMock ? { note: 'Google Maps APIキー未設定のためモックデータ（10km固定）を使用' } : {}),
     })
   } catch (err) {
     console.error('[Shipping] Error:', err)

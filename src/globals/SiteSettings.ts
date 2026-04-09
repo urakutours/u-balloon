@@ -436,5 +436,219 @@ export const SiteSettings: GlobalConfig = {
         },
       ],
     },
+    // ─────────────────────────────────────────────────────────────────
+    // 配送設定
+    // ─────────────────────────────────────────────────────────────────
+    {
+      type: 'collapsible',
+      label: '配送設定',
+      admin: {
+        initCollapsed: true,
+      },
+      fields: [
+        {
+          name: 'shippingOriginAddress',
+          type: 'text',
+          label: '配送起点住所',
+          admin: {
+            placeholder: '東京都港区',
+            description: 'Google Maps Distance Matrix API で距離計算に使用する出発地点。',
+          },
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'shippingStandardBaseFee',
+              type: 'number',
+              label: '通常配送 基本料金（円）',
+              admin: { placeholder: '1200', width: '50%' },
+            },
+            {
+              name: 'shippingStandardFreeDistanceKm',
+              type: 'number',
+              label: '通常配送 無料距離（km）',
+              admin: {
+                placeholder: '5',
+                width: '50%',
+                description: 'この距離以内は基本料金のみ。超過分に距離単価が加算されます。',
+              },
+            },
+          ],
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'shippingDeliveryBaseFee',
+              type: 'number',
+              label: 'デリバリー配送 基本料金（円）',
+              admin: { placeholder: '4500', width: '50%' },
+            },
+            {
+              name: 'shippingDeliveryFreeDistanceKm',
+              type: 'number',
+              label: 'デリバリー配送 無料距離（km）',
+              admin: { placeholder: '10', width: '50%' },
+            },
+          ],
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'shippingExtraPerKmFee',
+              type: 'number',
+              label: '距離超過単価（円/km）',
+              admin: {
+                placeholder: '200',
+                width: '50%',
+                description: '無料距離を超えた場合の1kmあたりの追加料金。通常・デリバリー共通。',
+              },
+            },
+            {
+              name: 'shippingDeliveryFreeThreshold',
+              type: 'number',
+              label: 'デリバリー送料無料閾値（円）',
+              admin: {
+                placeholder: '30000',
+                width: '50%',
+                description: '注文金額がこの金額以上の場合、デリバリー基本料を無料にする。0で無効。',
+              },
+            },
+          ],
+        },
+      ],
+    },
+    // ─────────────────────────────────────────────────────────────────
+    // 銀行振込設定
+    // ─────────────────────────────────────────────────────────────────
+    {
+      type: 'collapsible',
+      label: '銀行振込設定',
+      admin: {
+        initCollapsed: true,
+      },
+      fields: [
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'bankName',
+              type: 'text',
+              label: '銀行名',
+              admin: { placeholder: '三菱UFJ銀行', width: '50%' },
+            },
+            {
+              name: 'bankBranchName',
+              type: 'text',
+              label: '支店名',
+              admin: { placeholder: '渋谷支店', width: '50%' },
+            },
+          ],
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'bankAccountType',
+              type: 'select',
+              label: '口座種別',
+              options: [
+                { label: '普通', value: 'ordinary' },
+                { label: '当座', value: 'checking' },
+              ],
+              defaultValue: 'ordinary',
+              admin: { width: '33%' },
+            },
+            {
+              name: 'bankAccountNumber',
+              type: 'text',
+              label: '口座番号',
+              admin: { placeholder: '1234567', width: '33%' },
+            },
+            {
+              name: 'bankAccountHolder',
+              type: 'text',
+              label: '口座名義',
+              admin: {
+                placeholder: 'ユーバルーン（カ',
+                width: '34%',
+                description: 'カタカナ表記',
+              },
+            },
+          ],
+        },
+        {
+          name: 'bankTransferDeadlineDays',
+          type: 'number',
+          label: '振込期限（日数）',
+          defaultValue: 7,
+          admin: {
+            description: '注文日から振込期限までの日数。',
+          },
+        },
+      ],
+    },
+    // ─────────────────────────────────────────────────────────────────
+    // SNS / ソーシャルメディア
+    // ─────────────────────────────────────────────────────────────────
+    {
+      type: 'collapsible',
+      label: 'SNS / ソーシャルメディア',
+      admin: {
+        initCollapsed: true,
+      },
+      fields: [
+        {
+          name: 'snsInstagramUrl',
+          type: 'text',
+          label: 'Instagram URL',
+          admin: { placeholder: 'https://www.instagram.com/yourname/' },
+        },
+        {
+          name: 'snsLineUrl',
+          type: 'text',
+          label: 'LINE公式アカウント URL',
+          admin: { placeholder: 'https://line.me/R/ti/p/@xxx' },
+        },
+        {
+          name: 'snsXUrl',
+          type: 'text',
+          label: 'X（Twitter）URL',
+          admin: {
+            placeholder: 'https://x.com/yourname',
+            description: '未設定の場合、フッターに表示されません。',
+          },
+        },
+        {
+          name: 'snsFacebookUrl',
+          type: 'text',
+          label: 'Facebook URL',
+          admin: {
+            placeholder: 'https://www.facebook.com/yourpage',
+            description: '未設定の場合、フッターに表示されません。',
+          },
+        },
+        {
+          name: 'snsTiktokUrl',
+          type: 'text',
+          label: 'TikTok URL',
+          admin: {
+            placeholder: 'https://www.tiktok.com/@yourname',
+            description: '未設定の場合、フッターに表示されません。',
+          },
+        },
+        {
+          name: 'snsYoutubeUrl',
+          type: 'text',
+          label: 'YouTube URL',
+          admin: {
+            placeholder: 'https://www.youtube.com/@yourname',
+            description: '未設定の場合、フッターに表示されません。',
+          },
+        },
+      ],
+    },
   ],
 }
