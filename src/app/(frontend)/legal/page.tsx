@@ -4,6 +4,7 @@ import { ChevronRight, Home } from 'lucide-react'
 import type { Metadata } from 'next'
 import { getStaticPage } from '@/lib/get-static-page'
 import { BlockRenderer } from '@/components/blocks/BlockRenderer'
+import { getSiteSettings } from '@/lib/site-settings'
 
 export async function generateMetadata(): Promise<Metadata> {
   const page = await getStaticPage('legal')
@@ -13,143 +14,16 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-const legalItems: { label: string; value: React.ReactNode }[] = [
-  { label: '販売業者', value: '株式会社URAKU' },
-  { label: '運営統括責任者', value: '奥山大介' },
-  {
-    label: '所在地',
-    value: (
-      <>
-        〒108-0074
-        <br />
-        東京都港区高輪2-1-13 高輪タウンハウス414
-      </>
-    ),
-  },
-  { label: '電話番号', value: '03-6277-4682（平日 10:00〜17:00）' },
-  {
-    label: 'メールアドレス',
-    value: (
-      <a href="mailto:info@u-balloon.com" className="text-brand-teal underline underline-offset-2 hover:text-brand-teal/80">
-        info@u-balloon.com
-      </a>
-    ),
-  },
-  { label: '販売価格', value: '各商品ページに表示（税込価格）' },
-  {
-    label: '商品代金以外の必要料金',
-    value: (
-      <>
-        ・消費税（税込価格に含む）
-        <br />
-        ・送料（地域により異なります。詳細は下記「送料」欄をご確認ください）
-        <br />
-        ・振込手数料（銀行振込の場合、お客様ご負担）
-      </>
-    ),
-  },
-  {
-    label: 'お支払い方法',
-    value: (
-      <>
-        <strong>クレジットカード</strong>
-        <br />
-        VISA / Mastercard / American Express / JCB / Diners Club / Discover
-        <br />
-        <br />
-        <strong>銀行振込（前払い）</strong>
-        <br />
-        PayPay銀行 本店営業部 普通 2409635 カ）ウラク
-        <br />
-        ※振込手数料はお客様のご負担となります
-      </>
-    ),
-  },
-  {
-    label: 'お支払い期限',
-    value: (
-      <>
-        クレジットカード：ご注文確定時に決済
-        <br />
-        銀行振込：ご注文後7日以内にお振込みください。期限内にご入金がない場合、ご注文をキャンセルとさせていただく場合がございます。
-      </>
-    ),
-  },
-  {
-    label: '商品の引渡し時期',
-    value: (
-      <>
-        クレジットカード：ご注文確定後、通常2〜5営業日以内に発送いたします。
-        <br />
-        銀行振込：ご入金確認後、通常2〜5営業日以内に発送いたします。
-        <br />
-        ※土日祝日は受注・発送業務をお休みしております。
-        <br />
-        ※在庫状況によりお届けまでにお時間をいただく場合がございます。
-      </>
-    ),
-  },
-  {
-    label: '配送業者',
-    value: (
-      <>
-        ヤマト運輸 / ゆうパック
-        <br />
-        ※商品やお届け先に応じて最適な方法で発送いたします。
-      </>
-    ),
-  },
-  {
-    label: '送料',
-    value: (
-      <>
-        関東・信越・北陸・東海・南東北：無料
-        <br />
-        関西：200円（税込）
-        <br />
-        中国・四国：400円（税込）
-        <br />
-        北海道・北東北：700円（税込）
-        <br />
-        九州：800円（税込）
-        <br />
-        <br />
-        <strong>※沖縄県への配送はお受けできません。</strong>
-        バルーンはヘリウムガスで膨らませているため、気圧の変化により破裂する恐れがあります。
-        <br />
-        ※離島へのお届けはお受けできない場合がございます。事前にお問い合わせください。
-      </>
-    ),
-  },
-  {
-    label: '返品・交換について',
-    value: (
-      <>
-        バルーン商品の性質上、お客様のご都合による返品・交換はお受けできません。
-        <br />
-        <br />
-        <strong>配送中の破損・不良品の場合：</strong>
-        <br />
-        商品到着後3日以内にご連絡ください。状況を確認のうえ、以下のいずれかで対応いたします。
-        <br />
-        ・同一商品の再発送
-        <br />
-        ・ご返金
-        <br />
-        <br />
-        ※バルーン商品の性質上、状況に応じて商品の処分をお願いする場合がございます（返送不要）。
-      </>
-    ),
-  },
-  { label: '返品送料', value: '不良品・破損の場合は当社負担' },
-  {
-    label: '申込みの有効期限',
-    value: 'ご注文後7日以内にお支払いがない場合はキャンセルとさせていただきます。',
-  },
-]
+const BANK_ACCOUNT_TYPE_LABELS: Record<string, string> = {
+  ordinary: '普通',
+  checking: '当座',
+}
 
 export default async function LegalPage() {
-  const cmsPage = await getStaticPage('legal')
+  const [cmsPage, settings] = await Promise.all([
+    getStaticPage('legal'),
+    getSiteSettings().catch(() => null),
+  ])
 
   if (cmsPage?.layout?.length) {
     return (
@@ -173,6 +47,177 @@ export default async function LegalPage() {
       </div>
     )
   }
+
+  // 会社情報
+  const companyName = settings?.companyName || '株式会社URAKU'
+  const companyRepresentative = settings?.companyRepresentative || '奥山大介'
+  const postalCode = settings?.companyPostalCode || '〒108-0074'
+  const address = settings?.companyAddress || '東京都港区高輪2-1-13 高輪タウンハウス414'
+  const companyPhone = settings?.companyPhone || '03-6277-4682'
+  const businessHours = settings?.companyBusinessHours || '平日 10:00〜17:00'
+  const contactEmail = settings?.companyContactEmail || 'info@u-balloon.com'
+
+  // 銀行振込情報
+  const bankName = settings?.bankName || 'PayPay銀行'
+  const bankBranchName = settings?.bankBranchName || '本店営業部'
+  const bankAccountTypeLabel = BANK_ACCOUNT_TYPE_LABELS[settings?.bankAccountType || 'ordinary'] || '普通'
+  const bankAccountNumber = settings?.bankAccountNumber || '2409635'
+  const bankAccountHolder = settings?.bankAccountHolder || 'カ）ウラク'
+  const bankDeadlineDays = settings?.bankTransferDeadlineDays ?? 7
+
+  // 地域別送料テーブル
+  const regionalFees = settings?.shippingRegionalFees
+
+  const legalItems: { label: string; value: React.ReactNode }[] = [
+    { label: '販売業者', value: companyName },
+    { label: '運営統括責任者', value: companyRepresentative },
+    {
+      label: '所在地',
+      value: (
+        <>
+          {postalCode}
+          <br />
+          {address}
+        </>
+      ),
+    },
+    { label: '電話番号', value: `${companyPhone}（${businessHours}）` },
+    {
+      label: 'メールアドレス',
+      value: (
+        <a href={`mailto:${contactEmail}`} className="text-brand-teal underline underline-offset-2 hover:text-brand-teal/80">
+          {contactEmail}
+        </a>
+      ),
+    },
+    { label: '販売価格', value: '各商品ページに表示（税込価格）' },
+    {
+      label: '商品代金以外の必要料金',
+      value: (
+        <>
+          ・消費税（税込価格に含む）
+          <br />
+          ・送料（地域により異なります。詳細は下記「送料」欄をご確認ください）
+          <br />
+          ・振込手数料（銀行振込の場合、お客様ご負担）
+        </>
+      ),
+    },
+    {
+      label: 'お支払い方法',
+      value: (
+        <>
+          <strong>クレジットカード</strong>
+          <br />
+          VISA / Mastercard / American Express / JCB / Diners Club / Discover
+          <br />
+          <br />
+          <strong>銀行振込（前払い）</strong>
+          <br />
+          {bankName} {bankBranchName} {bankAccountTypeLabel} {bankAccountNumber} {bankAccountHolder}
+          <br />
+          ※振込手数料はお客様のご負担となります
+        </>
+      ),
+    },
+    {
+      label: 'お支払い期限',
+      value: (
+        <>
+          クレジットカード：ご注文確定時に決済
+          <br />
+          銀行振込：ご注文後{bankDeadlineDays}日以内にお振込みください。期限内にご入金がない場合、ご注文をキャンセルとさせていただく場合がございます。
+        </>
+      ),
+    },
+    {
+      label: '商品の引渡し時期',
+      value: (
+        <>
+          クレジットカード：ご注文確定後、通常2〜5営業日以内に発送いたします。
+          <br />
+          銀行振込：ご入金確認後、通常2〜5営業日以内に発送いたします。
+          <br />
+          ※土日祝日は受注・発送業務をお休みしております。
+          <br />
+          ※在庫状況によりお届けまでにお時間をいただく場合がございます。
+        </>
+      ),
+    },
+    {
+      label: '配送業者',
+      value: (
+        <>
+          ヤマト運輸 / ゆうパック
+          <br />
+          ※商品やお届け先に応じて最適な方法で発送いたします。
+        </>
+      ),
+    },
+    {
+      label: '送料',
+      value: regionalFees && regionalFees.length > 0 ? (
+        <>
+          {regionalFees.map((item, i) => (
+            <React.Fragment key={item.id || i}>
+              {item.region}：{item.fee === 0 ? '無料' : `${item.fee.toLocaleString()}円（税込）`}
+              {item.note ? `（${item.note}）` : ''}
+              {i < regionalFees.length - 1 && <br />}
+            </React.Fragment>
+          ))}
+          <br />
+          <br />
+          <strong>※沖縄県への配送はお受けできません。</strong>
+          バルーンはヘリウムガスで膨らませているため、気圧の変化により破裂する恐れがあります。
+          <br />
+          ※離島へのお届けはお受けできない場合がございます。事前にお問い合わせください。
+        </>
+      ) : (
+        <>
+          関東・信越・北陸・東海・南東北：無料
+          <br />
+          関西：200円（税込）
+          <br />
+          中国・四国：400円（税込）
+          <br />
+          北海道・北東北：700円（税込）
+          <br />
+          九州：800円（税込）
+          <br />
+          <br />
+          <strong>※沖縄県への配送はお受けできません。</strong>
+          バルーンはヘリウムガスで膨らませているため、気圧の変化により破裂する恐れがあります。
+          <br />
+          ※離島へのお届けはお受けできない場合がございます。事前にお問い合わせください。
+        </>
+      ),
+    },
+    {
+      label: '返品・交換について',
+      value: (
+        <>
+          バルーン商品の性質上、お客様のご都合による返品・交換はお受けできません。
+          <br />
+          <br />
+          <strong>配送中の破損・不良品の場合：</strong>
+          <br />
+          商品到着後3日以内にご連絡ください。状況を確認のうえ、以下のいずれかで対応いたします。
+          <br />
+          ・同一商品の再発送
+          <br />
+          ・ご返金
+          <br />
+          <br />
+          ※バルーン商品の性質上、状況に応じて商品の処分をお願いする場合がございます（返送不要）。
+        </>
+      ),
+    },
+    { label: '返品送料', value: '不良品・破損の場合は当社負担' },
+    {
+      label: '申込みの有効期限',
+      value: `ご注文後${bankDeadlineDays}日以内にお支払いがない場合はキャンセルとさせていただきます。`,
+    },
+  ]
 
   return (
     <div className="min-h-screen bg-white">

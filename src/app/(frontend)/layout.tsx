@@ -17,13 +17,25 @@ const notoSansJP = Noto_Sans_JP({
 })
 
 import type { Metadata } from 'next'
+import { getSiteSettings } from '@/lib/site-settings'
 
-export const metadata: Metadata = {
-  title: {
-    default: 'uballoon | バルーンギフト・バルーン電報の通販',
-    template: '%s | uballoon',
-  },
-  description: 'バルーンギフトで特別な日を彩ります。誕生日、結婚式、記念日に最適なバルーン電報・バルーンギフトの通販サイト。東京都心への即日配送対応。',
+const DEFAULT_TITLE = 'uballoon | バルーンギフト・バルーン電報の通販'
+const DEFAULT_DESCRIPTION = 'バルーンギフトで特別な日を彩ります。誕生日、結婚式、記念日に最適なバルーン電報・バルーンギフトの通販サイト。東京都心への即日配送対応。'
+
+export async function generateMetadata(): Promise<Metadata> {
+  let settings = null
+  try {
+    settings = await getSiteSettings()
+  } catch {
+    // DB columns may not be ready yet
+  }
+  return {
+    title: {
+      default: settings?.siteTitle || DEFAULT_TITLE,
+      template: '%s | uballoon',
+    },
+    description: settings?.siteDescription || DEFAULT_DESCRIPTION,
+  }
 }
 
 export default async function RootLayout(props: { children: React.ReactNode }) {

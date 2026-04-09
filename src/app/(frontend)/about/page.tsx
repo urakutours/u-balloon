@@ -4,6 +4,7 @@ import { ChevronRight, Home } from 'lucide-react'
 import type { Metadata } from 'next'
 import { getStaticPage } from '@/lib/get-static-page'
 import { BlockRenderer } from '@/components/blocks/BlockRenderer'
+import { getSiteSettings } from '@/lib/site-settings'
 
 export async function generateMetadata(): Promise<Metadata> {
   const page = await getStaticPage('about')
@@ -13,21 +14,11 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-const companyInfo = [
-  { label: '会社名', value: '株式会社URAKU' },
-  { label: '代表取締役', value: '奥山大介' },
-  {
-    label: '所在地',
-    value: '〒108-0074\n東京都港区高輪2-1-13 高輪タウンハウス414',
-  },
-  { label: '電話番号', value: '03-6277-4682' },
-  { label: 'メールアドレス', value: 'info@u-balloon.com', href: 'mailto:info@u-balloon.com' },
-  { label: '営業時間', value: '平日 10:00〜17:00（土日祝休み）' },
-  { label: 'URL', value: 'https://u-balloon.com', href: 'https://u-balloon.com' },
-]
-
 export default async function AboutPage() {
-  const cmsPage = await getStaticPage('about')
+  const [cmsPage, settings] = await Promise.all([
+    getStaticPage('about'),
+    getSiteSettings().catch(() => null),
+  ])
 
   if (cmsPage?.layout?.length) {
     return (
@@ -51,6 +42,23 @@ export default async function AboutPage() {
       </div>
     )
   }
+
+  const postalCode = settings?.companyPostalCode || '〒108-0074'
+  const address = settings?.companyAddress || '東京都港区高輪2-1-13 高輪タウンハウス414'
+  const contactEmail = settings?.companyContactEmail || 'info@u-balloon.com'
+
+  const companyInfo = [
+    { label: '会社名', value: settings?.companyName || '株式会社URAKU' },
+    { label: '代表取締役', value: settings?.companyRepresentative || '奥山大介' },
+    {
+      label: '所在地',
+      value: `${postalCode}\n${address}`,
+    },
+    { label: '電話番号', value: settings?.companyPhone || '03-6277-4682' },
+    { label: 'メールアドレス', value: contactEmail, href: `mailto:${contactEmail}` },
+    { label: '営業時間', value: settings?.companyBusinessHours || '平日 10:00〜17:00（土日祝休み）' },
+    { label: 'URL', value: 'https://u-balloon.com', href: 'https://u-balloon.com' },
+  ]
 
   return (
     <div className="min-h-screen bg-white">

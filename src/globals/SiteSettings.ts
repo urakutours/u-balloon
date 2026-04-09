@@ -87,6 +87,125 @@ export const SiteSettings: GlobalConfig = {
     ],
   },
   fields: [
+    // ─────────────────────────────────────────────────────────────────
+    // 会社 / 店舗情報
+    // ─────────────────────────────────────────────────────────────────
+    {
+      type: 'collapsible',
+      label: '会社 / 店舗情報',
+      admin: {
+        initCollapsed: false,
+      },
+      fields: [
+        {
+          name: 'companyName',
+          type: 'text',
+          label: '会社名 / 屋号',
+          admin: {
+            description: '特定商取引法に基づく表記、フッター等に使用します。',
+          },
+        },
+        {
+          name: 'companyRepresentative',
+          type: 'text',
+          label: '代表者名',
+          admin: {
+            description: '特定商取引法に基づく表記に使用します。',
+          },
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'companyPostalCode',
+              type: 'text',
+              label: '郵便番号',
+              admin: {
+                placeholder: '〒108-0000',
+                width: '30%',
+              },
+            },
+            {
+              name: 'companyAddress',
+              type: 'text',
+              label: '所在地',
+              admin: {
+                description: '郵便番号以降の住所。',
+                width: '70%',
+              },
+            },
+          ],
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'companyPhone',
+              type: 'text',
+              label: '電話番号',
+              admin: {
+                placeholder: '03-0000-0000',
+                width: '50%',
+              },
+            },
+            {
+              name: 'companyBusinessHours',
+              type: 'text',
+              label: '営業時間',
+              admin: {
+                placeholder: '平日 10:00〜17:00（土日祝休み）',
+                width: '50%',
+              },
+            },
+          ],
+        },
+        {
+          name: 'companyContactEmail',
+          type: 'text',
+          label: 'お問い合わせメールアドレス（表示用）',
+          admin: {
+            placeholder: 'info@example.com',
+            description: 'サイト上に表示するお問い合わせ先メールアドレス。メール送信設定の送信元アドレスとは別です。',
+          },
+          validate: (value: string | null | undefined) => {
+            if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+              return '有効なメールアドレスを入力してください'
+            }
+            return true
+          },
+        },
+      ],
+    },
+    // ─────────────────────────────────────────────────────────────────
+    // サイト基本設定
+    // ─────────────────────────────────────────────────────────────────
+    {
+      type: 'collapsible',
+      label: 'サイト基本設定',
+      admin: {
+        initCollapsed: true,
+      },
+      fields: [
+        {
+          name: 'siteTitle',
+          type: 'text',
+          label: 'サイト名',
+          admin: {
+            description: 'ブラウザタイトルのデフォルト値、OGP 等に使用します。',
+            placeholder: 'uballoon | バルーンギフト・バルーン電報の通販',
+          },
+        },
+        {
+          name: 'siteDescription',
+          type: 'textarea',
+          label: 'サイト説明文',
+          admin: {
+            description: 'meta description、OGP description に使用します。SEO に影響します。',
+          },
+        },
+      ],
+    },
+    // ─────────────────────────────────────────────────────────────────
     {
       type: 'collapsible',
       label: 'Google Analytics 4',
@@ -514,6 +633,45 @@ export const SiteSettings: GlobalConfig = {
                 placeholder: '30000',
                 width: '50%',
                 description: '注文金額がこの金額以上の場合、デリバリー基本料を無料にする。0で無効。',
+              },
+            },
+          ],
+        },
+        {
+          name: 'shippingRegionalFees',
+          type: 'array',
+          label: '地域別送料テーブル',
+          admin: {
+            description: '地域ごとの送料一覧。ご利用ガイドページと特定商取引法ページに表示されます。無料の場合は 0 を入力してください。',
+          },
+          fields: [
+            {
+              name: 'region',
+              type: 'text',
+              label: '地域名',
+              required: true,
+              admin: {
+                placeholder: '例: 関東（東京・神奈川・千葉・埼玉・茨城・栃木・群馬・山梨）',
+                width: '55%',
+              },
+            },
+            {
+              name: 'fee',
+              type: 'number',
+              label: '送料（円）',
+              required: true,
+              admin: {
+                description: '無料は 0',
+                width: '25%',
+              },
+            },
+            {
+              name: 'note',
+              type: 'text',
+              label: '備考',
+              admin: {
+                placeholder: '例: 離島は別途見積もり',
+                width: '20%',
               },
             },
           ],

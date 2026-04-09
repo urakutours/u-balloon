@@ -12,7 +12,25 @@ import { decrypt } from './encryption'
 // Types
 // ---------------------------------------------------------------------------
 
+export type ShippingRegionalFee = {
+  id?: string
+  region: string
+  fee: number
+  note?: string | null
+}
+
 export type SiteSettingsData = {
+  // 会社情報
+  companyName: string | null
+  companyRepresentative: string | null
+  companyPostalCode: string | null
+  companyAddress: string | null
+  companyPhone: string | null
+  companyBusinessHours: string | null
+  companyContactEmail: string | null
+  // サイト基本設定
+  siteTitle: string | null
+  siteDescription: string | null
   // Stripe mode
   stripeMode: 'test' | 'live'
   // Stripe (test/live keys)
@@ -52,6 +70,8 @@ export type SiteSettingsData = {
   snsFacebookUrl: string | null
   snsTiktokUrl: string | null
   snsYoutubeUrl: string | null
+  // 地域別送料テーブル
+  shippingRegionalFees: ShippingRegionalFee[] | null
 }
 
 export type ActiveStripeKeys = {
@@ -88,6 +108,17 @@ export async function getSiteSettings(): Promise<SiteSettingsData> {
   })
 
   _cache = {
+    // 会社情報
+    companyName: stringField(doc.companyName),
+    companyRepresentative: stringField(doc.companyRepresentative),
+    companyPostalCode: stringField(doc.companyPostalCode),
+    companyAddress: stringField(doc.companyAddress),
+    companyPhone: stringField(doc.companyPhone),
+    companyBusinessHours: stringField(doc.companyBusinessHours),
+    companyContactEmail: stringField(doc.companyContactEmail),
+    // サイト基本設定
+    siteTitle: stringField(doc.siteTitle),
+    siteDescription: stringField(doc.siteDescription),
     stripeMode: ((doc.stripeMode as string) === 'live' ? 'live' : 'test'),
     stripeTestPublishableKey: decryptField(doc.stripeTestPublishableKey),
     stripeTestSecretKey: decryptField(doc.stripeTestSecretKey),
@@ -119,6 +150,8 @@ export async function getSiteSettings(): Promise<SiteSettingsData> {
     snsFacebookUrl: stringField(doc.snsFacebookUrl),
     snsTiktokUrl: stringField(doc.snsTiktokUrl),
     snsYoutubeUrl: stringField(doc.snsYoutubeUrl),
+    // 地域別送料テーブル
+    shippingRegionalFees: arrayField<ShippingRegionalFee>(doc.shippingRegionalFees),
     emailFromAddress: stringField(doc.emailFromAddress),
     emailFromName: stringField(doc.emailFromName),
     emailReplyTo: stringField(doc.emailReplyTo),
@@ -182,4 +215,10 @@ function stringField(value: unknown): string | null {
 function numberField(value: unknown): number | null {
   if (typeof value === 'number' && !Number.isNaN(value)) return value
   return null
+}
+
+/** Coerce an array field to T[] | null. */
+function arrayField<T>(value: unknown): T[] | null {
+  if (!Array.isArray(value) || value.length === 0) return null
+  return value as T[]
 }

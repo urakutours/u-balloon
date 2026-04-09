@@ -4,6 +4,7 @@ import { ChevronRight, Home } from 'lucide-react'
 import type { Metadata } from 'next'
 import { getStaticPage } from '@/lib/get-static-page'
 import { BlockRenderer } from '@/components/blocks/BlockRenderer'
+import { getSiteSettings } from '@/lib/site-settings'
 
 export async function generateMetadata(): Promise<Metadata> {
   const page = await getStaticPage('delivery')
@@ -13,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-const shippingRates = [
+const FALLBACK_SHIPPING_RATES = [
   { area: '関東（東京・神奈川・千葉・埼玉・茨城・栃木・群馬・山梨）', rate: '無料' },
   { area: '信越（新潟・長野）', rate: '無料' },
   { area: '北陸（富山・石川・福井）', rate: '無料' },
@@ -42,7 +43,32 @@ const deliveryService = [
 ]
 
 export default async function DeliveryPage() {
-  const cmsPage = await getStaticPage('delivery')
+  const [cmsPage, settings] = await Promise.all([
+    getStaticPage('delivery'),
+    getSiteSettings().catch(() => null),
+  ])
+
+  // 地域別送料: DB優先、未設定時はフォールバック
+  const dbFees = settings?.shippingRegionalFees
+  const shippingRates = dbFees && dbFees.length > 0
+    ? dbFees.map(item => ({
+        area: item.region,
+        rate: item.fee === 0 ? '無料' : `${item.fee.toLocaleString()}円`,
+      }))
+    : FALLBACK_SHIPPING_RATES
+
+  // 連絡先情報
+  const companyPhone = settings?.companyPhone || '03-6277-4682'
+  const businessHours = settings?.companyBusinessHours || '平日 10:00〜17:00'
+  const contactEmail = settings?.companyContactEmail || 'info@u-balloon.com'
+
+  // 銀行振込情報
+  const bankName = settings?.bankName || 'PayPay銀行'
+  const bankBranchName = settings?.bankBranchName || '本店営業部'
+  const bankAccountType = settings?.bankAccountType === 'checking' ? '当座' : '普通'
+  const bankAccountNumber = settings?.bankAccountNumber || '2409635'
+  const bankAccountHolder = settings?.bankAccountHolder || 'カ）ウラク（株式会社URAKU）'
+  const bankDeadlineDays = settings?.bankTransferDeadlineDays ?? 7
 
   if (cmsPage?.layout?.length) {
     return (
@@ -126,14 +152,14 @@ export default async function DeliveryPage() {
 
               <h3 className="mb-2 mt-6 text-sm font-semibold text-brand-dark">銀行振込（前払い）</h3>
               <p className="text-sm text-gray-700">
-                PayPay銀行　本店営業部　普通 2409635　カ）ウラク（株式会社URAKU）
+                {bankName}　{bankBranchName}　{bankAccountType} {bankAccountNumber}　{bankAccountHolder}
               </p>
 
               <div className="mt-4 rounded-lg border bg-muted/30 p-4">
                 <p className="mb-2 text-sm font-semibold text-brand-dark">銀行振込のご注意</p>
                 <ul className="space-y-1 text-sm text-gray-700">
                   <li>・振込手数料はお客様のご負担となります。</li>
-                  <li>・ご注文後7日以内にお振込みをお願いいたします。</li>
+                  <li>・ご注文後{bankDeadlineDays}日以内にお振込みをお願いいたします。</li>
                   <li>・ご入金確認後の発送となります。</li>
                   <li>・12:00までにご入金が確認できた場合、当日の発送手配が可能です（在庫状況による）。</li>
                 </ul>
@@ -304,7 +330,7 @@ export default async function DeliveryPage() {
                   <tbody className="divide-y">
                     <tr>
                       <td className="px-4 py-3 font-semibold text-brand-dark">営業時間</td>
-                      <td className="px-4 py-3 text-gray-700">平日 10:00〜17:00</td>
+                      <td className="px-4 py-3 text-gray-700">{businessHours}</td>
                     </tr>
                     <tr className="bg-muted/20">
                       <td className="px-4 py-3 font-semibold text-brand-dark">定休日</td>
@@ -312,13 +338,13 @@ export default async function DeliveryPage() {
                     </tr>
                     <tr>
                       <td className="px-4 py-3 font-semibold text-brand-dark">電話番号</td>
-                      <td className="px-4 py-3 text-gray-700">03-6277-4682</td>
+                      <td className="px-4 py-3 text-gray-700">{companyPhone}</td>
                     </tr>
                     <tr className="bg-muted/20">
                       <td className="px-4 py-3 font-semibold text-brand-dark">メール</td>
                       <td className="px-4 py-3 text-gray-700">
-                        <a href="mailto:info@u-balloon.com" className="text-brand-teal underline underline-offset-2 hover:text-brand-teal/80">
-                          info@u-balloon.com
+                        <a href={`mailto:${contactEmail}`} className="text-brand-teal underline underline-offset-2 hover:text-brand-teal/80">
+                          {contactEmail}
                         </a>
                       </td>
                     </tr>
