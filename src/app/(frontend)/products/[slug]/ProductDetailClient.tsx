@@ -26,6 +26,7 @@ import {
 import { ProductInfoAccordion } from '@/components/product/ProductInfoAccordion'
 import { OptionProductsSlider } from '@/components/product/OptionProductsSlider'
 import { detectProductType, shouldShowHeliumBanner } from '@/lib/product-types'
+import { viewItem, addToCart as trackAddToCart } from '@/lib/gtag'
 
 type SelectOption = {
   name: string
@@ -72,6 +73,20 @@ export function ProductDetailClient({ product }: { product: ProductData }) {
     const stored = sessionStorage.getItem('uballoon-products-url')
     if (stored) setBackHref(stored)
   }, [])
+
+  // GA4: view_item — fire once per product on mount / product change
+  useEffect(() => {
+    try {
+      viewItem({
+        item_id: product.id,
+        item_name: product.title,
+        price: product.price,
+        item_category: product.tags?.[0],
+      })
+    } catch (e) {
+      console.warn('GA4 viewItem failed:', e)
+    }
+  }, [product.id, product.title, product.price, product.tags])
 
   // Image gallery state
   const [selectedImage, setSelectedImage] = useState(0)
@@ -175,6 +190,19 @@ export function ProductDetailClient({ product }: { product: ProductData }) {
       optionTotal,
       unitPrice,
     })
+
+    // GA4: add_to_cart — fire after successful cart add
+    try {
+      trackAddToCart({
+        item_id: product.id,
+        item_name: product.title,
+        price: unitPrice,
+        quantity: 1,
+        item_category: product.tags?.[0],
+      })
+    } catch (e) {
+      console.warn('GA4 addToCart failed:', e)
+    }
 
     setAdded(true)
     openCartDrawer()

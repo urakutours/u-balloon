@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { ShoppingCart, Loader2, ArrowUpDown } from 'lucide-react'
 import { useCartStore } from '@/lib/cart-store'
 import { useCartDrawer } from '@/components/CartDrawer'
+import { addToCart as trackAddToCart } from '@/lib/gtag'
 
 type Product = {
   id: string
@@ -139,6 +140,20 @@ export function ProductListClient({
       optionTotal: 0,
       unitPrice: product.price,
     })
+
+    // GA4: add_to_cart — fire after successful quick-add
+    try {
+      trackAddToCart({
+        item_id: product.id,
+        item_name: product.title,
+        price: product.price,
+        quantity: 1,
+        item_category: product.tags?.[0],
+      })
+    } catch (err) {
+      console.warn('GA4 addToCart failed:', err)
+    }
+
     openCartDrawer()
   }
 

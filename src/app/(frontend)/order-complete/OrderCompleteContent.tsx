@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { CheckCircle, Loader2, Package, MapPin, CalendarDays, Gift } from 'lucide-react'
+import { purchase as trackPurchase } from '@/lib/gtag'
 
 type OrderItem = {
   product: { title?: string; id: string } | string
@@ -76,6 +77,36 @@ export default function OrderCompleteContent() {
 
         if (fetchedOrder) {
           setOrder(fetchedOrder)
+
+          // GA4: purchase — fire once per order (dedupe via sessionStorage)
+          try {
+            const storageKey = `ga4_purchase_tracked_${fetchedOrder.id}`
+            if (!sessionStorage.getItem(storageKey)) {
+              const items = (fetchedOrder.items || []).map((item) => {
+                const productObj =
+                  typeof item.product === 'object' && item.product ? item.product : null
+                const itemId =
+                  (productObj && productObj.id) ||
+                  (typeof item.product === 'string' ? item.product : 'unknown')
+                const itemName = productObj?.title || '商品'
+                return {
+                  item_id: itemId,
+                  item_name: itemName,
+                  price: item.unitPrice,
+                  quantity: item.quantity,
+                }
+              })
+              trackPurchase(
+                fetchedOrder.orderNumber || fetchedOrder.id,
+                items,
+                fetchedOrder.totalAmount ?? 0,
+                fetchedOrder.shippingFee ?? 0,
+              )
+              sessionStorage.setItem(storageKey, 'true')
+            }
+          } catch (e) {
+            console.warn('GA4 purchase failed:', e)
+          }
         } else {
           setError('注文情報が見つかりませんでした')
         }
