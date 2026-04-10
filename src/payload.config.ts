@@ -64,6 +64,10 @@ export default buildConfig({
         dashboard: {
           Component: '@/components/admin/Dashboard',
         },
+        'data-management': {
+          Component: '@/components/admin/ImportExportPage',
+          path: '/data-management',
+        },
       },
     },
   },
