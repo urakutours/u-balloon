@@ -6,3 +6,17 @@ next-env.d.ts
 
 
 .vercel
+
+# 環境変数（追加）
+.env.local
+.env.production
+.env.staging
+.env.vercel
+.env.*.local
+
+# PayloadCMS
+/media/
+.payload/
+
+# Secrets ディレクトリ
+.secrets/
