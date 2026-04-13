@@ -14,11 +14,7 @@ export const Products: CollectionConfig = {
     listSearchableFields: ['title', 'sku', 'slug'],
     defaultColumns: ['title', 'sku', 'price', 'productType', 'stock', 'status'],
     components: {
-      views: {
-        list: {
-          actions: ['@/components/admin/ListImportExportActions'],
-        },
-      },
+      beforeListTable: ['@/components/admin/ListImportExportActions'],
     },
   },
   access: {

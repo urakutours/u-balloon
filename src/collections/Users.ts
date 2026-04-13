@@ -16,11 +16,7 @@ export const Users: CollectionConfig = {
     defaultColumns: ['email', 'name', 'nameKana', 'role', 'points', 'phone', 'prefecture', 'createdAt'],
     listSearchableFields: ['email', 'name', 'nameKana', 'phone', 'legacyId'],
     components: {
-      views: {
-        list: {
-          actions: ['@/components/admin/ListImportExportActions'],
-        },
-      },
+      beforeListTable: ['@/components/admin/ListImportExportActions'],
     },
   },
   auth: true,
