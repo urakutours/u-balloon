@@ -69,7 +69,7 @@ export default buildConfig({
           Component: '@/components/admin/Dashboard',
         },
         'data-management': {
-          Component: '@/components/admin/ImportExportPage',
+          Component: '@/components/admin/ImportExportView',
           path: '/data-management',
         },
       },
