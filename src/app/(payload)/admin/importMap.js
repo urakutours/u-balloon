@@ -26,6 +26,7 @@ import { default as default_50332e17a35cc67bb397274c257d7ca9 } from '@/component
 import { default as default_9870fd18da5f585b086dac7c5b924c68 } from '@/components/admin/CustomNav'
 import { S3ClientUploadHandler as S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24 } from '@payloadcms/storage-s3/client'
 import { default as default_0e7b23c75ea046975e1784ba01f82886 } from '@/components/admin/Dashboard'
+import { default as default_a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6 } from '@/components/admin/ImportExportView'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 import { default as default_db688bcb0cf5a6bb12d05e9453ebda65 } from '@/components/admin/fields/GA4MeasurementIdHelp'
 import { default as default_7083d8fa0d0e4281ff7562b4b04e148e } from '@/components/admin/fields/GA4PropertyIdHelp'
@@ -65,6 +66,7 @@ export const importMap = {
   "@/components/admin/CustomNav#default": default_9870fd18da5f585b086dac7c5b924c68,
   "@payloadcms/storage-s3/client#S3ClientUploadHandler": S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24,
   "@/components/admin/Dashboard#default": default_0e7b23c75ea046975e1784ba01f82886,
+  "@/components/admin/ImportExportView#default": default_a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1,
   "@/components/admin/fields/GA4MeasurementIdHelp#default": default_db688bcb0cf5a6bb12d05e9453ebda65,
   "@/components/admin/fields/GA4PropertyIdHelp#default": default_7083d8fa0d0e4281ff7562b4b04e148e,
