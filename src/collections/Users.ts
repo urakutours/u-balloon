@@ -15,6 +15,13 @@ export const Users: CollectionConfig = {
     description: '会員・管理者アカウントの一覧。ポイント残高の確認・手動調整もここから行えます。',
     defaultColumns: ['email', 'name', 'nameKana', 'role', 'points', 'phone', 'prefecture', 'createdAt'],
     listSearchableFields: ['email', 'name', 'nameKana', 'phone', 'legacyId'],
+    components: {
+      views: {
+        list: {
+          actions: ['@/components/admin/ListImportExportActions'],
+        },
+      },
+    },
   },
   auth: true,
   hooks: {

@@ -36,6 +36,8 @@ import { default as default_b873a42c1a999b7a0cf70d3867f61bfb } from '@/component
 import { default as default_fbcfaf38993f683faf05dcbf7a250fcc } from '@/components/admin/fields/EmailHelp'
 import { default as default_f3930a59cd3828f2f419e58c47bc3521 } from '@/components/admin/fields/GoogleMapsHelp'
 import { default as default_09b11ce5004b0ab5026998c080ad05c8 } from '@/components/admin/fields/StripeModeSwitch'
+import { default as default_c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8 } from '@/components/admin/ListImportExportActions'
+import { default as default_d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9 } from '@/components/admin/ImportDrawerContent'
 
 export const importMap = {
   "@payloadcms/richtext-lexical/rsc#RscEntryLexicalCell": RscEntryLexicalCell_44fe37237e0ebf4470c9990d8cb7b07e,
@@ -76,4 +78,6 @@ export const importMap = {
   "@/components/admin/fields/EmailHelp#default": default_fbcfaf38993f683faf05dcbf7a250fcc,
   "@/components/admin/fields/GoogleMapsHelp#default": default_f3930a59cd3828f2f419e58c47bc3521,
   "@/components/admin/fields/StripeModeSwitch#default": default_09b11ce5004b0ab5026998c080ad05c8,
+  "@/components/admin/ListImportExportActions#default": default_c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8,
+  "@/components/admin/ImportDrawerContent#default": default_d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9,
 }

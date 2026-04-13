@@ -13,6 +13,13 @@ export const Products: CollectionConfig = {
     description: 'バルーンギフト商品の登録・編集・在庫管理。商品名・SKU・価格・カスタムオプション・在庫数を管理できます。',
     listSearchableFields: ['title', 'sku', 'slug'],
     defaultColumns: ['title', 'sku', 'price', 'productType', 'stock', 'status'],
+    components: {
+      views: {
+        list: {
+          actions: ['@/components/admin/ListImportExportActions'],
+        },
+      },
+    },
   },
   access: {
     read: anyone,
