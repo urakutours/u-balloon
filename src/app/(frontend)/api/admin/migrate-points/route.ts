@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
           collection: 'users',
           id: targetUser.id,
           data: { points: newBalance },
+          context: { skipPointAdjustHook: true },
         })
 
         results.push({ legacyId: item.legacyId, status: 'success' })
