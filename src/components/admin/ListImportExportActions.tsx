@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Drawer, DrawerToggler } from '@payloadcms/ui'
 import ImportDrawerContent from './ImportDrawerContent'
 
@@ -12,14 +12,18 @@ const IMPORT_DRAWER_SLUG = 'import-csv-drawer'
 
 export default function ListImportExportActions() {
   const [exporting, setExporting] = useState(false)
+  // useEffect で slug を判定 — SSR/クライアントの差異をなくしてハイドレーションミスマッチを防ぐ
+  const [collectionSlug, setCollectionSlug] = useState<'products' | 'customers'>('products')
 
-  // コレクションの slug を URL パスから判別
-  // /admin/collections/users → 'customers'
-  // /admin/collections/products → 'products'
-  const collectionSlug: 'products' | 'customers' =
-    typeof window !== 'undefined' && window.location.pathname.includes('/users')
-      ? 'customers'
-      : 'products'
+  useEffect(() => {
+    // /admin/collections/users → 'customers'
+    // /admin/collections/products → 'products'
+    if (window.location.pathname.includes('/users')) {
+      setCollectionSlug('customers')
+    } else {
+      setCollectionSlug('products')
+    }
+  }, [])
 
   const drawerTitle =
     collectionSlug === 'customers' ? '顧客データ インポート' : '商品データ インポート'
