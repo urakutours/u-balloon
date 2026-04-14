@@ -282,6 +282,18 @@ export default function CustomNav() {
 
   return (
     <>
+      {/* Override Payload's fixed 220px grid column on mobile — the <nav> is position: fixed
+          on mobile, so the grid column should collapse to let content fill the viewport. */}
+      <style>{`
+        @media (max-width: 1023px) {
+          .template-default {
+            grid-template-columns: 1fr !important;
+          }
+          .template-default > nav {
+            grid-column: 1 / -1;
+          }
+        }
+      `}</style>
       {/* Backdrop — only on mobile when nav is open */}
       {isMobile && isNavOpen && (
         <div
