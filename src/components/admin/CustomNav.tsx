@@ -283,10 +283,15 @@ export default function CustomNav() {
   return (
     <>
       {/* Override Payload's fixed 220px grid column on mobile — the <nav> is position: fixed
-          on mobile, so the grid column should collapse to let content fill the viewport. */}
+          on mobile, so the grid column should collapse to let content fill the viewport.
+          Payload uses [data-theme] .template-default { grid-template-columns: 220px 1fr !important }
+          as an unlayered rule, so we must match/exceed specificity and use !important. */}
       <style>{`
         @media (max-width: 1023px) {
-          .template-default {
+          [data-theme] .template-default,
+          [data-theme] .template-default.template-default--nav-hydrated,
+          [data-theme] .template-default.template-default--nav-open,
+          [data-theme] .template-default.template-default--nav-animate {
             grid-template-columns: 1fr !important;
           }
           .template-default > nav {
