@@ -303,9 +303,10 @@ export default function CustomNav() {
             grid-column: 1 / -1;
           }
           /* Narrow 時は左上に自前ハンバーガー FAB (top:12, height:40 = ~52px) が fixed で乗るため、
-             コンテンツ領域の上端を押し下げてタイトル等と重ならないようにする */
-          [data-theme] .template-default__wrap {
-            padding-top: 56px;
+             コンテンツ領域の上端を押し下げてタイトル等と重ならないようにする。
+             Payload のデフォルトルールに勝つために !important + 高特異度セレクタを使う */
+          [data-theme] .template-default .template-default__wrap {
+            padding-top: 56px !important;
           }
         }
       `}</style>
