@@ -172,111 +172,12 @@ export default function CustomNav() {
     }
   }, [isNarrow])
 
-  // --- Paginator enhancer ---
-  // Payload の PageControls は numberOfNeighbors=1 固定で `< > 1 2 — N` しか表示しない。
-  // ビルド時パッチが Vercel で安定しないため、ランタイムで DOM を拡張して
-  // `< > 1 2 3 4 5 — N` 形式に差し替える。クリックは React fiber 経由で
-  // Payload 本体の onChange(page) を直接呼び出す。
-  useEffect(() => {
-    // 既存の paginator__page から Pagination コンポーネントの onChange を探す
-    const findPaginationOnChange = (paginator: HTMLElement): ((page: number) => void) | null => {
-      const anyBtn = paginator.querySelector<HTMLButtonElement>('.paginator__page')
-      if (!anyBtn) return null
-      const fiberKey = Object.keys(anyBtn).find((k) => k.startsWith('__reactFiber'))
-      if (!fiberKey) return null
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let fiber: any = (anyBtn as any)[fiberKey]
-      while (fiber) {
-        if (fiber.memoizedProps && typeof fiber.memoizedProps.onChange === 'function') {
-          return fiber.memoizedProps.onChange as (page: number) => void
-        }
-        fiber = fiber.return
-      }
-      return null
-    }
-
-    const buildPageBtn = (page: number, current: number, onChange: (p: number) => void) => {
-      const btn = document.createElement('button')
-      btn.type = 'button'
-      btn.className = 'paginator__page'
-      if (page === current) btn.classList.add('paginator__page--is-current')
-      btn.textContent = String(page)
-      btn.dataset.enhancedPage = String(page)
-      btn.addEventListener('click', (e) => {
-        e.preventDefault()
-        onChange(page)
-      })
-      return btn
-    }
-
-    const buildSeparator = () => {
-      const sp = document.createElement('span')
-      sp.className = 'paginator__separator'
-      sp.textContent = '—'
-      return sp
-    }
-
-    const enhance = (paginator: HTMLElement) => {
-      const currentBtn = paginator.querySelector<HTMLButtonElement>('.paginator__page--is-current')
-      const pages = Array.from(paginator.querySelectorAll<HTMLButtonElement>('.paginator__page'))
-      if (!currentBtn || pages.length === 0) return
-
-      const currentPage = parseInt(currentBtn.textContent || '1', 10)
-      const lastPage = parseInt(pages[pages.length - 1].textContent || '1', 10)
-      if (isNaN(currentPage) || isNaN(lastPage) || lastPage <= 5) return
-
-      // fiber から Pagination の onChange を取得（既存ボタン削除前に）
-      const onChange = findPaginationOnChange(paginator)
-      if (!onChange) return
-
-      // ウィンドウ [start, end] を算出（current±2 を 5 ページ分）
-      let start = Math.max(1, currentPage - 2)
-      let end = Math.min(lastPage, currentPage + 2)
-      if (currentPage <= 3) {
-        start = 1
-        end = Math.min(5, lastPage)
-      } else if (currentPage >= lastPage - 2) {
-        start = Math.max(1, lastPage - 4)
-        end = lastPage
-      }
-
-      const rightArrow = paginator.querySelector('.clickable-arrow--right')
-      // 既存の page/separator を全削除
-      paginator.querySelectorAll('.paginator__page, .paginator__separator').forEach((n) => n.remove())
-
-      const frag = document.createDocumentFragment()
-      if (start > 1) {
-        frag.appendChild(buildPageBtn(1, currentPage, onChange))
-        if (start > 2) frag.appendChild(buildSeparator())
-      }
-      for (let p = start; p <= end; p++) {
-        frag.appendChild(buildPageBtn(p, currentPage, onChange))
-      }
-      if (end < lastPage) {
-        if (end < lastPage - 1) frag.appendChild(buildSeparator())
-        frag.appendChild(buildPageBtn(lastPage, currentPage, onChange))
-      }
-
-      if (rightArrow) rightArrow.before(frag)
-      else paginator.appendChild(frag)
-    }
-
-    const scan = () => {
-      document.querySelectorAll<HTMLElement>('.paginator').forEach((p) => {
-        const cur = p.querySelector('.paginator__page--is-current')?.textContent?.trim()
-        const pageCount = p.querySelectorAll('.paginator__page').length
-        // enhanced 判定: 現在ページが同じ AND ボタン数が 5 件以上（=既に拡張済み）
-        if (p.dataset.enhancedFor === cur && pageCount > 3) return
-        p.dataset.enhancedFor = cur || ''
-        enhance(p)
-      })
-    }
-
-    scan()
-    const observer = new MutationObserver(() => scan())
-    observer.observe(document.body, { childList: true, subtree: true })
-    return () => observer.disconnect()
-  }, [])
+  // NOTE: paginator ランタイム拡張 (< > 1 2 3 4 5 — N) は
+  // React の再レンダリングとの競合で動作が不安定になったため撤回。
+  // Payload デフォルトの `< > 1 2 — N` 表示で運用する。
+  // 将来的に numberOfNeighbors を増やしたい場合は
+  // scripts/patch-payload-paginator.mjs が Vercel ビルド時に
+  // numberOfNeighbors を 1 → 4 に書き換える（現状は効いていない）。
 
   // Restore open sections from localStorage + auto-expand active group
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
