@@ -308,11 +308,17 @@ export default function CustomNav() {
           [data-theme] .template-default .template-default__wrap {
             padding-top: 56px !important;
           }
-          /* ページネーションを中央揃え + 折り返し対応 */
+          /* ページネーションを中央揃え + 折り返し対応。
+             .paginator は 100% 幅で独立行に、page-info/per-page は次行に折り返して中央配置 */
           [data-theme] .page-controls {
             justify-content: center !important;
+            align-items: center !important;
             flex-wrap: wrap !important;
             gap: 12px !important;
+          }
+          [data-theme] .page-controls > .paginator {
+            flex-basis: 100% !important;
+            justify-content: center !important;
           }
         }
         /* モバイル (<768px): .template-default__wrap の左右 padding をゼロに。

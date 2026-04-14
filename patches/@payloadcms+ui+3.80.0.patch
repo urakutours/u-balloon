@@ -1,0 +1,13 @@
+diff --git a/node_modules/@payloadcms/ui/dist/elements/PageControls/index.js b/node_modules/@payloadcms/ui/dist/elements/PageControls/index.js
+index e01f6f8..bb01aa6 100644
+--- a/node_modules/@payloadcms/ui/dist/elements/PageControls/index.js
++++ b/node_modules/@payloadcms/ui/dist/elements/PageControls/index.js
+@@ -35,7 +35,7 @@ export const PageControlsComponent = t0 => {
+         hasPrevPage: data.hasPrevPage,
+         limit: data.limit,
+         nextPage: data.nextPage,
+-        numberOfNeighbors: 1,
++        numberOfNeighbors: 4,
+         onChange: handlePageChange,
+         page: data.page,
+         prevPage: data.prevPage,
