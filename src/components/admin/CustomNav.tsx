@@ -308,6 +308,20 @@ export default function CustomNav() {
           [data-theme] .template-default .template-default__wrap {
             padding-top: 56px !important;
           }
+          /* ページネーションを中央揃え + 折り返し対応 */
+          [data-theme] .page-controls {
+            justify-content: center !important;
+            flex-wrap: wrap !important;
+            gap: 12px !important;
+          }
+        }
+        /* モバイル (<768px): 左右パディングを 4% に詰めてコンテンツ幅を広げる */
+        @media (max-width: 767px) {
+          [data-theme="light"] .template-default__wrap,
+          [data-theme="dark"] .template-default__wrap {
+            padding-left: 4% !important;
+            padding-right: 4% !important;
+          }
         }
       `}</style>
       {/* 自前ハンバーガー (narrow 時、nav が閉じている時のみ表示) */}
