@@ -5,7 +5,7 @@
   "scripts": {
     "postinstall": "patch-package",
     "dev": "next dev --turbopack",
-    "build": "patch-package && next build",
+    "build": "node scripts/patch-payload-paginator.mjs && next build",
     "start": "next start",
     "generate:types": "payload generate:types",
     "generate:importmap": "payload generate:importmap"
