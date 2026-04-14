@@ -477,6 +477,28 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
   const [fetchError, setFetchError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
+  // --- Breakpoint detection (3段階) ---
+  const [breakpoint, setBreakpoint] = useState<'mobile' | 'tablet' | 'desktop'>('desktop')
+  useEffect(() => {
+    const mqMobile = window.matchMedia('(max-width: 767px)')
+    const mqTablet = window.matchMedia('(min-width: 768px) and (max-width: 1023px)')
+    const update = () => {
+      if (mqMobile.matches) setBreakpoint('mobile')
+      else if (mqTablet.matches) setBreakpoint('tablet')
+      else setBreakpoint('desktop')
+    }
+    update()
+    mqMobile.addEventListener('change', update)
+    mqTablet.addEventListener('change', update)
+    return () => {
+      mqMobile.removeEventListener('change', update)
+      mqTablet.removeEventListener('change', update)
+    }
+  }, [])
+  const isMobile = breakpoint === 'mobile'
+  const isTablet = breakpoint === 'tablet'
+  const isNarrow = isMobile || isTablet
+
   const fetchData = useCallback(async (p: Period, start?: string, end?: string) => {
     // Cancel any in-flight request to prevent race conditions
     abortRef.current?.abort()
@@ -717,7 +739,7 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
     <div style={{ fontFamily: "'Noto Sans JP', -apple-system, sans-serif", color: t.text, paddingBottom: 40 }}>
 
       {/* ===== Header ===== */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.5, margin: 0, color: t.text }}>
             ダッシュボード
@@ -726,7 +748,7 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
             {format(today, 'yyyy年M月d日（EEE）', { locale: ja })}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <button
             type="button"
             onClick={() => setTheme(themeKey === 'light' ? 'dark' : 'light')}
@@ -741,8 +763,8 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
             {themeKey === 'light' ? <MoonIcon /> : <SunIcon />}
           </button>
           <a href="/admin/collections/orders/create" style={{
-            padding: '8px 16px', borderRadius: 10, border: `1px solid ${t.border}`,
-            background: t.surface, fontSize: 13, fontWeight: 500, color: t.textSecondary,
+            padding: isMobile ? '6px 12px' : '8px 16px', borderRadius: 10, border: `1px solid ${t.border}`,
+            background: t.surface, fontSize: isMobile ? 12 : 13, fontWeight: 500, color: t.textSecondary,
             display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none',
           }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -750,9 +772,9 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
             </svg>新規注文
           </a>
           <a href="/admin/collections/products/create" style={{
-            padding: '8px 16px', borderRadius: 10, border: 'none',
+            padding: isMobile ? '6px 12px' : '8px 16px', borderRadius: 10, border: 'none',
             background: 'linear-gradient(135deg, #6366f1, #818cf8)',
-            fontSize: 13, fontWeight: 600, color: 'white',
+            fontSize: isMobile ? 12 : 13, fontWeight: 600, color: 'white',
             display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none',
             boxShadow: '0 2px 8px rgba(99,102,241,.3)',
           }}>
@@ -769,7 +791,7 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
         <div style={{ display: 'inline-flex', background: t.tabBg, borderRadius: 12, padding: 3 }}>
           {(Object.keys(PERIOD_LABELS) as Period[]).map(p => (
             <button key={p} type="button" onClick={() => handlePeriodChange(p)} style={{
-              padding: '7px 20px', borderRadius: 10, border: 'none',
+              padding: isMobile ? '5px 14px' : '7px 20px', borderRadius: 10, border: 'none',
               background: period === p ? t.tabActive : 'transparent',
               color: period === p ? t.text : t.textMuted,
               fontWeight: period === p ? 600 : 500, fontSize: 13, cursor: 'pointer',
@@ -834,12 +856,23 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
       )}
 
       {/* ===== KPI Cards ===== */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isNarrow ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+        gap: isNarrow ? 12 : 16,
+        marginBottom: isNarrow ? 16 : 24,
+      }}>
         {kpiCards.map((card, i) => <KpiCard key={i} {...card} t={t} />)}
       </div>
 
       {/* ===== Charts Row ===== */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24, minWidth: 0 }}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isNarrow ? '1fr' : '1fr 1fr',
+        gap: isNarrow ? 12 : 16,
+        marginBottom: isNarrow ? 16 : 24,
+        minWidth: 0,
+      }}>
         {/* Bar chart — Revenue trend */}
         <Card t={t} style={{ padding: 24, overflow: 'hidden', minWidth: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -867,7 +900,11 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
       </div>
 
       {/* ===== Bottom Grid ===== */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 16 }}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isNarrow ? '1fr' : '1.6fr 1fr',
+        gap: isNarrow ? 12 : 16,
+      }}>
 
         {/* Recent Orders Table */}
         <Card t={t} style={{ padding: 24 }}>
@@ -881,18 +918,18 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
           ) : (
             <>
               <div style={{
-                display: 'grid', gridTemplateColumns: '1.2fr 1fr .8fr .8fr .7fr',
+                display: 'grid', gridTemplateColumns: isMobile ? '1.2fr 1fr .8fr .8fr' : '1.2fr 1fr .8fr .8fr .7fr',
                 padding: '8px 0', borderBottom: `1px solid ${t.borderLight}`,
                 fontSize: 11, fontWeight: 600, color: t.textMuted, letterSpacing: 0.3,
               }}>
-                <span>注文ID</span><span>顧客</span><span>金額</span><span>ステータス</span><span>時刻</span>
+                <span>注文ID</span><span>顧客</span><span>金額</span><span>ステータス</span>{!isMobile && (<span>時刻</span>)}
               </div>
               {data.recentOrders.map((o, i) => (
                 <a
                   key={o.id}
                   href={`/admin/collections/orders/${o.id}`}
                   style={{
-                    display: 'grid', gridTemplateColumns: '1.2fr 1fr .8fr .8fr .7fr',
+                    display: 'grid', gridTemplateColumns: isMobile ? '1.2fr 1fr .8fr .8fr' : '1.2fr 1fr .8fr .8fr .7fr',
                     alignItems: 'center', padding: '12px 0',
                     borderBottom: i < data.recentOrders.length - 1 ? `1px solid ${t.borderLight}` : 'none',
                     fontSize: 13, cursor: 'pointer', textDecoration: 'none', color: 'inherit',
@@ -902,7 +939,7 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
                   <span style={{ fontWeight: 500 }}>{o.customerName}</span>
                   <span style={{ fontWeight: 600 }}>{yen(o.totalAmount)}</span>
                   <StatusBadge status={o.status} themeKey={themeKey} />
-                  <span style={{ color: t.textMuted, fontSize: 12 }}>{format(new Date(o.createdAt), 'MM/dd HH:mm')}</span>
+                  {!isMobile && (<span style={{ color: t.textMuted, fontSize: 12 }}>{format(new Date(o.createdAt), 'MM/dd HH:mm')}</span>)}
                 </a>
               ))}
             </>
@@ -1002,7 +1039,12 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
       </div>
 
       {/* ===== Analytics Row ===== */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginTop: 16 }}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isNarrow ? '1fr' : '1fr 1fr 1fr',
+        gap: isNarrow ? 12 : 16,
+        marginTop: isNarrow ? 12 : 16,
+      }}>
 
         {/* サイトトラフィック */}
         <Card t={t} style={{ padding: 24 }}>

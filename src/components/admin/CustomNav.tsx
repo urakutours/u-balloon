@@ -139,11 +139,11 @@ export default function CustomNav() {
   const [stripeMode, setStripeMode] = useState<'test' | 'live'>('test')
   const pathname = usePathname() ?? '/admin'
 
-  // Responsive: detect mobile/tablet viewport (< 1024px)
-  const [isMobile, setIsMobile] = useState(false)
+  // Responsive: detect narrow viewport (< 1024px) — covers tablet + mobile
+  const [isNarrow, setIsNarrow] = useState(false)
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 1023px)')
-    const update = () => setIsMobile(mq.matches)
+    const update = () => setIsNarrow(mq.matches)
     update()
     mq.addEventListener('change', update)
     return () => mq.removeEventListener('change', update)
@@ -163,14 +163,14 @@ export default function CustomNav() {
     return () => observer.disconnect()
   }, [])
 
-  // Close nav when clicking a link on mobile (requires triggering Payload's toggler)
-  const closeNavOnMobile = useCallback(() => {
-    if (!isMobile) return
+  // Close nav when clicking a link on narrow viewport (requires triggering Payload's toggler)
+  const closeNavOnNarrow = useCallback(() => {
+    if (!isNarrow) return
     const toggler = document.querySelector<HTMLButtonElement>('.nav-toggler')
     if (toggler && document.querySelector('.app-header--nav-open')) {
       toggler.click()
     }
-  }, [isMobile])
+  }, [isNarrow])
 
   // Restore open sections from localStorage + auto-expand active group
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
@@ -242,9 +242,9 @@ export default function CustomNav() {
     return group.children?.some(c => isActive(c.href)) ?? false
   }
 
-  // Desktop: always visible (sticky)
-  // Mobile: fixed overlay, slides in/out based on Payload's nav-open state
-  const navStyle: React.CSSProperties = isMobile
+  // Desktop (≥1024px): sticky
+  // Narrow (<1024px): fixed overlay, slides in/out based on Payload's nav-open state
+  const navStyle: React.CSSProperties = isNarrow
     ? {
         width: 260,
         flexShrink: 0,
@@ -287,6 +287,11 @@ export default function CustomNav() {
           Payload uses [data-theme] .template-default { grid-template-columns: 220px 1fr !important }
           as an unlayered rule, so we must match/exceed specificity and use !important. */}
       <style>{`
+        /* Payload 内蔵の両方のハンバーガーを常時非表示にする（自前を使用） */
+        [data-theme] .template-default__nav-toggler-wrapper,
+        [data-theme] .app-header__mobile-nav-toggler {
+          display: none !important;
+        }
         @media (max-width: 1023px) {
           [data-theme] .template-default,
           [data-theme] .template-default.template-default--nav-hydrated,
@@ -299,10 +304,45 @@ export default function CustomNav() {
           }
         }
       `}</style>
-      {/* Backdrop — only on mobile when nav is open */}
-      {isMobile && isNavOpen && (
+      {/* 自前ハンバーガー (narrow 時、nav が閉じている時のみ表示) */}
+      {isNarrow && !isNavOpen && (
+        <button
+          type="button"
+          aria-label="メニューを開く"
+          onClick={() => {
+            document.querySelector<HTMLButtonElement>('.nav-toggler')?.click()
+          }}
+          onMouseEnter={() => setHoveredIdx('hamburger-btn')}
+          onMouseLeave={() => setHoveredIdx(null)}
+          style={{
+            position: 'fixed',
+            top: 12,
+            left: 12,
+            zIndex: 101,
+            width: 40,
+            height: 40,
+            borderRadius: 10,
+            background: hoveredIdx === 'hamburger-btn' ? t.surfaceHover : t.sidebarBg,
+            border: `1px solid ${t.border}`,
+            color: t.text,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+            transition: 'background .15s',
+            padding: 0,
+          }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 6h18"/><path d="M3 12h18"/><path d="M3 18h18"/>
+          </svg>
+        </button>
+      )}
+      {/* Backdrop — only on narrow viewport when nav is open */}
+      {isNarrow && isNavOpen && (
         <div
-          onClick={closeNavOnMobile}
+          onClick={closeNavOnNarrow}
           aria-hidden
           style={{
             position: 'fixed',
@@ -313,20 +353,50 @@ export default function CustomNav() {
           }}
         />
       )}
-      <nav style={navStyle}>
+      <nav aria-label="主ナビゲーション" style={navStyle}>
 
       {/* Logo */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 12px', marginBottom: stripeMode === 'test' ? 10 : 32 }}>
-        <div style={{
-          width: 32, height: 32, borderRadius: 10,
-          background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: 'white', fontWeight: 800, fontSize: 14, flexShrink: 0,
-        }}>UB</div>
-        <div>
-          <div style={{ fontWeight: 700, fontSize: 14, letterSpacing: -0.3, color: t.text }}>U BALLOON</div>
-          <div style={{ fontSize: 10, color: t.textMuted, fontWeight: 500 }}>管理画面</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 12px', marginBottom: stripeMode === 'test' ? 10 : 32 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: 10,
+            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'white', fontWeight: 800, fontSize: 14, flexShrink: 0,
+          }}>UB</div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 14, letterSpacing: -0.3, color: t.text }}>U BALLOON</div>
+            <div style={{ fontSize: 10, color: t.textMuted, fontWeight: 500 }}>管理画面</div>
+          </div>
         </div>
+        {isNarrow && (
+          <button
+            type="button"
+            aria-label="メニューを閉じる"
+            onClick={closeNavOnNarrow}
+            onMouseEnter={() => setHoveredIdx('close-btn')}
+            onMouseLeave={() => setHoveredIdx(null)}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              border: `1px solid ${t.borderLight}`,
+              background: hoveredIdx === 'close-btn' ? t.surfaceHover : 'transparent',
+              color: hoveredIdx === 'close-btn' ? t.text : t.textSecondary,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'background .15s, color .15s',
+              padding: 0,
+              flexShrink: 0,
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Stripe test mode badge — shown only when not in production */}
