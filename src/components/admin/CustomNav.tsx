@@ -139,6 +139,39 @@ export default function CustomNav() {
   const [stripeMode, setStripeMode] = useState<'test' | 'live'>('test')
   const pathname = usePathname() ?? '/admin'
 
+  // Responsive: detect mobile/tablet viewport (< 1024px)
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 1023px)')
+    const update = () => setIsMobile(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+
+  // Sync with Payload's built-in hamburger toggle — watches .app-header--nav-open class
+  const [isNavOpen, setIsNavOpen] = useState(true)
+  useEffect(() => {
+    const appHeader = document.querySelector('.app-header')
+    if (!appHeader) return
+
+    const updateOpen = () => setIsNavOpen(appHeader.classList.contains('app-header--nav-open'))
+    updateOpen()
+
+    const observer = new MutationObserver(updateOpen)
+    observer.observe(appHeader, { attributes: true, attributeFilter: ['class'] })
+    return () => observer.disconnect()
+  }, [])
+
+  // Close nav when clicking a link on mobile (requires triggering Payload's toggler)
+  const closeNavOnMobile = useCallback(() => {
+    if (!isMobile) return
+    const toggler = document.querySelector<HTMLButtonElement>('.nav-toggler')
+    if (toggler && document.querySelector('.app-header--nav-open')) {
+      toggler.click()
+    }
+  }, [isMobile])
+
   // Restore open sections from localStorage + auto-expand active group
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
     try {
@@ -209,15 +242,61 @@ export default function CustomNav() {
     return group.children?.some(c => isActive(c.href)) ?? false
   }
 
+  // Desktop: always visible (sticky)
+  // Mobile: fixed overlay, slides in/out based on Payload's nav-open state
+  const navStyle: React.CSSProperties = isMobile
+    ? {
+        width: 260,
+        flexShrink: 0,
+        background: t.sidebarBg,
+        borderRight: `1px solid ${t.border}`,
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '24px 12px',
+        height: '100vh',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        overflowY: 'auto',
+        fontFamily: "'Noto Sans JP', -apple-system, sans-serif",
+        transform: isNavOpen ? 'translateX(0)' : 'translateX(-100%)',
+        transition: 'transform .25s ease, background .3s, border-color .3s',
+        zIndex: 100,
+        boxShadow: isNavOpen ? '0 10px 40px rgba(0,0,0,0.2)' : 'none',
+      }
+    : {
+        width: 220,
+        flexShrink: 0,
+        background: t.sidebarBg,
+        borderRight: `1px solid ${t.border}`,
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '24px 12px',
+        transition: 'background .3s, border-color .3s',
+        height: '100vh',
+        position: 'sticky',
+        top: 0,
+        overflowY: 'auto',
+        fontFamily: "'Noto Sans JP', -apple-system, sans-serif",
+      }
+
   return (
-    <nav style={{
-      width: 220, flexShrink: 0, background: t.sidebarBg,
-      borderRight: `1px solid ${t.border}`,
-      display: 'flex', flexDirection: 'column', padding: '24px 12px',
-      transition: 'background .3s, border-color .3s',
-      height: '100vh', position: 'sticky', top: 0, overflowY: 'auto',
-      fontFamily: "'Noto Sans JP', -apple-system, sans-serif",
-    }}>
+    <>
+      {/* Backdrop — only on mobile when nav is open */}
+      {isMobile && isNavOpen && (
+        <div
+          onClick={closeNavOnMobile}
+          aria-hidden
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.4)',
+            zIndex: 99,
+            transition: 'opacity .25s ease',
+          }}
+        />
+      )}
+      <nav style={navStyle}>
 
       {/* Logo */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 12px', marginBottom: stripeMode === 'test' ? 10 : 32 }}>
@@ -421,5 +500,6 @@ export default function CustomNav() {
         )
       })()}
     </nav>
+    </>
   )
 }
