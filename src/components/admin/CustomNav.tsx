@@ -315,12 +315,14 @@ export default function CustomNav() {
             gap: 12px !important;
           }
         }
-        /* モバイル (<768px): 左右パディングを 4% に詰めてコンテンツ幅を広げる */
+        /* モバイル (<768px): .template-default__wrap の左右 padding をゼロに。
+           内側の .gutter--left.gutter--right が --gutter-h で適切な padding を持つので、
+           二重 padding を避けるため wrap 側を 0 にする */
         @media (max-width: 767px) {
           [data-theme="light"] .template-default__wrap,
           [data-theme="dark"] .template-default__wrap {
-            padding-left: 4% !important;
-            padding-right: 4% !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
           }
         }
       `}</style>
