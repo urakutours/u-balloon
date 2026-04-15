@@ -174,6 +174,12 @@ export default function CheckoutPage() {
   // 全プランが ineligible または 0 件かどうかの判定
   const hasIneligibleOnly = planOptions.length > 0 && planOptions.every((p) => !p.eligible)
 
+  // delivery商品でself_deliveryプランが1件も返ってこなかった場合（送料計算後）
+  const hasNoDeliveryPlan =
+    cartProductType === 'delivery' &&
+    shippingResult !== null &&
+    planOptions.filter((p) => p.carrier === 'self_delivery').length === 0
+
   const handleSubmit = async () => {
     if (!user) return
     setSubmitting(true)
@@ -668,7 +674,7 @@ export default function CheckoutPage() {
               className="mt-6 w-full gap-2 bg-brand-dark font-semibold hover:bg-brand-dark/90"
               size="lg"
               onClick={handleSubmit}
-              disabled={submitting || !selectedPlanId || hasIneligibleOnly}
+              disabled={submitting || !selectedPlanId || hasIneligibleOnly || hasNoDeliveryPlan}
             >
               {submitting
                 ? <><Loader2 className="h-4 w-4 animate-spin" /> 処理中...</>
@@ -676,12 +682,17 @@ export default function CheckoutPage() {
                   ? '注文を確定する（銀行振込）'
                   : '決済へ進む'}
             </Button>
+            {hasNoDeliveryPlan && (
+              <p className="mt-2 text-center text-xs text-destructive">
+                このカート内容では対応するデリバリー便がありません。住所または商品構成をご確認ください
+              </p>
+            )}
             {hasIneligibleOnly && (
               <p className="mt-2 text-center text-xs text-destructive">
                 お届け先エリアに対応する配送プランがありません。住所をご確認ください
               </p>
             )}
-            {!selectedPlanId && !hasIneligibleOnly && (
+            {!selectedPlanId && !hasIneligibleOnly && !hasNoDeliveryPlan && (
               <p className="mt-2 text-center text-xs text-foreground/40">
                 配送プランを選択してから決済に進めます
               </p>
@@ -701,10 +712,12 @@ export default function CheckoutPage() {
             className="w-full gap-2 bg-brand-dark font-semibold hover:bg-brand-dark/90"
             size="lg"
             onClick={handleSubmit}
-            disabled={submitting || !selectedPlanId || hasIneligibleOnly}
+            disabled={submitting || !selectedPlanId || hasIneligibleOnly || hasNoDeliveryPlan}
           >
             {submitting ? (
               <><Loader2 className="h-4 w-4 animate-spin" /> 処理中...</>
+            ) : hasNoDeliveryPlan ? (
+              'デリバリー便がありません'
             ) : hasIneligibleOnly ? (
               '対応エリア外のため注文できません'
             ) : !selectedPlanId ? (

@@ -46,6 +46,19 @@ type OrderData = {
   bankInfo?: BankInfo | null
 }
 
+/**
+ * YYYY-MM-DD 形式の文字列を local time で Date に変換する。
+ * new Date('YYYY-MM-DD') は UTC 解釈になりブラウザ環境で 1 日ずれるため専用パーサを使う。
+ * ISO 8601 タイムゾーン付き文字列はそのまま new Date() に渡す。
+ */
+function parseDateStr(dateStr: string): Date {
+  const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (m) {
+    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  }
+  return new Date(dateStr)
+}
+
 function formatAccountType(type: string | null | undefined): string {
   if (!type) return '-'
   if (type === 'checking') return '当座'
@@ -266,7 +279,7 @@ export default function OrderCompleteContent() {
                   <span>
                     <span className="text-muted-foreground">発送予定日:</span>
                     <span className="ml-2">
-                      {new Date(order.scheduledShipDate).toLocaleDateString('ja-JP')}
+                      {parseDateStr(order.scheduledShipDate).toLocaleDateString('ja-JP')}
                     </span>
                   </span>
                 </div>
@@ -275,7 +288,7 @@ export default function OrderCompleteContent() {
                 <div className="flex items-center gap-2">
                   <CalendarDays className="h-4 w-4 text-muted-foreground" />
                   <span>
-                    到着希望日: {new Date(order.desiredArrivalDate).toLocaleDateString('ja-JP')}
+                    到着希望日: {parseDateStr(order.desiredArrivalDate).toLocaleDateString('ja-JP')}
                     {order.desiredTimeSlot && ` ${timeSlotLabels[order.desiredTimeSlot] || order.desiredTimeSlot}`}
                   </span>
                 </div>
