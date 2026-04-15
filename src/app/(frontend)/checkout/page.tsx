@@ -429,10 +429,10 @@ export default function CheckoutPage() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <CreditCard className="h-4 w-4 text-brand-teal" />
-                    <span className="font-semibold text-brand-dark">クレジットカード（Stripe）</span>
+                    <span className="font-semibold text-brand-dark">クレジットカード</span>
                   </div>
                   <p className="mt-1 text-sm text-foreground/60">
-                    Visa / Mastercard / JCB など。即時決済で安全にご購入いただけます。
+                    主要ブランド対応。即時決済で安心してお買い物いただけます。
                   </p>
                 </div>
               </label>
@@ -456,7 +456,7 @@ export default function CheckoutPage() {
                     <span className="font-semibold text-brand-dark">銀行振込（前払い）</span>
                   </div>
                   <p className="mt-1 text-sm text-foreground/60">
-                    注文確定後、振込先情報をメールでお送りします。振込期限までにお振込みください。
+                    ご注文確定後、お振込先をメールでお知らせいたします。期限までにお振込みください。
                   </p>
                 </div>
               </label>
@@ -684,17 +684,17 @@ export default function CheckoutPage() {
             </Button>
             {hasNoDeliveryPlan && (
               <p className="mt-2 text-center text-xs text-destructive">
-                このカート内容では対応するデリバリー便がありません。住所または商品構成をご確認ください
+                このカート内容では対応するデリバリー便がありません。住所または商品構成をご確認ください。
               </p>
             )}
             {hasIneligibleOnly && (
               <p className="mt-2 text-center text-xs text-destructive">
-                お届け先エリアに対応する配送プランがありません。住所をご確認ください
+                お届け先エリアに対応する配送プランがありません。住所をご確認ください。
               </p>
             )}
             {!selectedPlanId && !hasIneligibleOnly && !hasNoDeliveryPlan && (
               <p className="mt-2 text-center text-xs text-foreground/40">
-                配送プランを選択してから決済に進めます
+                配送プランを選択すると決済に進めます。
               </p>
             )}
           </div>
@@ -721,7 +721,7 @@ export default function CheckoutPage() {
             ) : hasIneligibleOnly ? (
               '対応エリア外のため注文できません'
             ) : !selectedPlanId ? (
-              '配送プランを先に選択してください'
+              '配送プランを選択してください'
             ) : paymentMethod === 'bank_transfer' ? (
               '注文を確定する（銀行振込）'
             ) : (
