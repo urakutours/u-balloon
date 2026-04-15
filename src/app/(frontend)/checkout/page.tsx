@@ -2,27 +2,21 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useAuth } from '@/lib/auth-context'
 import { useCartStore } from '@/lib/cart-store'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
-import { Calendar } from '@/components/ui/calendar'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { CalendarIcon, Loader2, MapPin, Truck, ChevronDown, ChevronUp, Clock, MessageSquare, Coins, PartyPopper, CreditCard, Building2 } from 'lucide-react'
-import { format, addDays, addMonths } from 'date-fns'
-import { ja } from 'date-fns/locale'
+import { Loader2, Truck, ChevronDown, ChevronUp, Coins, CreditCard, Building2, LogIn } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { SenderBlock, type SenderState } from '@/components/checkout/SenderBlock'
+import { RecipientBlock, type RecipientState } from '@/components/checkout/RecipientBlock'
+import { GiftBlock, type GiftState } from '@/components/checkout/GiftBlock'
+import { UsageDateBlock, type UsageInfo } from '@/components/checkout/UsageDateBlock'
+import type { GiftWrappingOption, MessageCardTemplate, ShippingTimeSlot } from '@/lib/site-settings'
 
 type PlanOption = {
   planId: string
@@ -35,6 +29,7 @@ type PlanOption = {
   reason: string | null
   breakdown: Record<string, unknown>
   scheduledShipDate: string | null
+  availableTimeSlots?: ShippingTimeSlot[]
 }
 
 export default function CheckoutPage() {
@@ -46,50 +41,110 @@ export default function CheckoutPage() {
 
   useEffect(() => { setHydrated(true) }, [])
 
-  useEffect(() => {
-    if (!authLoading && !user) router.push('/login?redirect=/checkout')
-  }, [authLoading, user, router])
-
+  // カートが空なら /cart へリダイレクト
   useEffect(() => {
     if (hydrated && items.length === 0) router.push('/cart')
   }, [hydrated, items.length, router])
 
-  // Form state
-  const [address, setAddress] = useState(user?.defaultAddress || '')
-  const [desiredDate, setDesiredDate] = useState<Date | undefined>()
-  const [datePickerOpen, setDatePickerOpen] = useState(false)
-  const [timeSlot, setTimeSlot] = useState('')
-  const [eventName, setEventName] = useState('')
-  const [eventDateTime, setEventDateTime] = useState('')
+  const isGuest = !user
+
+  // --- Sender state ---
+  const [sender, setSender] = useState<SenderState>({
+    name: '',
+    nameKana: '',
+    email: '',
+    phone: '',
+    postalCode: '',
+    prefecture: '',
+    addressLine1: '',
+    addressLine2: '',
+  })
+
+  // --- Recipient state ---
+  const [recipient, setRecipient] = useState<RecipientState>({
+    sameAsSender: true,
+    name: '',
+    nameKana: '',
+    phone: '',
+    postalCode: '',
+    prefecture: '',
+    addressLine1: '',
+    addressLine2: '',
+    desiredArrivalDate: '',
+    desiredTimeSlotValue: '',
+    desiredTimeSlotLabel: '',
+  })
+
+  // --- Gift state ---
+  const [gift, setGift] = useState<GiftState>({
+    wrappingOptionId: '',
+    wrappingOptionName: '',
+    wrappingFee: 0,
+    messageCardTemplateId: '',
+    messageCardText: '',
+  })
+
+  // --- UsageInfo state ---
+  const [usageInfo, setUsageInfo] = useState<UsageInfo>({
+    eventName: '',
+    usageDate: '',
+    usageTimeText: '',
+  })
+
+  // --- Gift settings from API ---
+  const [giftWrappingOptions, setGiftWrappingOptions] = useState<GiftWrappingOption[]>([])
+  const [giftMessageCardTemplates, setGiftMessageCardTemplates] = useState<MessageCardTemplate[]>([])
+
+  // --- Notes & payment ---
   const [notes, setNotes] = useState('')
   const [pointsToUse, setPointsToUse] = useState(0)
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'bank_transfer'>('stripe')
+  const [submitting, setSubmitting] = useState(false)
+  const [summaryOpen, setSummaryOpen] = useState(false)
 
-  // Shipping state
+  // --- Shipping state ---
   const [shippingCalculating, setShippingCalculating] = useState(false)
   const [shippingResult, setShippingResult] = useState<{
     distanceKm: number
     shippingFee: number
     breakdown: string
   } | null>(null)
-
-  // Shipping plan selection
   const [planOptions, setPlanOptions] = useState<PlanOption[]>([])
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
-
-  // 営業日補正済み発送予定日（サーバーから取得）
   const [scheduledShipDate, setScheduledShipDate] = useState<string | null>(null)
 
-  // Available dates
-  const [availableDates, setAvailableDates] = useState<Set<string>>(new Set())
-  const [datesLoading, setDatesLoading] = useState(true)
-
-  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'bank_transfer'>('stripe')
-  const [submitting, setSubmitting] = useState(false)
-  const [summaryOpen, setSummaryOpen] = useState(false)
-
+  // ログイン時: sender を user 情報でプリセット
   useEffect(() => {
-    if (user?.defaultAddress && !address) setAddress(user.defaultAddress)
-  }, [user, address])
+    if (user) {
+      setSender({
+        name: user.name ?? '',
+        nameKana: (user as any).nameKana ?? '',
+        email: user.email ?? '',
+        phone: (user as any).phone ?? (user as any).mobilePhone ?? '',
+        postalCode: (user as any).postalCode ?? '',
+        prefecture: (user as any).prefecture ?? '',
+        addressLine1: (user as any).addressLine1 ?? '',
+        addressLine2: (user as any).addressLine2 ?? '',
+      })
+    }
+  }, [user])
+
+  // ギフト設定を API から取得
+  useEffect(() => {
+    const fetchGiftSettings = async () => {
+      try {
+        const res = await fetch('/api/gift-settings')
+        if (res.ok) {
+          const data = await res.json()
+          setGiftWrappingOptions(data.wrappingOptions ?? [])
+          setGiftMessageCardTemplates(data.messageCardTemplates ?? [])
+        }
+      } catch (err) {
+        console.error('Failed to fetch gift settings:', err)
+      }
+    }
+    fetchGiftSettings()
+  }, [])
 
   const cartProductType = (() => {
     const types = new Set(items.map((i) => i.productType))
@@ -97,42 +152,21 @@ export default function CheckoutPage() {
     return 'standard'
   })()
 
-  useEffect(() => {
-    const fetchDates = async () => {
-      setDatesLoading(true)
-      try {
-        const startDate = format(addDays(new Date(), 1), 'yyyy-MM-dd')
-        const endDate = format(addMonths(new Date(), 3), 'yyyy-MM-dd')
-        const res = await fetch('/api/available-dates', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ startDate, endDate, productType: cartProductType }),
-        })
-        if (res.ok) {
-          const data = await res.json()
-          setAvailableDates(new Set(data.availableDates || []))
-        }
-      } catch (err) {
-        console.error('Failed to fetch available dates:', err)
-      } finally {
-        setDatesLoading(false)
-      }
-    }
-    fetchDates()
-  }, [cartProductType])
+  // 配送先住所（送り先別指定 or 送り主と同じ）
+  const destinationAddress = recipient.sameAsSender
+    ? `${sender.prefecture}${sender.addressLine1}${sender.addressLine2}`
+    : `${recipient.prefecture}${recipient.addressLine1}${recipient.addressLine2}`
 
-  const calculateShipping = useCallback(async (arrivalDateOverride?: string) => {
-    if (!address.trim()) return
+  const calculateShipping = useCallback(async () => {
+    if (!destinationAddress.trim()) return
     setShippingCalculating(true)
-    const desiredArrivalDateStr = arrivalDateOverride ?? (desiredDate ? format(desiredDate, 'yyyy-MM-dd') : undefined)
     try {
       const res = await fetch('/api/calculate-shipping', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          destinationAddress: address,
+          destinationAddress,
           cartSubtotal: subtotal,
-          desiredArrivalDate: desiredArrivalDateStr,
         }),
       })
       if (!res.ok) return
@@ -161,27 +195,37 @@ export default function CheckoutPage() {
     } finally {
       setShippingCalculating(false)
     }
-  }, [address, cartProductType, desiredDate, subtotal])
-
-  const isDateDisabled = (date: Date) => !availableDates.has(format(date, 'yyyy-MM-dd'))
+  }, [destinationAddress, cartProductType, subtotal])
 
   const selectedPlan = planOptions.find((p) => p.planId === selectedPlanId)
   const shippingFee = selectedPlan?.shippingFee ?? shippingResult?.shippingFee ?? 0
-  const maxUsablePoints = Math.min(user?.points ?? 0, subtotal + shippingFee)
+  const wrappingFee = gift.wrappingFee ?? 0
+  const maxUsablePoints = Math.min(user?.points ?? 0, subtotal + shippingFee + wrappingFee)
   const pointsDiscount = Math.min(pointsToUse, maxUsablePoints)
-  const totalAmount = subtotal + shippingFee - pointsDiscount
+  const totalAmount = subtotal + shippingFee + wrappingFee - pointsDiscount
 
-  // 全プランが ineligible または 0 件かどうかの判定
   const hasIneligibleOnly = planOptions.length > 0 && planOptions.every((p) => !p.eligible)
-
-  // delivery商品でself_deliveryプランが1件も返ってこなかった場合（送料計算後）
   const hasNoDeliveryPlan =
     cartProductType === 'delivery' &&
     shippingResult !== null &&
     planOptions.filter((p) => p.carrier === 'self_delivery').length === 0
 
+  // availableTimeSlots: 選択中プランのものを渡す（未選択は空配列）
+  const availableTimeSlots: ShippingTimeSlot[] = selectedPlan?.availableTimeSlots ?? []
+
+  // バリデーション
+  const isGuestInvalid = isGuest && (!sender.name || !sender.email || !sender.phone)
+  const isRecipientInvalid =
+    !recipient.sameAsSender && (!recipient.prefecture || !recipient.addressLine1)
+  const isSubmitDisabled =
+    submitting ||
+    !selectedPlanId ||
+    hasIneligibleOnly ||
+    hasNoDeliveryPlan ||
+    isGuestInvalid ||
+    isRecipientInvalid
+
   const handleSubmit = async () => {
-    if (!user) return
     setSubmitting(true)
     try {
       const checkoutItems = items.map((item) => ({
@@ -191,22 +235,46 @@ export default function CheckoutPage() {
         unitPrice: item.unitPrice,
       }))
 
-      const desiredArrivalDateStr = desiredDate ? format(desiredDate, 'yyyy-MM-dd') : undefined
+      const resolvedRecipient = {
+        ...recipient,
+        ...(recipient.sameAsSender
+          ? {
+              name: sender.name,
+              nameKana: sender.nameKana,
+              phone: sender.phone,
+              postalCode: sender.postalCode,
+              prefecture: sender.prefecture,
+              addressLine1: sender.addressLine1,
+              addressLine2: sender.addressLine2,
+            }
+          : {}),
+      }
+
       const commonBody = {
         items: checkoutItems,
         subtotal,
         shippingFee,
         pointsUsed: pointsDiscount,
-        deliveryAddress: address,
-        deliveryDistance: shippingResult?.distanceKm ?? 0,
-        desiredArrivalDate: desiredArrivalDateStr,
-        desiredTimeSlot: timeSlot || undefined,
-        eventName: eventName || undefined,
-        eventDateTime: eventDateTime || undefined,
         notes: notes || undefined,
         shippingPlanId: selectedPlan?.planId,
         shippingPlanName: selectedPlan?.planName,
         scheduledShipDate: scheduledShipDate ?? undefined,
+        sender,
+        recipient: resolvedRecipient,
+        giftSettings: gift,
+        usageInfo,
+        isGuestOrder: !user,
+        // 後方互換のための旧フィールド（API側で使用）
+        deliveryAddress: recipient.sameAsSender
+          ? `${sender.prefecture}${sender.addressLine1} ${sender.addressLine2}`
+          : `${recipient.prefecture}${recipient.addressLine1} ${recipient.addressLine2}`,
+        desiredArrivalDate: recipient.desiredArrivalDate || undefined,
+        desiredTimeSlot: recipient.desiredTimeSlotValue || undefined,
+        eventName: usageInfo.eventName || undefined,
+        eventDateTime: usageInfo.usageDate
+          ? `${usageInfo.usageDate}T${usageInfo.usageTimeText || '00:00'}`
+          : undefined,
+        deliveryDistance: shippingResult?.distanceKm ?? 0,
       }
 
       if (paymentMethod === 'stripe') {
@@ -231,7 +299,7 @@ export default function CheckoutPage() {
           credentials: 'include',
           body: JSON.stringify({
             ...commonBody,
-            customerId: user.id,
+            customerId: user?.id,
             totalAmount,
           }),
         })
@@ -252,7 +320,8 @@ export default function CheckoutPage() {
     }
   }
 
-  if (authLoading || !user || !hydrated || items.length === 0) {
+  // authLoading 中 or カート空（hydrate 前）はスピナー表示
+  if (!hydrated || (authLoading && !user)) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -301,6 +370,12 @@ export default function CheckoutPage() {
                   <span className="text-foreground/60">送料</span>
                   <span>{shippingResult ? `¥${shippingFee.toLocaleString()}` : '未計算'}</span>
                 </div>
+                {wrappingFee > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-foreground/60">ラッピング</span>
+                    <span>¥{wrappingFee.toLocaleString()}</span>
+                  </div>
+                )}
                 {pointsDiscount > 0 && (
                   <div className="flex justify-between text-brand-teal">
                     <span>ポイント使用</span>
@@ -316,31 +391,51 @@ export default function CheckoutPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
         <div className="space-y-5 lg:col-span-2">
 
-          {/* 1. Delivery Address */}
+          {/* 1. ゲスト向けログイン誘導バナー */}
+          {isGuest && (
+            <div className="flex items-center gap-3 rounded-xl border border-brand-teal/30 bg-brand-teal/5 p-4">
+              <LogIn className="h-5 w-5 shrink-0 text-brand-teal" />
+              <p className="text-sm text-brand-dark">
+                会員の方はログインすると送り主情報の入力が不要です。
+                <Link
+                  href={`/login?redirect=/checkout`}
+                  className="ml-1 font-semibold text-brand-teal underline underline-offset-2"
+                >
+                  ログインする
+                </Link>
+              </p>
+            </div>
+          )}
+
+          {/* 2. SenderBlock — 送り主情報 */}
+          <SenderBlock
+            value={sender}
+            onChange={setSender}
+            user={user}
+            isGuest={isGuest}
+          />
+
+          {/* 3. RecipientBlock — 送り先情報 */}
+          <RecipientBlock
+            value={recipient}
+            onChange={setRecipient}
+            senderSnapshot={sender}
+            availableTimeSlots={availableTimeSlots}
+          />
+
+          {/* 4. 配送プラン選択 */}
           <section className="rounded-xl border border-border/60 bg-white p-5 sm:p-6">
             <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-brand-dark sm:text-base">
-              <MapPin className="h-4.5 w-4.5 text-brand-teal" />
-              配送先住所
+              <Truck className="h-4.5 w-4.5 text-brand-teal" />
+              配送プラン
             </h2>
             <div className="space-y-3">
-              <Input
-                placeholder="例: 東京都渋谷区..."
-                value={address}
-                onChange={(e) => {
-                  setAddress(e.target.value)
-                  setShippingResult(null)
-                  setPlanOptions([])
-                  setSelectedPlanId(null)
-                  setScheduledShipDate(null)
-                }}
-                className="text-base sm:text-sm"
-              />
               <Button
                 variant="outline"
                 size="sm"
                 className="w-full gap-2 sm:w-auto"
                 onClick={() => calculateShipping()}
-                disabled={!address.trim() || shippingCalculating}
+                disabled={!destinationAddress.trim() || shippingCalculating}
               >
                 {shippingCalculating ? (
                   <><Loader2 className="h-4 w-4 animate-spin" /> 計算中...</>
@@ -348,64 +443,69 @@ export default function CheckoutPage() {
                   <><Truck className="h-4 w-4" /> 送料を計算</>
                 )}
               </Button>
+              {planOptions.length > 0 && (
+                <div className="mt-3 space-y-3">
+                  {planOptions.map((p) => (
+                    <label
+                      key={p.planId}
+                      className={cn(
+                        'flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors',
+                        selectedPlanId === p.planId
+                          ? 'border-brand-teal bg-brand-teal/5'
+                          : 'border-border hover:border-brand-teal/40',
+                        !p.eligible && 'cursor-not-allowed opacity-50',
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="shippingPlan"
+                        value={p.planId}
+                        checked={selectedPlanId === p.planId}
+                        disabled={!p.eligible}
+                        onChange={() => {
+                          if (p.eligible) {
+                            setSelectedPlanId(p.planId)
+                            setShippingResult((prev) =>
+                              prev ? { ...prev, shippingFee: p.shippingFee } : null,
+                            )
+                            setScheduledShipDate(p.scheduledShipDate ?? null)
+                          }
+                        }}
+                        className="mt-1 accent-brand-teal"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-brand-dark">{p.planName}</span>
+                          <span className="font-semibold text-brand-dark">¥{p.shippingFee.toLocaleString()}</span>
+                        </div>
+                        {(p.estimatedDaysMin != null || p.estimatedDaysMax != null) && (
+                          <div className="mt-1 text-sm text-foreground/60">
+                            発送から{p.estimatedDaysMin ?? '-'}〜{p.estimatedDaysMax ?? '-'}日で到着予定
+                          </div>
+                        )}
+                        {p.reason && (
+                          <div className="mt-1 text-sm text-destructive">{p.reason}</div>
+                        )}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
           </section>
 
-          {/* 2. Shipping Plan Selection */}
-          {planOptions.length > 0 && (
-            <section className="rounded-xl border border-border/60 bg-white p-5 sm:p-6">
-              <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-brand-dark sm:text-base">
-                <Truck className="h-4.5 w-4.5 text-brand-teal" />
-                配送プランを選択
-              </h2>
-              <div className="space-y-3">
-                {planOptions.map((p) => (
-                  <label
-                    key={p.planId}
-                    className={cn(
-                      'flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors',
-                      selectedPlanId === p.planId
-                        ? 'border-brand-teal bg-brand-teal/5'
-                        : 'border-border hover:border-brand-teal/40',
-                      !p.eligible && 'cursor-not-allowed opacity-50',
-                    )}
-                  >
-                    <input
-                      type="radio"
-                      name="shippingPlan"
-                      value={p.planId}
-                      checked={selectedPlanId === p.planId}
-                      disabled={!p.eligible}
-                      onChange={() => {
-                        if (p.eligible) {
-                          setSelectedPlanId(p.planId)
-                          setShippingResult((prev) => prev ? { ...prev, shippingFee: p.shippingFee } : null)
-                          setScheduledShipDate(p.scheduledShipDate ?? null)
-                        }
-                      }}
-                      className="mt-1 accent-brand-teal"
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-brand-dark">{p.planName}</span>
-                        <span className="font-semibold text-brand-dark">¥{p.shippingFee.toLocaleString()}</span>
-                      </div>
-                      {(p.estimatedDaysMin != null || p.estimatedDaysMax != null) && (
-                        <div className="mt-1 text-sm text-foreground/60">
-                          発送から{p.estimatedDaysMin ?? '-'}〜{p.estimatedDaysMax ?? '-'}日で到着予定
-                        </div>
-                      )}
-                      {p.reason && (
-                        <div className="mt-1 text-sm text-destructive">{p.reason}</div>
-                      )}
-                    </div>
-                  </label>
-                ))}
-              </div>
-            </section>
-          )}
+          {/* 5. UsageDateBlock — 使用日時 */}
+          <UsageDateBlock value={usageInfo} onChange={setUsageInfo} />
 
-          {/* 3. Payment Method */}
+          {/* 6. GiftBlock — ギフト設定 */}
+          <GiftBlock
+            value={gift}
+            onChange={setGift}
+            wrappingOptions={giftWrappingOptions}
+            messageCardTemplates={giftMessageCardTemplates}
+          />
+
+          {/* 7. お支払い方法 */}
           <section aria-labelledby="payment-method-heading" className="rounded-xl border border-border/60 bg-white p-5 sm:p-6">
             <h2 id="payment-method-heading" className="mb-4 flex items-center gap-2 text-sm font-bold text-brand-dark sm:text-base">
               <CreditCard className="h-4.5 w-4.5 text-brand-teal" />
@@ -463,174 +563,65 @@ export default function CheckoutPage() {
             </div>
           </section>
 
-          {/* 4. Desired Arrival Date */}
-          <section className="rounded-xl border border-border/60 bg-white p-5 sm:p-6">
-            <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-brand-dark sm:text-base">
-              <CalendarIcon className="h-4.5 w-4.5 text-brand-teal" />
-              到着希望日
-            </h2>
-            <div className="space-y-3">
-              <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-                <PopoverTrigger
-                  render={
-                    <button
-                      type="button"
-                      className="flex w-full items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background transition-colors hover:bg-accent"
-                    />
-                  }
-                >
-                  <CalendarIcon className="h-4 w-4 text-foreground/40" />
-                  <span className={desiredDate ? 'text-foreground' : 'text-foreground/40'}>
-                    {desiredDate
-                      ? format(desiredDate, 'yyyy年M月d日(E)', { locale: ja })
-                      : '日付を選択...'}
-                  </span>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start" side="bottom" sideOffset={4}>
-                  {datesLoading ? (
-                    <div className="flex items-center justify-center p-8">
-                      <Loader2 className="h-6 w-6 animate-spin" />
-                    </div>
-                  ) : (
-                    <Calendar
-                      mode="single"
-                      selected={desiredDate}
-                      onSelect={(date) => {
-                        setDesiredDate(date)
-                        setDatePickerOpen(false)
-                        // 住所が入力済みなら到着希望日変更時に shipping を再計算して scheduledShipDate を更新
-                        if (date && address.trim()) {
-                          calculateShipping(format(date, 'yyyy-MM-dd'))
-                        } else {
-                          setScheduledShipDate(null)
-                        }
-                      }}
-                      disabled={isDateDisabled}
-                      fromDate={addDays(new Date(), 1)}
-                      toDate={addMonths(new Date(), 3)}
-                      className="rounded-md border-0"
-                    />
-                  )}
-                </PopoverContent>
-              </Popover>
-              <p className="text-xs text-foreground/40">
-                {cartProductType === 'delivery'
-                  ? 'デリバリー商品は最短5営業日後からお届け可能です'
-                  : '通常商品は最短3営業日後からお届け可能です'}
-              </p>
-            </div>
-          </section>
-
-          {/* 5. Time Slot & Event Info */}
-          <section className="rounded-xl border border-border/60 bg-white p-5 sm:p-6">
-            <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-brand-dark sm:text-base">
-              <Clock className="h-4.5 w-4.5 text-brand-teal" />
-              配送時間・イベント情報
-            </h2>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <Label className="mb-2 block text-sm font-semibold text-brand-dark">希望時間帯</Label>
-                  <Select value={timeSlot} onValueChange={(v) => setTimeSlot(v || '')}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="時間帯を選択..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="morning">午前</SelectItem>
-                      <SelectItem value="afternoon">午後</SelectItem>
-                      <SelectItem value="evening">夕方</SelectItem>
-                      <SelectItem value="night">夜</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="mb-2 block text-sm font-semibold text-brand-dark">
-                    使用日時（イベント日時）
-                  </Label>
-                  <Input
-                    type="datetime-local"
-                    value={eventDateTime}
-                    onChange={(e) => setEventDateTime(e.target.value)}
-                    className="text-base sm:text-sm"
-                  />
-                </div>
+          {/* 8. ポイント使用 — ログイン時のみ */}
+          {user && (
+            <section className="rounded-xl border border-border/60 bg-white p-5 sm:p-6">
+              <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-brand-dark sm:text-base">
+                <Coins className="h-4.5 w-4.5 text-brand-teal" />
+                ポイント使用
+              </h2>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-foreground/60">保有ポイント:</span>
+                <Badge variant="secondary" className="gap-1 bg-brand-pink-light text-brand-pink">
+                  {(user.points ?? 0).toLocaleString()} pt
+                </Badge>
               </div>
-
-              {/* Event Name — from Shopify's cart-delivery-options */}
-              <div>
-                <Label className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-brand-dark">
-                  <PartyPopper className="h-3.5 w-3.5 text-brand-pink" />
-                  イベント名（任意）
-                </Label>
+              <div className="mt-3 flex items-center gap-2">
                 <Input
-                  placeholder="例: ○○家・△△家 結婚披露宴、○○さん誕生日パーティー"
-                  value={eventName}
-                  onChange={(e) => setEventName(e.target.value)}
-                  className="text-base sm:text-sm"
+                  type="number"
+                  min={0}
+                  max={maxUsablePoints}
+                  value={pointsToUse}
+                  onChange={(e) =>
+                    setPointsToUse(Math.max(0, Math.min(maxUsablePoints, Number(e.target.value) || 0)))
+                  }
+                  className="w-24 text-base sm:w-32 sm:text-sm"
                 />
-                <p className="mt-1.5 text-xs text-foreground/40">
-                  結婚式やパーティーの場合、外箱に記載して混乱を防ぎます
-                </p>
+                <span className="text-sm text-foreground/60">pt</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 text-xs"
+                  onClick={() => setPointsToUse(maxUsablePoints)}
+                  disabled={maxUsablePoints === 0}
+                >
+                  全て使う
+                </Button>
               </div>
-            </div>
-          </section>
+              {pointsDiscount > 0 && (
+                <p className="mt-2 text-sm font-medium text-brand-teal">
+                  -{pointsDiscount.toLocaleString()}円割引が適用されます
+                </p>
+              )}
+            </section>
+          )}
 
-          {/* 6. Notes */}
+          {/* 9. 備考 */}
           <section className="rounded-xl border border-border/60 bg-white p-5 sm:p-6">
             <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-brand-dark sm:text-base">
-              <MessageSquare className="h-4.5 w-4.5 text-brand-teal" />
               備考
             </h2>
             <Textarea
-              placeholder="ご要望やメッセージカードの文面などがあればご記入ください..."
+              placeholder="ご要望などがあればご記入ください..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
               className="text-base sm:text-sm"
             />
           </section>
-
-          {/* 7. Points */}
-          <section className="rounded-xl border border-border/60 bg-white p-5 sm:p-6">
-            <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-brand-dark sm:text-base">
-              <Coins className="h-4.5 w-4.5 text-brand-teal" />
-              ポイント使用
-            </h2>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-foreground/60">保有ポイント:</span>
-              <Badge variant="secondary" className="gap-1 bg-brand-pink-light text-brand-pink">
-                {(user.points ?? 0).toLocaleString()} pt
-              </Badge>
-            </div>
-            <div className="mt-3 flex items-center gap-2">
-              <Input
-                type="number"
-                min={0}
-                max={maxUsablePoints}
-                value={pointsToUse}
-                onChange={(e) => setPointsToUse(Math.max(0, Math.min(maxUsablePoints, Number(e.target.value) || 0)))}
-                className="w-24 text-base sm:w-32 sm:text-sm"
-              />
-              <span className="text-sm text-foreground/60">pt</span>
-              <Button
-                variant="outline"
-                size="sm"
-                className="shrink-0 text-xs"
-                onClick={() => setPointsToUse(maxUsablePoints)}
-                disabled={maxUsablePoints === 0}
-              >
-                全て使う
-              </Button>
-            </div>
-            {pointsDiscount > 0 && (
-              <p className="mt-2 text-sm font-medium text-brand-teal">
-                -{pointsDiscount.toLocaleString()}円割引が適用されます
-              </p>
-            )}
-          </section>
         </div>
 
-        {/* Order Summary Sidebar — Desktop */}
+        {/* 10. 注文サマリー + 決済ボタン — Desktop Sidebar */}
         <div className="hidden lg:block">
           <div className="sticky top-20 rounded-xl border border-border/60 bg-white p-6">
             <h2 className="mb-4 font-bold text-brand-dark">ご注文内容</h2>
@@ -658,6 +649,12 @@ export default function CheckoutPage() {
                       : '未計算'}
                 </span>
               </div>
+              {wrappingFee > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-foreground/60">ラッピング</span>
+                  <span>¥{wrappingFee.toLocaleString()}</span>
+                </div>
+              )}
               {pointsDiscount > 0 && (
                 <div className="flex justify-between text-brand-teal">
                   <span>ポイント使用</span>
@@ -670,18 +667,23 @@ export default function CheckoutPage() {
               <span>合計</span>
               <span>¥{totalAmount.toLocaleString()}</span>
             </div>
-            <Button
-              className="mt-6 w-full gap-2 bg-brand-dark font-semibold hover:bg-brand-dark/90"
-              size="lg"
-              onClick={handleSubmit}
-              disabled={submitting || !selectedPlanId || hasIneligibleOnly || hasNoDeliveryPlan}
+            <span
+              className="mt-6 block w-full"
+              title={isGuestInvalid ? '必須項目（送り主情報）を入力してください' : undefined}
             >
-              {submitting
-                ? <><Loader2 className="h-4 w-4 animate-spin" /> 処理中...</>
-                : paymentMethod === 'bank_transfer'
-                  ? '注文を確定する（銀行振込）'
-                  : '決済へ進む'}
-            </Button>
+              <Button
+                className="w-full gap-2 bg-brand-dark font-semibold hover:bg-brand-dark/90"
+                size="lg"
+                onClick={handleSubmit}
+                disabled={isSubmitDisabled}
+              >
+                {submitting
+                  ? <><Loader2 className="h-4 w-4 animate-spin" /> 処理中...</>
+                  : paymentMethod === 'bank_transfer'
+                    ? '注文を確定する（銀行振込）'
+                    : '決済へ進む'}
+              </Button>
+            </span>
             {hasNoDeliveryPlan && (
               <p className="mt-2 text-center text-xs text-destructive">
                 このカート内容では対応するデリバリー便がありません。住所または商品構成をご確認ください。
@@ -708,26 +710,33 @@ export default function CheckoutPage() {
             <span className="text-foreground/60">合計</span>
             <span className="text-lg font-bold text-brand-dark">¥{totalAmount.toLocaleString()}</span>
           </div>
-          <Button
-            className="w-full gap-2 bg-brand-dark font-semibold hover:bg-brand-dark/90"
-            size="lg"
-            onClick={handleSubmit}
-            disabled={submitting || !selectedPlanId || hasIneligibleOnly || hasNoDeliveryPlan}
+          <span
+            className="block w-full"
+            title={isGuestInvalid ? '必須項目（送り主情報）を入力してください' : undefined}
           >
-            {submitting ? (
-              <><Loader2 className="h-4 w-4 animate-spin" /> 処理中...</>
-            ) : hasNoDeliveryPlan ? (
-              'デリバリー便がありません'
-            ) : hasIneligibleOnly ? (
-              '対応エリア外のため注文できません'
-            ) : !selectedPlanId ? (
-              '配送プランを選択してください'
-            ) : paymentMethod === 'bank_transfer' ? (
-              '注文を確定する（銀行振込）'
-            ) : (
-              '決済へ進む'
-            )}
-          </Button>
+            <Button
+              className="w-full gap-2 bg-brand-dark font-semibold hover:bg-brand-dark/90"
+              size="lg"
+              onClick={handleSubmit}
+              disabled={isSubmitDisabled}
+            >
+              {submitting ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> 処理中...</>
+              ) : hasNoDeliveryPlan ? (
+                'デリバリー便がありません'
+              ) : hasIneligibleOnly ? (
+                '対応エリア外のため注文できません'
+              ) : !selectedPlanId ? (
+                '配送プランを選択してください'
+              ) : isGuestInvalid ? (
+                '送り主情報を入力してください'
+              ) : paymentMethod === 'bank_transfer' ? (
+                '注文を確定する（銀行振込）'
+              ) : (
+                '決済へ進む'
+              )}
+            </Button>
+          </span>
         </div>
       </div>
       <div className="h-24 lg:hidden" />

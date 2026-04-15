@@ -222,6 +222,9 @@ async function processOrderStatusChange(payload: Payload, doc: Record<string, un
         ? (doc.customer as { id: string }).id
         : (doc.customer as string)
 
+      // subtotal はラッピング料金（giftWrappingFee）込みの値で保存されている。
+      // ラッピング料金分にもポイントを付与する設計（意図的）。
+      // 変更する場合は: doc.subtotal - ((doc.giftSettings as Record<string,unknown>)?.giftWrappingFee as number ?? 0)
       const result = await earnPoints(payload, {
         userId: customerId,
         orderId: doc.id as string,

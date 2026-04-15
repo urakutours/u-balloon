@@ -213,6 +213,7 @@ export async function POST(req: NextRequest) {
           carrier: p.carrier,
           estimatedDaysMin: p.estimatedDaysMin,
           estimatedDaysMax: p.estimatedDaysMax,
+          availableTimeSlots: p.availableTimeSlots ?? [],
         },
         isMock,
         eligible: calc.eligible,
@@ -244,6 +245,7 @@ export async function POST(req: NextRequest) {
           carrier: preferred.carrier,
           estimatedDaysMin: preferred.estimatedDaysMin,
           estimatedDaysMax: preferred.estimatedDaysMax,
+          availableTimeSlots: preferred.availableTimeSlots ?? [],
         },
         isMock,
         eligible: calc.eligible,
@@ -271,6 +273,7 @@ export async function POST(req: NextRequest) {
           carrier: p.carrier,
           estimatedDaysMin: p.estimatedDaysMin,
           estimatedDaysMax: p.estimatedDaysMax,
+          availableTimeSlots: p.availableTimeSlots ?? [],
           shippingFee: calc.shippingFee,
           distanceKm,
           eligible: calc.eligible,
@@ -290,7 +293,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error('[Shipping] Error:', err)
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : '送料計算に失敗しました' },
+      { error: '送料計算に失敗しました' },
       { status: 500 },
     )
   }
