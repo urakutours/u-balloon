@@ -12,6 +12,31 @@ import { decrypt } from './encryption'
 // Types
 // ---------------------------------------------------------------------------
 
+export type ShippingTimeSlot = {
+  id: string
+  label: string
+  value: string
+  active: boolean
+  sortOrder: number
+}
+
+export type MessageCardTemplate = {
+  id: string
+  label: string
+  body: string
+  active: boolean
+  sortOrder: number
+}
+
+export type GiftWrappingOption = {
+  id: string
+  label: string
+  description: string | null
+  feeAmount: number
+  active: boolean
+  sortOrder: number
+}
+
 export type ShippingRegionalFee = {
   id?: string
   region: string
@@ -35,6 +60,7 @@ export type ShippingPlan = {
   extraPerKmFee: number | null
   freeThreshold: number | null
   regionalFees: ShippingPlanRegionalFee[]
+  availableTimeSlots: ShippingTimeSlot[]
   estimatedDaysMin: number | null
   estimatedDaysMax: number | null
   supportedAreas: string | null
@@ -105,6 +131,9 @@ export type SiteSettingsData = {
   paymentMethodsText: string | null
   // 配送プラン
   shippingPlans: ShippingPlan[] | null
+  // ギフト設定
+  giftSettingsMessageCardTemplates: MessageCardTemplate[] | null
+  giftSettingsWrappingOptions: GiftWrappingOption[] | null
 }
 
 export type ActiveStripeKeys = {
@@ -192,6 +221,30 @@ export async function getSiteSettings(): Promise<SiteSettingsData> {
     emailFromName: stringField(doc.emailFromName),
     emailReplyTo: stringField(doc.emailReplyTo),
     adminAlertEmail: stringField(doc.adminAlertEmail),
+    // ギフト設定
+    giftSettingsMessageCardTemplates: (() => {
+      const raw = (doc.giftSettingsMessageCardTemplates as unknown as Array<Record<string, unknown>>) ?? []
+      if (!Array.isArray(raw) || raw.length === 0) return null
+      return raw.map((t) => ({
+        id: String(t.id ?? ''),
+        label: String(t.label ?? ''),
+        body: String(t.body ?? ''),
+        active: Boolean(t.active ?? true),
+        sortOrder: typeof t.sortOrder === 'number' ? t.sortOrder : Number(t.sortOrder ?? 0),
+      })) as MessageCardTemplate[]
+    })(),
+    giftSettingsWrappingOptions: (() => {
+      const raw = (doc.giftSettingsWrappingOptions as unknown as Array<Record<string, unknown>>) ?? []
+      if (!Array.isArray(raw) || raw.length === 0) return null
+      return raw.map((w) => ({
+        id: String(w.id ?? ''),
+        label: String(w.label ?? ''),
+        description: (w.description as string | null | undefined) ?? null,
+        feeAmount: typeof w.feeAmount === 'number' ? w.feeAmount : Number(w.feeAmount ?? 0),
+        active: Boolean(w.active ?? true),
+        sortOrder: typeof w.sortOrder === 'number' ? w.sortOrder : Number(w.sortOrder ?? 0),
+      })) as GiftWrappingOption[]
+    })(),
     // 配送プラン
     shippingPlans: (() => {
       const rawPlans = (doc.shippingPlans as unknown as Array<Record<string, unknown>>) ?? []
@@ -212,6 +265,16 @@ export async function getSiteSettings(): Promise<SiteSettingsData> {
             fee: typeof r.fee === 'number' ? r.fee : Number(r.fee ?? 0),
             note: (r.note as string | null | undefined) ?? null,
           })),
+          availableTimeSlots: (() => {
+            const rawSlots = (p.availableTimeSlots as Array<Record<string, unknown>> | undefined) ?? []
+            return rawSlots.map((s) => ({
+              id: String(s.id ?? ''),
+              label: String(s.label ?? ''),
+              value: String(s.value ?? ''),
+              active: Boolean(s.active ?? true),
+              sortOrder: typeof s.sortOrder === 'number' ? s.sortOrder : Number(s.sortOrder ?? 0),
+            }))
+          })(),
           estimatedDaysMin: typeof p.estimatedDaysMin === 'number' ? p.estimatedDaysMin : p.estimatedDaysMin != null ? Number(p.estimatedDaysMin) : null,
           estimatedDaysMax: typeof p.estimatedDaysMax === 'number' ? p.estimatedDaysMax : p.estimatedDaysMax != null ? Number(p.estimatedDaysMax) : null,
           supportedAreas: (p.supportedAreas as string | null | undefined) ?? null,

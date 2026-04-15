@@ -15,9 +15,23 @@ import type { Payload } from 'payload'
  */
 async function processOrderCreate(payload: Payload, doc: Record<string, unknown>) {
   try {
-    const customer = typeof doc.customer === 'object'
-      ? (doc.customer as Record<string, unknown>)
-      : await payload.findByID({ collection: 'users', id: doc.customer as string })
+    const isGuestOrder = !doc.customer || doc.customer === null
+
+    // For guest orders, derive name/email from sender group instead of user record
+    const senderGroup = (doc.sender as Record<string, unknown>) ?? {}
+    let customerName: string
+    let customerEmail: string
+
+    if (isGuestOrder) {
+      customerEmail = (senderGroup.senderEmail as string | undefined) ?? ''
+      customerName = (senderGroup.senderName as string | undefined) ?? 'お客様'
+    } else {
+      const customer = typeof doc.customer === 'object'
+        ? (doc.customer as Record<string, unknown>)
+        : await payload.findByID({ collection: 'users', id: doc.customer as string })
+      customerName = (customer as { name?: string }).name || (customer as { email: string }).email
+      customerEmail = (customer as { email: string }).email
+    }
 
     const items = await Promise.all(
       ((doc.items as Array<Record<string, unknown>>) || []).map(async (item) => {
@@ -40,10 +54,50 @@ async function processOrderCreate(payload: Payload, doc: Record<string, unknown>
       ? (settings.shippingPlans.find((p) => p.id === shippingPlanId)?.carrier ?? undefined)
       : undefined
 
+    // Extract new group fields (Payload v3 group fields are nested objects in API response)
+    const recipientGroup = (doc.recipient as Record<string, unknown>) ?? {}
+    const giftGroup = (doc.giftSettings as Record<string, unknown>) ?? {}
+    const usageGroup = (doc.usageInfo as Record<string, unknown>) ?? {}
+
+    const senderInfo = {
+      senderName: (senderGroup.senderName as string | undefined) ?? undefined,
+      senderEmail: (senderGroup.senderEmail as string | undefined) ?? undefined,
+      senderPhone: (senderGroup.senderPhone as string | undefined) ?? undefined,
+      senderPostalCode: (senderGroup.senderPostalCode as string | undefined) ?? undefined,
+      senderPrefecture: (senderGroup.senderPrefecture as string | undefined) ?? undefined,
+      senderAddressLine1: (senderGroup.senderAddressLine1 as string | undefined) ?? undefined,
+      senderAddressLine2: (senderGroup.senderAddressLine2 as string | undefined) ?? undefined,
+    }
+
+    const recipientInfo = {
+      recipientSameAsSender: (recipientGroup.recipientSameAsSender as boolean | undefined) ?? false,
+      recipientName: (recipientGroup.recipientName as string | undefined) ?? undefined,
+      recipientNameKana: (recipientGroup.recipientNameKana as string | undefined) ?? undefined,
+      recipientPhone: (recipientGroup.recipientPhone as string | undefined) ?? undefined,
+      recipientPostalCode: (recipientGroup.recipientPostalCode as string | undefined) ?? undefined,
+      recipientPrefecture: (recipientGroup.recipientPrefecture as string | undefined) ?? undefined,
+      recipientAddressLine1: (recipientGroup.recipientAddressLine1 as string | undefined) ?? undefined,
+      recipientAddressLine2: (recipientGroup.recipientAddressLine2 as string | undefined) ?? undefined,
+      recipientDesiredArrivalDate: (recipientGroup.recipientDesiredArrivalDate as string | undefined) ?? undefined,
+      recipientDesiredTimeSlotLabel: (recipientGroup.recipientDesiredTimeSlotLabel as string | undefined) ?? undefined,
+    }
+
+    const giftInfo = {
+      giftWrappingOptionName: (giftGroup.giftWrappingOptionName as string | undefined) ?? undefined,
+      giftWrappingFee: (giftGroup.giftWrappingFee as number | undefined) ?? undefined,
+      giftMessageCardText: (giftGroup.giftMessageCardText as string | undefined) ?? undefined,
+    }
+
+    const usageInfo = {
+      usageEventName: (usageGroup.usageEventName as string | undefined) ?? undefined,
+      usageDate: (usageGroup.usageDate as string | undefined) ?? undefined,
+      usageTimeText: (usageGroup.usageTimeText as string | undefined) ?? undefined,
+    }
+
     // Build base email props common to all payment methods
     const baseEmailProps = {
-      name: ((customer as { name?: string }).name || (customer as { email: string }).email),
-      email: (customer as { email: string }).email,
+      name: customerName,
+      email: customerEmail,
       orderNumber: doc.orderNumber as string,
       items,
       deliveryAddress: doc.deliveryAddress as string | undefined,
@@ -79,6 +133,10 @@ async function processOrderCreate(payload: Payload, doc: Record<string, unknown>
       shippingPlanName: (doc.shippingPlanName as string | undefined) ?? undefined,
       scheduledShipDate: (doc.scheduledShipDate as string | undefined) ?? undefined,
       paymentMethod: (doc.paymentMethod as string | undefined) ?? 'stripe',
+      senderInfo,
+      recipientInfo,
+      giftInfo,
+      usageInfo,
     }
 
     // For bank_transfer orders, add payment-specific props
@@ -106,17 +164,18 @@ async function processOrderCreate(payload: Payload, doc: Record<string, unknown>
     emailProps = { ...emailProps, blocks: blocksResult?.blocks ?? {} }
 
     await sendEmail({
-      to: (customer as { email: string }).email,
+      to: customerEmail,
       subject: `【uballoon】ご注文確認 ${doc.orderNumber}`,
       react: React.createElement(OrderConfirmEmail, emailProps as OrderConfirmEmailProps),
     })
     console.log('[Hook] Order confirm email sent for', doc.orderNumber)
 
     // Admin alert for new order
+    const guestLabel = isGuestOrder ? ' (ゲスト注文)' : ''
     sendAdminAlert({
       type: 'new_order',
-      title: `新規注文 ${doc.orderNumber}`,
-      details: `顧客: ${(customer as { name?: string; email: string }).name || (customer as { email: string }).email}\n合計: ¥${(doc.totalAmount as number).toLocaleString()}\n商品数: ${items.length}`,
+      title: `新規注文 ${doc.orderNumber}${guestLabel}`,
+      details: `顧客: ${customerName}\n合計: ¥${(doc.totalAmount as number).toLocaleString()}\n商品数: ${items.length}`,
     }).catch(console.error)
   } catch (err) {
     console.error('[Hook] Order confirm email error:', err)
@@ -125,27 +184,40 @@ async function processOrderCreate(payload: Payload, doc: Record<string, unknown>
 
 async function processOrderStatusChange(payload: Payload, doc: Record<string, unknown>, previousDoc: Record<string, unknown>) {
   try {
-    const customer = typeof doc.customer === 'object'
-      ? (doc.customer as Record<string, unknown>)
-      : await payload.findByID({ collection: 'users', id: doc.customer as string })
-    const customerEmail = (customer as { email: string }).email
-    const customerName = (customer as { name?: string }).name || customerEmail
+    const isGuestOrder = !doc.customer || doc.customer === null
 
-    // Send status update email
-    await sendEmail({
-      to: customerEmail,
-      subject: `【uballoon】ご注文ステータス更新 ${doc.orderNumber}`,
-      react: React.createElement(OrderStatusUpdateEmail, {
-        name: customerName,
-        orderNumber: doc.orderNumber as string,
-        newStatus: doc.status as string,
-        scheduledShipDate: doc.scheduledShipDate as string | undefined,
-      }),
-    })
-    console.log('[Hook] Status update email sent for', doc.orderNumber, '->', doc.status)
+    let customerEmail: string
+    let customerName: string
 
-    // If confirmed -> earn points
-    if (doc.status === 'confirmed' && previousDoc.status !== 'confirmed') {
+    if (isGuestOrder) {
+      const senderGroup = (doc.sender as Record<string, unknown>) ?? {}
+      customerEmail = (senderGroup.senderEmail as string | undefined) ?? ''
+      customerName = (senderGroup.senderName as string | undefined) ?? 'お客様'
+    } else {
+      const customer = typeof doc.customer === 'object'
+        ? (doc.customer as Record<string, unknown>)
+        : await payload.findByID({ collection: 'users', id: doc.customer as string })
+      customerEmail = (customer as { email: string }).email
+      customerName = (customer as { name?: string }).name || customerEmail
+    }
+
+    // Send status update email (only if we have a valid email address)
+    if (customerEmail) {
+      await sendEmail({
+        to: customerEmail,
+        subject: `【uballoon】ご注文ステータス更新 ${doc.orderNumber}`,
+        react: React.createElement(OrderStatusUpdateEmail, {
+          name: customerName,
+          orderNumber: doc.orderNumber as string,
+          newStatus: doc.status as string,
+          scheduledShipDate: doc.scheduledShipDate as string | undefined,
+        }),
+      })
+      console.log('[Hook] Status update email sent for', doc.orderNumber, '->', doc.status)
+    }
+
+    // If confirmed -> earn points (skip for guest orders)
+    if (doc.status === 'confirmed' && previousDoc.status !== 'confirmed' && !isGuestOrder) {
       const customerId = typeof doc.customer === 'object'
         ? (doc.customer as { id: string }).id
         : (doc.customer as string)
@@ -165,61 +237,68 @@ async function processOrderStatusChange(payload: Payload, doc: Record<string, un
         })
 
         // Send point earned email
-        await sendEmail({
-          to: customerEmail,
-          subject: `【uballoon】ポイント付与のお知らせ`,
-          react: React.createElement(PointsEarnedEmail, {
-            name: customerName,
-            pointsEarned: result.pointsEarned,
-            newBalance: result.newBalance,
-            orderNumber: doc.orderNumber as string,
-          }),
-        })
+        if (customerEmail) {
+          await sendEmail({
+            to: customerEmail,
+            subject: `【uballoon】ポイント付与のお知らせ`,
+            react: React.createElement(PointsEarnedEmail, {
+              name: customerName,
+              pointsEarned: result.pointsEarned,
+              newBalance: result.newBalance,
+              orderNumber: doc.orderNumber as string,
+            }),
+          })
+        }
         console.log('[Hook] Points earned:', result.pointsEarned, 'for order', doc.orderNumber)
       }
     }
 
     // If cancelled -> return used points + admin alert
     if (doc.status === 'cancelled' && previousDoc.status !== 'cancelled') {
+      const guestLabel = isGuestOrder ? ' (ゲスト注文)' : ''
       sendAdminAlert({
         type: 'order_cancelled',
-        title: `注文キャンセル ${doc.orderNumber}`,
+        title: `注文キャンセル ${doc.orderNumber}${guestLabel}`,
         details: `顧客: ${customerName}\n合計: ¥${(doc.totalAmount as number).toLocaleString()}`,
         urgency: 'high',
       }).catch(console.error)
-      const pointsUsed = (doc.pointsUsed as number) ?? 0
-      if (pointsUsed > 0) {
-        const customerId = typeof doc.customer === 'object'
-          ? (doc.customer as { id: string }).id
-          : (doc.customer as string)
 
-        try {
-          const user = await payload.findByID({ collection: 'users', id: customerId })
-          const currentPoints = (user.points as number) ?? 0
-          const newBalance = currentPoints + pointsUsed
+      // Points return is only applicable to registered customers
+      if (!isGuestOrder) {
+        const pointsUsed = (doc.pointsUsed as number) ?? 0
+        if (pointsUsed > 0) {
+          const customerId = typeof doc.customer === 'object'
+            ? (doc.customer as { id: string }).id
+            : (doc.customer as string)
 
-          await payload.create({
-            collection: 'point-transactions',
-            data: {
-              user: customerId,
-              type: 'adjust',
-              amount: pointsUsed,
-              balance: newBalance,
-              order: doc.id,
-              description: `ポイント返還（注文キャンセル: ${doc.orderNumber}）`,
-            },
-          })
+          try {
+            const user = await payload.findByID({ collection: 'users', id: customerId })
+            const currentPoints = (user.points as number) ?? 0
+            const newBalance = currentPoints + pointsUsed
 
-          await payload.update({
-            collection: 'users',
-            id: customerId,
-            data: { points: newBalance },
-            context: { skipPointAdjustHook: true },
-          })
+            await payload.create({
+              collection: 'point-transactions',
+              data: {
+                user: customerId,
+                type: 'adjust',
+                amount: pointsUsed,
+                balance: newBalance,
+                order: doc.id,
+                description: `ポイント返還（注文キャンセル: ${doc.orderNumber}）`,
+              },
+            })
 
-          console.log('[Hook] Points returned:', pointsUsed, 'for cancelled order', doc.orderNumber)
-        } catch (pointErr) {
-          console.error('[Hook] Point return error for order', doc.orderNumber, ':', pointErr)
+            await payload.update({
+              collection: 'users',
+              id: customerId,
+              data: { points: newBalance },
+              context: { skipPointAdjustHook: true },
+            })
+
+            console.log('[Hook] Points returned:', pointsUsed, 'for cancelled order', doc.orderNumber)
+          } catch (pointErr) {
+            console.error('[Hook] Point return error for order', doc.orderNumber, ':', pointErr)
+          }
         }
       }
     }

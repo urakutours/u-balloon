@@ -75,8 +75,9 @@ export async function POST(req: NextRequest) {
       const batch = subscribers.docs.slice(i, i + batchSize) as any[]
 
       await Promise.allSettled(
-        batch.map((subscriber) =>
-          resend.emails.send({
+        batch.map((subscriber) => {
+          const unsubUrl = `${appUrl}/api/newsletter/unsubscribe?token=${subscriber.unsubscribeToken}`
+          return resend.emails.send({
             from: `${fromName} <${fromEmail}>`,
             to: subscriber.email,
             subject: newsletter.subject,
@@ -86,11 +87,16 @@ export async function POST(req: NextRequest) {
               <div>${newsletter.subject}</div>
               <hr />
               <p style="font-size:12px;color:#888;text-align:center;">
-                <a href="${appUrl}/api/newsletter/unsubscribe?token=${subscriber.unsubscribeToken}">配信停止</a>
+                <a href="${unsubUrl}">配信停止</a>
               </p>
             </div>`,
-          }).then(() => { sentCount++ }),
-        ),
+            // RFC 8058 準拠: Gmail/Yahoo の 1-click unsubscribe 要件を満たす
+            headers: {
+              'List-Unsubscribe': `<${unsubUrl}>`,
+              'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+            },
+          }).then(() => { sentCount++ })
+        }),
       )
     }
 

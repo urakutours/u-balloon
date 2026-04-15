@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { CheckCircle, Loader2, Package, MapPin, CalendarDays, Gift, Building2, CreditCard, FileText, PartyPopper, User } from 'lucide-react'
+import { CheckCircle, Loader2, Package, MapPin, CalendarDays, Gift, Building2, CreditCard, FileText, PartyPopper, User, Send } from 'lucide-react'
 import { purchase as trackPurchase } from '@/lib/gtag'
 import { formatTimeSlot, formatCarrier, formatPaymentMethod, formatReceivedAt } from '@/lib/order-display-helpers'
 
@@ -26,9 +26,45 @@ type BankInfo = {
   accountHolder: string | null
 }
 
+type SenderInfo = {
+  senderName?: string | null
+  senderEmail?: string | null
+  senderPhone?: string | null
+  senderPostalCode?: string | null
+  senderPrefecture?: string | null
+  senderAddressLine1?: string | null
+  senderAddressLine2?: string | null
+}
+
+type RecipientInfo = {
+  recipientSameAsSender?: boolean | null
+  recipientName?: string | null
+  recipientNameKana?: string | null
+  recipientPhone?: string | null
+  recipientPostalCode?: string | null
+  recipientPrefecture?: string | null
+  recipientAddressLine1?: string | null
+  recipientAddressLine2?: string | null
+  recipientDesiredArrivalDate?: string | null
+  recipientDesiredTimeSlotLabel?: string | null
+}
+
+type GiftSettings = {
+  giftWrappingOptionName?: string | null
+  giftWrappingFee?: number | null
+  giftMessageCardText?: string | null
+}
+
+type UsageInfoData = {
+  usageEventName?: string | null
+  usageDate?: string | null
+  usageTimeText?: string | null
+}
+
 type OrderData = {
   id: string
   orderNumber: string
+  customer?: { id: string; name?: string; email: string } | null
   items: OrderItem[]
   subtotal: number
   shippingFee: number
@@ -52,6 +88,11 @@ type OrderData = {
   eventName?: string | null
   eventDateTime?: string | null
   notes?: string | null
+  isGuestOrder?: boolean | null
+  sender?: SenderInfo | null
+  recipient?: RecipientInfo | null
+  giftSettings?: GiftSettings | null
+  usageInfo?: UsageInfoData | null
 }
 
 /**
@@ -410,6 +451,113 @@ export default function OrderCompleteContent() {
         </Card>
       )}
 
+      {/* 送り主情報（新フォーム対応） */}
+      {order.sender && (order.sender.senderName || order.sender.senderPhone || order.sender.senderEmail) && (
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+              <User className="h-4 w-4" />
+              送り主情報
+            </h3>
+            <div className="space-y-1 text-sm">
+              {order.sender.senderName && <p className="font-medium">{order.sender.senderName}</p>}
+              {order.sender.senderPhone && <p className="text-muted-foreground">{order.sender.senderPhone}</p>}
+              {order.sender.senderEmail && <p className="text-muted-foreground">{order.sender.senderEmail}</p>}
+              {(order.sender.senderPostalCode || order.sender.senderPrefecture || order.sender.senderAddressLine1) && (
+                <p className="text-muted-foreground">
+                  {[
+                    order.sender.senderPostalCode ? `〒${order.sender.senderPostalCode}` : '',
+                    order.sender.senderPrefecture,
+                    order.sender.senderAddressLine1,
+                    order.sender.senderAddressLine2,
+                  ].filter(Boolean).join(' ')}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 送り先情報（新フォーム対応） */}
+      {order.recipient && (
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+              <Send className="h-4 w-4" />
+              送り先情報
+            </h3>
+            {order.recipient.recipientSameAsSender ? (
+              <p className="text-sm text-muted-foreground">送り主と同じ</p>
+            ) : (
+              <div className="space-y-1 text-sm">
+                {order.recipient.recipientName && <p className="font-medium">{order.recipient.recipientName}</p>}
+                {order.recipient.recipientPhone && <p className="text-muted-foreground">{order.recipient.recipientPhone}</p>}
+                {(order.recipient.recipientPostalCode || order.recipient.recipientPrefecture || order.recipient.recipientAddressLine1) && (
+                  <p className="text-muted-foreground">
+                    {[
+                      order.recipient.recipientPostalCode ? `〒${order.recipient.recipientPostalCode}` : '',
+                      order.recipient.recipientPrefecture,
+                      order.recipient.recipientAddressLine1,
+                      order.recipient.recipientAddressLine2,
+                    ].filter(Boolean).join(' ')}
+                  </p>
+                )}
+                {order.recipient.recipientDesiredArrivalDate && (
+                  <p className="text-muted-foreground">
+                    到着希望日: {parseDateStr(order.recipient.recipientDesiredArrivalDate).toLocaleDateString('ja-JP')}
+                    {order.recipient.recipientDesiredTimeSlotLabel && ` （${order.recipient.recipientDesiredTimeSlotLabel}）`}
+                  </p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ギフト設定（新フォーム対応） */}
+      {order.giftSettings && order.giftSettings.giftWrappingOptionName && (
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+              <Gift className="h-4 w-4" />
+              ギフト設定
+            </h3>
+            <div className="space-y-1 text-sm">
+              <p>
+                ラッピング: {order.giftSettings.giftWrappingOptionName}
+                {order.giftSettings.giftWrappingFee ? ` (+¥${order.giftSettings.giftWrappingFee.toLocaleString()})` : ''}
+              </p>
+              {order.giftSettings.giftMessageCardText && (
+                <p className="whitespace-pre-wrap text-muted-foreground">
+                  メッセージ: {order.giftSettings.giftMessageCardText}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 使用日時（新フォーム対応） */}
+      {order.usageInfo && (order.usageInfo.usageDate || order.usageInfo.usageEventName) && (
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+              <CalendarDays className="h-4 w-4" />
+              使用日時
+            </h3>
+            <div className="space-y-1 text-sm">
+              {order.usageInfo.usageEventName && <p className="font-medium">{order.usageInfo.usageEventName}</p>}
+              {order.usageInfo.usageDate && (
+                <p className="text-muted-foreground">
+                  {parseDateStr(order.usageInfo.usageDate).toLocaleDateString('ja-JP')}
+                  {order.usageInfo.usageTimeText && ` ${order.usageInfo.usageTimeText}`}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* お支払い方法 */}
       <Card className="mb-6">
         <CardContent className="p-6">
@@ -470,10 +618,23 @@ export default function OrderCompleteContent() {
         </Card>
       )}
 
+      {/* ゲスト注文向け案内 */}
+      {order.isGuestOrder && (
+        <Card className="mb-6 border-blue-200 bg-blue-50">
+          <CardContent className="p-4">
+            <p className="text-sm text-blue-700">
+              注文確認メールをお送りしました。メールをご確認ください。
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex justify-center gap-3">
-        <Link href={`/account/orders/${order.id}`}>
-          <Button variant="outline">注文詳細を確認</Button>
-        </Link>
+        {!order.isGuestOrder && (
+          <Link href={`/account/orders/${order.id}`}>
+            <Button variant="outline">注文詳細を確認</Button>
+          </Link>
+        )}
         <Link href="/products">
           <Button>買い物を続ける</Button>
         </Link>

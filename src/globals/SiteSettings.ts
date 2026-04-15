@@ -705,6 +705,64 @@ export const SiteSettings: GlobalConfig = {
                         description: '内部管理用メモ（ユーザーには表示されません）。',
                       },
                     },
+                    // ─── 利用可能時間帯 ───
+                    {
+                      name: 'availableTimeSlots',
+                      type: 'array',
+                      label: '利用可能時間帯',
+                      labels: { singular: '時間帯', plural: '時間帯一覧' },
+                      admin: {
+                        description: 'このプランを選んだ時にチェックアウトで表示される時間帯',
+                        initCollapsed: true,
+                      },
+                      fields: [
+                        {
+                          type: 'row',
+                          fields: [
+                            {
+                              name: 'id',
+                              type: 'text',
+                              label: 'ID（例: morning）',
+                              required: true,
+                              admin: { width: '33%' },
+                            },
+                            {
+                              name: 'label',
+                              type: 'text',
+                              label: '表示名（例: 午前中）',
+                              required: true,
+                              admin: { width: '33%' },
+                            },
+                            {
+                              name: 'value',
+                              type: 'text',
+                              label: '値（例: morning）',
+                              required: true,
+                              admin: { width: '34%' },
+                            },
+                          ],
+                        },
+                        {
+                          type: 'row',
+                          fields: [
+                            {
+                              name: 'active',
+                              type: 'checkbox',
+                              label: '有効',
+                              defaultValue: true,
+                              admin: { width: '50%' },
+                            },
+                            {
+                              name: 'sortOrder',
+                              type: 'number',
+                              label: '表示順',
+                              defaultValue: 0,
+                              admin: { width: '50%' },
+                            },
+                          ],
+                        },
+                      ],
+                    },
                   ],
                 },
                 // ─── 旧: 配送料設定（非推奨・shippingPlans へ移行中） ───
@@ -832,6 +890,138 @@ export const SiteSettings: GlobalConfig = {
                 description: '特定商取引法ページに表示される決済方法の一覧。改行で区切って入力してください。',
                 placeholder: 'クレジットカード（VISA, Mastercard, JCB, American Express, Diners Club, Discover）\n銀行振込（PayPay銀行）',
               },
+            },
+            // ─────────────────────────────────────────────────────────
+            // ギフト設定
+            // ─────────────────────────────────────────────────────────
+            {
+              type: 'collapsible',
+              label: 'ギフト設定',
+              admin: {
+                initCollapsed: true,
+                description: '将来オプション種別を増やす時は新 array を追加',
+              },
+              fields: [
+                {
+                  name: 'giftSettingsMessageCardTemplates',
+                  type: 'array',
+                  label: 'メッセージカードテンプレート',
+                  labels: { singular: 'テンプレート', plural: 'テンプレート一覧' },
+                  admin: {
+                    description: 'チェックアウトで選択可能なメッセージカードの文面テンプレート。',
+                    initCollapsed: true,
+                  },
+                  fields: [
+                    {
+                      type: 'row',
+                      fields: [
+                        {
+                          name: 'id',
+                          type: 'text',
+                          label: 'ID',
+                          required: true,
+                          admin: { placeholder: '例: birthday', width: '33%' },
+                        },
+                        {
+                          name: 'label',
+                          type: 'text',
+                          label: '表示名',
+                          required: true,
+                          admin: { placeholder: '例: 誕生日', width: '33%' },
+                        },
+                        {
+                          name: 'sortOrder',
+                          type: 'number',
+                          label: '表示順',
+                          defaultValue: 0,
+                          admin: { width: '34%' },
+                        },
+                      ],
+                    },
+                    {
+                      name: 'body',
+                      type: 'textarea',
+                      label: '本文',
+                      required: true,
+                      admin: {
+                        description: 'カードに印刷するメッセージ文面のテンプレート。',
+                      },
+                    },
+                    {
+                      name: 'active',
+                      type: 'checkbox',
+                      label: '有効',
+                      defaultValue: true,
+                    },
+                  ],
+                },
+                {
+                  name: 'giftSettingsWrappingOptions',
+                  type: 'array',
+                  label: 'ラッピングオプション',
+                  labels: { singular: 'オプション', plural: 'オプション一覧' },
+                  admin: {
+                    description: 'チェックアウトで選択可能なラッピングの種類と料金。',
+                    initCollapsed: true,
+                  },
+                  fields: [
+                    {
+                      type: 'row',
+                      fields: [
+                        {
+                          name: 'id',
+                          type: 'text',
+                          label: 'ID',
+                          required: true,
+                          admin: { placeholder: '例: ribbon_white', width: '33%' },
+                        },
+                        {
+                          name: 'label',
+                          type: 'text',
+                          label: '表示名',
+                          required: true,
+                          admin: { placeholder: '例: リボンラッピング（白）', width: '33%' },
+                        },
+                        {
+                          name: 'feeAmount',
+                          type: 'number',
+                          label: '追加料金（円）',
+                          min: 0,
+                          defaultValue: 0,
+                          admin: { width: '34%' },
+                        },
+                      ],
+                    },
+                    {
+                      name: 'description',
+                      type: 'textarea',
+                      label: '説明',
+                      admin: {
+                        description: 'ラッピングの詳細説明（任意）。',
+                      },
+                    },
+                    {
+                      type: 'row',
+                      fields: [
+                        {
+                          name: 'active',
+                          type: 'checkbox',
+                          label: '有効',
+                          defaultValue: true,
+                          admin: { width: '50%' },
+                        },
+                        {
+                          name: 'sortOrder',
+                          type: 'number',
+                          label: '表示順',
+                          defaultValue: 0,
+                          admin: { width: '50%' },
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
             },
           ],
         },

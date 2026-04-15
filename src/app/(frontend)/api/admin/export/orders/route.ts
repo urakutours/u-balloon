@@ -75,6 +75,10 @@ export async function GET(request: NextRequest) {
     const customer = order.customer as Record<string, unknown> | null
     const items = (order.items as Array<Record<string, unknown>>) || []
     const tracking = order.trackingInfo as Record<string, unknown> | null
+    const sender = (order.sender as Record<string, unknown> | null) ?? null
+    const recipient = (order.recipient as Record<string, unknown> | null) ?? null
+    const giftSettings = (order.giftSettings as Record<string, unknown> | null) ?? null
+    const usageInfo = (order.usageInfo as Record<string, unknown> | null) ?? null
 
     const base: Record<string, unknown> = {
       注文番号: order.orderNumber,
@@ -99,6 +103,35 @@ export async function GET(request: NextRequest) {
       配送業者: CARRIER_LABELS[(tracking?.carrier as string) || ''] || (tracking?.carrier ?? ''),
       追跡番号: tracking?.trackingNumber ?? '',
       備考: order.notes ?? '',
+      // 送り主情報
+      sender_name: sender?.senderName ?? '',
+      sender_email: sender?.senderEmail ?? '',
+      sender_phone: sender?.senderPhone ?? '',
+      sender_postal_code: sender?.senderPostalCode ?? '',
+      sender_prefecture: sender?.senderPrefecture ?? '',
+      sender_address_line1: sender?.senderAddressLine1 ?? '',
+      sender_address_line2: sender?.senderAddressLine2 ?? '',
+      // 送り先情報
+      recipient_same_as_sender: recipient?.recipientSameAsSender ? '1' : '0',
+      recipient_name: recipient?.recipientName ?? '',
+      recipient_phone: recipient?.recipientPhone ?? '',
+      recipient_postal_code: recipient?.recipientPostalCode ?? '',
+      recipient_prefecture: recipient?.recipientPrefecture ?? '',
+      recipient_address_line1: recipient?.recipientAddressLine1 ?? '',
+      recipient_address_line2: recipient?.recipientAddressLine2 ?? '',
+      recipient_desired_time_slot_label: recipient?.recipientDesiredTimeSlotLabel ?? '',
+      // ギフト設定
+      gift_wrapping_option_name: giftSettings?.giftWrappingOptionName ?? '',
+      gift_wrapping_fee: giftSettings?.giftWrappingFee ?? '',
+      gift_message_card_text: giftSettings?.giftMessageCardText ?? '',
+      // 使用日時
+      usage_event_name: usageInfo?.usageEventName ?? '',
+      usage_date: usageInfo?.usageDate
+        ? new Date(usageInfo.usageDate as string).toLocaleDateString('ja-JP')
+        : '',
+      usage_time_text: usageInfo?.usageTimeText ?? '',
+      // ゲスト注文フラグ
+      is_guest_order: order.isGuestOrder ? '1' : '0',
     }
 
     if (items.length === 0) {
@@ -140,6 +173,33 @@ export async function GET(request: NextRequest) {
     { key: '配送業者', label: '配送業者' },
     { key: '追跡番号', label: '追跡番号' },
     { key: '備考', label: '備考' },
+    // 送り主情報
+    { key: 'sender_name', label: '送り主_氏名' },
+    { key: 'sender_email', label: '送り主_メール' },
+    { key: 'sender_phone', label: '送り主_電話番号' },
+    { key: 'sender_postal_code', label: '送り主_郵便番号' },
+    { key: 'sender_prefecture', label: '送り主_都道府県' },
+    { key: 'sender_address_line1', label: '送り主_住所1' },
+    { key: 'sender_address_line2', label: '送り主_住所2' },
+    // 送り先情報
+    { key: 'recipient_same_as_sender', label: '送り先_送り主と同じ' },
+    { key: 'recipient_name', label: '送り先_氏名' },
+    { key: 'recipient_phone', label: '送り先_電話番号' },
+    { key: 'recipient_postal_code', label: '送り先_郵便番号' },
+    { key: 'recipient_prefecture', label: '送り先_都道府県' },
+    { key: 'recipient_address_line1', label: '送り先_住所1' },
+    { key: 'recipient_address_line2', label: '送り先_住所2' },
+    { key: 'recipient_desired_time_slot_label', label: '送り先_希望時間帯' },
+    // ギフト設定
+    { key: 'gift_wrapping_option_name', label: 'ギフト_ラッピング名' },
+    { key: 'gift_wrapping_fee', label: 'ギフト_ラッピング料金' },
+    { key: 'gift_message_card_text', label: 'ギフト_メッセージ' },
+    // 使用日時
+    { key: 'usage_event_name', label: '使用_イベント名' },
+    { key: 'usage_date', label: '使用_日付' },
+    { key: 'usage_time_text', label: '使用_時間帯' },
+    // ゲスト注文
+    { key: 'is_guest_order', label: 'ゲスト注文' },
   ]
 
   const csv = toCsv(rows, columns)

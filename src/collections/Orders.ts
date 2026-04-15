@@ -1,6 +1,107 @@
-import type { CollectionConfig } from 'payload'
+import type { CollectionConfig, CollectionAfterReadHook } from 'payload'
 import { isAdmin, isAdminOrOwner } from '../access'
 import { afterOrderChange, beforeOrderStatusChange } from '../hooks/orderHooks'
+
+/** 47都道府県 select options（Users.ts と共通） */
+const PREFECTURE_OPTIONS = [
+  { label: '北海道', value: '北海道' },
+  { label: '青森県', value: '青森県' },
+  { label: '岩手県', value: '岩手県' },
+  { label: '宮城県', value: '宮城県' },
+  { label: '秋田県', value: '秋田県' },
+  { label: '山形県', value: '山形県' },
+  { label: '福島県', value: '福島県' },
+  { label: '茨城県', value: '茨城県' },
+  { label: '栃木県', value: '栃木県' },
+  { label: '群馬県', value: '群馬県' },
+  { label: '埼玉県', value: '埼玉県' },
+  { label: '千葉県', value: '千葉県' },
+  { label: '東京都', value: '東京都' },
+  { label: '神奈川県', value: '神奈川県' },
+  { label: '新潟県', value: '新潟県' },
+  { label: '富山県', value: '富山県' },
+  { label: '石川県', value: '石川県' },
+  { label: '福井県', value: '福井県' },
+  { label: '山梨県', value: '山梨県' },
+  { label: '長野県', value: '長野県' },
+  { label: '岐阜県', value: '岐阜県' },
+  { label: '静岡県', value: '静岡県' },
+  { label: '愛知県', value: '愛知県' },
+  { label: '三重県', value: '三重県' },
+  { label: '滋賀県', value: '滋賀県' },
+  { label: '京都府', value: '京都府' },
+  { label: '大阪府', value: '大阪府' },
+  { label: '兵庫県', value: '兵庫県' },
+  { label: '奈良県', value: '奈良県' },
+  { label: '和歌山県', value: '和歌山県' },
+  { label: '鳥取県', value: '鳥取県' },
+  { label: '島根県', value: '島根県' },
+  { label: '岡山県', value: '岡山県' },
+  { label: '広島県', value: '広島県' },
+  { label: '山口県', value: '山口県' },
+  { label: '徳島県', value: '徳島県' },
+  { label: '香川県', value: '香川県' },
+  { label: '愛媛県', value: '愛媛県' },
+  { label: '高知県', value: '高知県' },
+  { label: '福岡県', value: '福岡県' },
+  { label: '佐賀県', value: '佐賀県' },
+  { label: '長崎県', value: '長崎県' },
+  { label: '熊本県', value: '熊本県' },
+  { label: '大分県', value: '大分県' },
+  { label: '宮崎県', value: '宮崎県' },
+  { label: '鹿児島県', value: '鹿児島県' },
+  { label: '沖縄県', value: '沖縄県' },
+]
+
+/**
+ * afterRead hook: 新フィールド（sender/recipient/usageInfo）から旧フィールドへ後方互換ミラーを行う。
+ * 旧フィールドが未設定で新フィールドが存在する場合のみ上書きする（既存データを壊さない）。
+ * Payload v3 の group フィールドは API レスポンスではネストされたオブジェクトとして返される。
+ */
+const mirrorLegacyFields: CollectionAfterReadHook = ({ doc }) => {
+  const sender = doc.sender as Record<string, unknown> | undefined
+  const recipient = doc.recipient as Record<string, unknown> | undefined
+  const usageInfo = doc.usageInfo as Record<string, unknown> | undefined
+
+  // senderName: customer の name でミラー（doc.customer が既にオブジェクト展開済みの場合に対応）
+  if (!sender?.senderName && doc.customer) {
+    const customerName = typeof doc.customer === 'object'
+      ? (doc.customer as Record<string, unknown>).name
+      : undefined
+    if (customerName && sender) {
+      sender.senderName = customerName
+    }
+  }
+
+  // deliveryAddress: 都道府県+市区町村・番地+建物名 を結合してセット
+  if (!doc.deliveryAddress && recipient?.recipientAddressLine1) {
+    const parts = [
+      recipient.recipientPrefecture,
+      recipient.recipientAddressLine1,
+      recipient.recipientAddressLine2,
+    ].filter(Boolean)
+    if (parts.length > 0) {
+      doc.deliveryAddress = parts.join('')
+    }
+  }
+
+  // desiredArrivalDate: recipientDesiredArrivalDate からミラー
+  if (!doc.desiredArrivalDate && recipient?.recipientDesiredArrivalDate) {
+    doc.desiredArrivalDate = recipient.recipientDesiredArrivalDate
+  }
+
+  // desiredTimeSlot: recipientDesiredTimeSlotValue からミラー
+  if (!doc.desiredTimeSlot && recipient?.recipientDesiredTimeSlotValue) {
+    doc.desiredTimeSlot = recipient.recipientDesiredTimeSlotValue
+  }
+
+  // eventName: usageEventName からミラー
+  if (!doc.eventName && usageInfo?.usageEventName) {
+    doc.eventName = usageInfo.usageEventName
+  }
+
+  return doc
+}
 
 export const Orders: CollectionConfig = {
   slug: 'orders',
@@ -18,6 +119,7 @@ export const Orders: CollectionConfig = {
   hooks: {
     beforeChange: [beforeOrderStatusChange],
     afterChange: [afterOrderChange],
+    afterRead: [mirrorLegacyFields],
   },
   access: {
     read: isAdminOrOwner('customer'),
@@ -73,11 +175,21 @@ export const Orders: CollectionConfig = {
           label: '注文内容',
           fields: [
             {
+              name: 'isGuestOrder',
+              type: 'checkbox',
+              label: 'ゲスト注文',
+              defaultValue: false,
+              admin: {
+                readOnly: true,
+                description: '非会員（ゲスト）による注文',
+              },
+            },
+            {
               name: 'customer',
               type: 'relationship',
               relationTo: 'users',
               label: '顧客',
-              required: true,
+              required: false,
             },
             {
               name: 'items',
@@ -167,6 +279,9 @@ export const Orders: CollectionConfig = {
               name: 'deliveryAddress',
               type: 'text',
               label: '配送先住所',
+              admin: {
+                description: '後方互換用フィールド。新規注文は sender/recipient/usageInfo 側を参照',
+              },
             },
             {
               name: 'deliveryDistance',
@@ -186,6 +301,7 @@ export const Orders: CollectionConfig = {
               type: 'date',
               label: '到着希望日',
               admin: {
+                description: '後方互換用フィールド。新規注文は sender/recipient/usageInfo 側を参照',
                 date: {
                   pickerAppearance: 'dayOnly',
                   displayFormat: 'yyyy/MM/dd',
@@ -196,6 +312,9 @@ export const Orders: CollectionConfig = {
               name: 'desiredTimeSlot',
               type: 'select',
               label: '希望時間帯',
+              admin: {
+                description: '後方互換用フィールド。新規注文は sender/recipient/usageInfo 側を参照',
+              },
               options: [
                 { label: '午前', value: 'morning' },
                 { label: '午後', value: 'afternoon' },
@@ -208,7 +327,7 @@ export const Orders: CollectionConfig = {
               type: 'text',
               label: 'イベント名',
               admin: {
-                description: '結婚式・誕生日パーティーなどのイベント名',
+                description: '後方互換用フィールド。新規注文は sender/recipient/usageInfo 側を参照',
               },
             },
             {
@@ -220,8 +339,193 @@ export const Orders: CollectionConfig = {
                   pickerAppearance: 'dayAndTime',
                   displayFormat: 'yyyy/MM/dd HH:mm',
                 },
-                description: 'バルーンを使うイベントの日時',
+                description: '後方互換用フィールド。新規注文は sender/recipient/usageInfo 側を参照',
               },
+            },
+            // ── 新フィールド群（チェックアウト再設計）────────────────────────────
+            {
+              name: 'sender',
+              type: 'group',
+              label: '送り主情報',
+              fields: [
+                {
+                  name: 'senderName',
+                  type: 'text',
+                  label: '氏名',
+                },
+                {
+                  name: 'senderNameKana',
+                  type: 'text',
+                  label: 'フリガナ',
+                },
+                {
+                  name: 'senderEmail',
+                  type: 'email',
+                  label: 'メールアドレス',
+                },
+                {
+                  name: 'senderPhone',
+                  type: 'text',
+                  label: '電話番号',
+                },
+                {
+                  name: 'senderPostalCode',
+                  type: 'text',
+                  label: '郵便番号',
+                },
+                {
+                  name: 'senderPrefecture',
+                  type: 'select',
+                  label: '都道府県',
+                  options: PREFECTURE_OPTIONS,
+                },
+                {
+                  name: 'senderAddressLine1',
+                  type: 'text',
+                  label: '市区町村・番地',
+                },
+                {
+                  name: 'senderAddressLine2',
+                  type: 'text',
+                  label: '建物名・部屋番号',
+                },
+              ],
+            },
+            {
+              name: 'recipient',
+              type: 'group',
+              label: '送り先情報',
+              fields: [
+                {
+                  name: 'recipientSameAsSender',
+                  type: 'checkbox',
+                  label: '送り主と同じ',
+                  defaultValue: true,
+                },
+                {
+                  name: 'recipientName',
+                  type: 'text',
+                  label: '氏名',
+                },
+                {
+                  name: 'recipientNameKana',
+                  type: 'text',
+                  label: 'フリガナ',
+                },
+                {
+                  name: 'recipientPhone',
+                  type: 'text',
+                  label: '電話番号',
+                },
+                {
+                  name: 'recipientPostalCode',
+                  type: 'text',
+                  label: '郵便番号',
+                },
+                {
+                  name: 'recipientPrefecture',
+                  type: 'select',
+                  label: '都道府県',
+                  options: PREFECTURE_OPTIONS,
+                },
+                {
+                  name: 'recipientAddressLine1',
+                  type: 'text',
+                  label: '市区町村・番地',
+                },
+                {
+                  name: 'recipientAddressLine2',
+                  type: 'text',
+                  label: '建物名・部屋番号',
+                },
+                {
+                  name: 'recipientDesiredArrivalDate',
+                  type: 'date',
+                  label: '到着希望日',
+                  admin: {
+                    date: {
+                      pickerAppearance: 'dayOnly',
+                      displayFormat: 'yyyy/MM/dd',
+                    },
+                  },
+                },
+                {
+                  name: 'recipientDesiredTimeSlotValue',
+                  type: 'text',
+                  label: '希望時間帯(値)',
+                },
+                {
+                  name: 'recipientDesiredTimeSlotLabel',
+                  type: 'text',
+                  label: '希望時間帯(表示名)',
+                },
+              ],
+            },
+            {
+              name: 'giftSettings',
+              type: 'group',
+              label: 'ギフト設定',
+              fields: [
+                {
+                  name: 'giftWrappingOptionId',
+                  type: 'text',
+                  label: 'ラッピングオプションID',
+                },
+                {
+                  name: 'giftWrappingOptionName',
+                  type: 'text',
+                  label: 'ラッピングオプション名',
+                },
+                {
+                  name: 'giftWrappingFee',
+                  type: 'number',
+                  label: 'ラッピング料金',
+                  min: 0,
+                  defaultValue: 0,
+                },
+                {
+                  name: 'giftMessageCardTemplateId',
+                  type: 'text',
+                  label: 'メッセージカードテンプレートID',
+                },
+                {
+                  name: 'giftMessageCardText',
+                  type: 'textarea',
+                  label: 'メッセージカード文面',
+                  maxLength: 500,
+                },
+              ],
+            },
+            {
+              name: 'usageInfo',
+              type: 'group',
+              label: '使用日時',
+              fields: [
+                {
+                  name: 'usageEventName',
+                  type: 'text',
+                  label: 'イベント名',
+                },
+                {
+                  name: 'usageDate',
+                  type: 'date',
+                  label: '使用日',
+                  admin: {
+                    date: {
+                      pickerAppearance: 'dayOnly',
+                      displayFormat: 'yyyy/MM/dd',
+                    },
+                  },
+                },
+                {
+                  name: 'usageTimeText',
+                  type: 'text',
+                  label: '使用時間（任意）',
+                  admin: {
+                    placeholder: '例: 14:00 ごろ / 午後',
+                  },
+                },
+              ],
             },
             {
               name: 'shippingPlanId',

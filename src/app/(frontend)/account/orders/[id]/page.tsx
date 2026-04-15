@@ -20,6 +20,8 @@ import {
   FileText,
   CheckCircle2,
   Circle,
+  Send,
+  User,
 } from 'lucide-react'
 
 type OrderItem = {
@@ -33,10 +35,45 @@ type OrderItem = {
   }
 }
 
+type SenderInfo = {
+  senderName?: string | null
+  senderEmail?: string | null
+  senderPhone?: string | null
+  senderPostalCode?: string | null
+  senderPrefecture?: string | null
+  senderAddressLine1?: string | null
+  senderAddressLine2?: string | null
+}
+
+type RecipientInfo = {
+  recipientSameAsSender?: boolean | null
+  recipientName?: string | null
+  recipientNameKana?: string | null
+  recipientPhone?: string | null
+  recipientPostalCode?: string | null
+  recipientPrefecture?: string | null
+  recipientAddressLine1?: string | null
+  recipientAddressLine2?: string | null
+  recipientDesiredArrivalDate?: string | null
+  recipientDesiredTimeSlotLabel?: string | null
+}
+
+type GiftSettings = {
+  giftWrappingOptionName?: string | null
+  giftWrappingFee?: number | null
+  giftMessageCardText?: string | null
+}
+
+type UsageInfoData = {
+  usageEventName?: string | null
+  usageDate?: string | null
+  usageTimeText?: string | null
+}
+
 type OrderData = {
   id: string
   orderNumber: string
-  customer: { id: string; name?: string; email: string } | string
+  customer: { id: string; name?: string; email: string } | string | null
   items: OrderItem[]
   subtotal: number
   shippingFee: number
@@ -54,6 +91,10 @@ type OrderData = {
   stripePaymentIntentId?: string
   createdAt: string
   updatedAt: string
+  sender?: SenderInfo | null
+  recipient?: RecipientInfo | null
+  giftSettings?: GiftSettings | null
+  usageInfo?: UsageInfoData | null
 }
 
 const statusSteps = [
@@ -87,6 +128,14 @@ const timeSlotLabels: Record<string, string> = {
   afternoon: '午後',
   evening: '夕方',
   night: '夜',
+}
+
+function parseDateStr(dateStr: string): Date {
+  const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (m) {
+    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  }
+  return new Date(dateStr)
 }
 
 export default function OrderDetailPage() {
@@ -389,6 +438,167 @@ export default function OrderDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* 送り主情報（新フォーム対応） */}
+      {order.sender && (order.sender.senderName || order.sender.senderPhone || order.sender.senderEmail) && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <User className="h-4 w-4" />
+              送り主情報
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 text-sm">
+              {order.sender.senderName && (
+                <div>
+                  <span className="text-muted-foreground">氏名</span>
+                  <p className="mt-0.5 font-medium">{order.sender.senderName}</p>
+                </div>
+              )}
+              {order.sender.senderPhone && (
+                <div>
+                  <span className="text-muted-foreground">電話番号</span>
+                  <p className="mt-0.5 font-medium">{order.sender.senderPhone}</p>
+                </div>
+              )}
+              {order.sender.senderEmail && (
+                <div>
+                  <span className="text-muted-foreground">メールアドレス</span>
+                  <p className="mt-0.5 font-medium">{order.sender.senderEmail}</p>
+                </div>
+              )}
+              {(order.sender.senderPostalCode || order.sender.senderPrefecture || order.sender.senderAddressLine1) && (
+                <div>
+                  <span className="text-muted-foreground">住所</span>
+                  <p className="mt-0.5 font-medium">
+                    {[
+                      order.sender.senderPostalCode ? `〒${order.sender.senderPostalCode}` : '',
+                      order.sender.senderPrefecture,
+                      order.sender.senderAddressLine1,
+                      order.sender.senderAddressLine2,
+                    ].filter(Boolean).join(' ')}
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 送り先情報（新フォーム対応） */}
+      {order.recipient && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Send className="h-4 w-4" />
+              送り先情報
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {order.recipient.recipientSameAsSender ? (
+              <p className="text-sm text-muted-foreground">送り主と同じ</p>
+            ) : (
+              <div className="space-y-2 text-sm">
+                {order.recipient.recipientName && (
+                  <div>
+                    <span className="text-muted-foreground">氏名</span>
+                    <p className="mt-0.5 font-medium">{order.recipient.recipientName}</p>
+                  </div>
+                )}
+                {order.recipient.recipientPhone && (
+                  <div>
+                    <span className="text-muted-foreground">電話番号</span>
+                    <p className="mt-0.5 font-medium">{order.recipient.recipientPhone}</p>
+                  </div>
+                )}
+                {(order.recipient.recipientPostalCode || order.recipient.recipientPrefecture || order.recipient.recipientAddressLine1) && (
+                  <div>
+                    <span className="text-muted-foreground">住所</span>
+                    <p className="mt-0.5 font-medium">
+                      {[
+                        order.recipient.recipientPostalCode ? `〒${order.recipient.recipientPostalCode}` : '',
+                        order.recipient.recipientPrefecture,
+                        order.recipient.recipientAddressLine1,
+                        order.recipient.recipientAddressLine2,
+                      ].filter(Boolean).join(' ')}
+                    </p>
+                  </div>
+                )}
+                {order.recipient.recipientDesiredArrivalDate && (
+                  <div>
+                    <span className="text-muted-foreground">到着希望日</span>
+                    <p className="mt-0.5 font-medium">
+                      {parseDateStr(order.recipient.recipientDesiredArrivalDate).toLocaleDateString('ja-JP')}
+                      {order.recipient.recipientDesiredTimeSlotLabel && ` （${order.recipient.recipientDesiredTimeSlotLabel}）`}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ギフト設定（新フォーム対応） */}
+      {order.giftSettings && order.giftSettings.giftWrappingOptionName && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Gift className="h-4 w-4" />
+              ギフト設定
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 text-sm">
+              <div>
+                <span className="text-muted-foreground">ラッピング</span>
+                <p className="mt-0.5 font-medium">
+                  {order.giftSettings.giftWrappingOptionName}
+                  {order.giftSettings.giftWrappingFee ? ` (+¥${order.giftSettings.giftWrappingFee.toLocaleString()})` : ''}
+                </p>
+              </div>
+              {order.giftSettings.giftMessageCardText && (
+                <div>
+                  <span className="text-muted-foreground">メッセージカード</span>
+                  <p className="mt-0.5 whitespace-pre-wrap font-medium">{order.giftSettings.giftMessageCardText}</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 使用日時（新フォーム対応） */}
+      {order.usageInfo && (order.usageInfo.usageDate || order.usageInfo.usageEventName) && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CalendarDays className="h-4 w-4" />
+              使用日時
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 text-sm">
+              {order.usageInfo.usageEventName && (
+                <div>
+                  <span className="text-muted-foreground">イベント名</span>
+                  <p className="mt-0.5 font-medium">{order.usageInfo.usageEventName}</p>
+                </div>
+              )}
+              {order.usageInfo.usageDate && (
+                <div>
+                  <span className="text-muted-foreground">使用日</span>
+                  <p className="mt-0.5 font-medium">
+                    {parseDateStr(order.usageInfo.usageDate).toLocaleDateString('ja-JP')}
+                    {order.usageInfo.usageTimeText && ` ${order.usageInfo.usageTimeText}`}
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Notes */}
       {order.notes && (

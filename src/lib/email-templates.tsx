@@ -60,6 +60,41 @@ export function WelcomeEmail({ name }: { name: string }) {
 }
 
 // 2. 注文確認メール
+export type SenderInfo = {
+  senderName?: string
+  senderEmail?: string
+  senderPhone?: string
+  senderPostalCode?: string
+  senderPrefecture?: string
+  senderAddressLine1?: string
+  senderAddressLine2?: string
+}
+
+export type RecipientInfo = {
+  recipientSameAsSender?: boolean
+  recipientName?: string
+  recipientNameKana?: string
+  recipientPhone?: string
+  recipientPostalCode?: string
+  recipientPrefecture?: string
+  recipientAddressLine1?: string
+  recipientAddressLine2?: string
+  recipientDesiredArrivalDate?: string
+  recipientDesiredTimeSlotLabel?: string
+}
+
+export type GiftInfo = {
+  giftWrappingOptionName?: string
+  giftWrappingFee?: number
+  giftMessageCardText?: string
+}
+
+export type UsageInfo = {
+  usageEventName?: string
+  usageDate?: string
+  usageTimeText?: string
+}
+
 export type OrderConfirmEmailProps = {
   name: string
   email?: string
@@ -93,6 +128,14 @@ export type OrderConfirmEmailProps = {
     accountHolder?: string | null
   }
   bankTransferDeadline?: string
+  /** 送り主情報（新フォーム対応） */
+  senderInfo?: SenderInfo
+  /** 送り先情報（新フォーム対応） */
+  recipientInfo?: RecipientInfo
+  /** ギフト設定（新フォーム対応） */
+  giftInfo?: GiftInfo
+  /** 使用日時情報（新フォーム対応） */
+  usageInfo?: UsageInfo
   /** DB から取得したブロックテキスト。キーが無い場合はコード内デフォルト文言にフォールバック */
   blocks?: Record<string, string>
 }
@@ -127,6 +170,10 @@ export function OrderConfirmEmail({
   cardLast4,
   bankInfo,
   bankTransferDeadline,
+  senderInfo,
+  recipientInfo,
+  giftInfo,
+  usageInfo,
   blocks = {},
 }: OrderConfirmEmailProps) {
   const greeting = blocks['greeting'] ?? `${name} 様、ご注文ありがとうございます。`
@@ -179,6 +226,87 @@ export function OrderConfirmEmail({
         <Text style={{ ...valueStyle, margin: '0 0 2px' }}>{name}</Text>
         {email && <Text style={{ ...valueStyle, margin: 0 }}>{email}</Text>}
       </Section>
+
+      {/* 送り主情報（新フォーム対応） */}
+      {senderInfo && (senderInfo.senderName || senderInfo.senderEmail || senderInfo.senderPhone) && (
+        <Section style={{ ...infoSectionStyle, marginTop: '12px' }}>
+          <Text style={infoHeadingStyle}>送り主情報</Text>
+          {senderInfo.senderName && <Text style={{ ...valueStyle, margin: '0 0 2px' }}>{senderInfo.senderName}</Text>}
+          {senderInfo.senderPhone && <Text style={{ ...valueStyle, margin: '0 0 2px' }}>{senderInfo.senderPhone}</Text>}
+          {senderInfo.senderEmail && <Text style={{ ...valueStyle, margin: '0 0 2px' }}>{senderInfo.senderEmail}</Text>}
+          {(senderInfo.senderPostalCode || senderInfo.senderPrefecture || senderInfo.senderAddressLine1) && (
+            <Text style={{ ...valueStyle, margin: 0 }}>
+              {[
+                senderInfo.senderPostalCode ? `〒${senderInfo.senderPostalCode}` : '',
+                senderInfo.senderPrefecture,
+                senderInfo.senderAddressLine1,
+                senderInfo.senderAddressLine2,
+              ].filter(Boolean).join(' ')}
+            </Text>
+          )}
+        </Section>
+      )}
+
+      {/* 送り先情報（新フォーム対応） */}
+      {recipientInfo && (recipientInfo.recipientSameAsSender !== undefined || recipientInfo.recipientName) && (
+        <Section style={{ ...infoSectionStyle, marginTop: '12px' }}>
+          <Text style={infoHeadingStyle}>送り先情報</Text>
+          {recipientInfo.recipientSameAsSender ? (
+            <Text style={{ ...valueStyle, margin: 0 }}>送り主と同じ</Text>
+          ) : (
+            <>
+              {recipientInfo.recipientName && <Text style={{ ...valueStyle, margin: '0 0 2px' }}>{recipientInfo.recipientName}</Text>}
+              {recipientInfo.recipientPhone && <Text style={{ ...valueStyle, margin: '0 0 2px' }}>{recipientInfo.recipientPhone}</Text>}
+              {(recipientInfo.recipientPostalCode || recipientInfo.recipientPrefecture || recipientInfo.recipientAddressLine1) && (
+                <Text style={{ ...valueStyle, margin: '0 0 2px' }}>
+                  {[
+                    recipientInfo.recipientPostalCode ? `〒${recipientInfo.recipientPostalCode}` : '',
+                    recipientInfo.recipientPrefecture,
+                    recipientInfo.recipientAddressLine1,
+                    recipientInfo.recipientAddressLine2,
+                  ].filter(Boolean).join(' ')}
+                </Text>
+              )}
+              {recipientInfo.recipientDesiredArrivalDate && (
+                <Text style={{ ...valueStyle, margin: '0 0 2px' }}>
+                  到着希望日: {new Date(recipientInfo.recipientDesiredArrivalDate).toLocaleDateString('ja-JP')}
+                  {recipientInfo.recipientDesiredTimeSlotLabel && `（${recipientInfo.recipientDesiredTimeSlotLabel}）`}
+                </Text>
+              )}
+            </>
+          )}
+        </Section>
+      )}
+
+      {/* ギフト設定（新フォーム対応） */}
+      {giftInfo && giftInfo.giftWrappingOptionName && (
+        <Section style={{ ...infoSectionStyle, marginTop: '12px' }}>
+          <Text style={infoHeadingStyle}>ギフト設定</Text>
+          <Text style={{ ...valueStyle, margin: '0 0 2px' }}>
+            ラッピング: {giftInfo.giftWrappingOptionName}
+            {giftInfo.giftWrappingFee ? ` (+¥${giftInfo.giftWrappingFee.toLocaleString()})` : ''}
+          </Text>
+          {giftInfo.giftMessageCardText && (
+            <Text style={{ ...valueStyle, margin: 0, whiteSpace: 'pre-wrap' as const }}>
+              メッセージ: {giftInfo.giftMessageCardText}
+            </Text>
+          )}
+        </Section>
+      )}
+
+      {/* 使用日時（新フォーム対応） */}
+      {usageInfo && (usageInfo.usageDate || usageInfo.usageEventName) && (
+        <Section style={{ ...infoSectionStyle, marginTop: '12px' }}>
+          <Text style={infoHeadingStyle}>使用日時</Text>
+          {usageInfo.usageEventName && <Text style={{ ...valueStyle, margin: '0 0 2px' }}>{usageInfo.usageEventName}</Text>}
+          {usageInfo.usageDate && (
+            <Text style={{ ...valueStyle, margin: 0 }}>
+              {new Date(usageInfo.usageDate).toLocaleDateString('ja-JP')}
+              {usageInfo.usageTimeText && ` ${usageInfo.usageTimeText}`}
+            </Text>
+          )}
+        </Section>
+      )}
 
       {/* お支払い方法 */}
       <Section style={infoSectionStyle}>
