@@ -14,7 +14,6 @@ export async function POST(req: NextRequest) {
       deliveryDistance,
       shippingFee,
       subtotal,
-      pointsUsed,
       totalAmount,
       desiredArrivalDate,
       desiredTimeSlot,
@@ -24,6 +23,9 @@ export async function POST(req: NextRequest) {
       shippingPlanName,
       scheduledShipDate,
     } = body
+
+    // 数値系は明示的に Number() で変換し NaN を 0 にフォールバック
+    const pointsUsed = Math.max(0, Math.floor(Number(body.pointsUsed) || 0))
 
     if (!customerId || !items?.length) {
       return NextResponse.json({ error: 'customerId and items are required' }, { status: 400 })
