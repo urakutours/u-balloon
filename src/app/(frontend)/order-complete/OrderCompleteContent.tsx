@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { CheckCircle, Loader2, Package, MapPin, CalendarDays, Gift } from 'lucide-react'
+import { CheckCircle, Loader2, Package, MapPin, CalendarDays, Gift, Building2 } from 'lucide-react'
 import { purchase as trackPurchase } from '@/lib/gtag'
 
 type OrderItem = {
@@ -15,6 +15,14 @@ type OrderItem = {
   quantity: number
   unitPrice: number
   selectedOptions?: Record<string, unknown>
+}
+
+type BankInfo = {
+  bankName: string | null
+  branchName: string | null
+  accountType: string | null
+  accountNumber: string | null
+  accountHolder: string | null
 }
 
 type OrderData = {
@@ -33,6 +41,16 @@ type OrderData = {
   scheduledShipDate?: string | null
   status: string
   createdAt: string
+  paymentMethod?: 'stripe' | 'bank_transfer'
+  bankTransferDeadline?: string | null
+  bankInfo?: BankInfo | null
+}
+
+function formatAccountType(type: string | null | undefined): string {
+  if (!type) return '-'
+  if (type === 'checking') return '当座'
+  if (type === 'ordinary' || type === 'savings' || type === 'normal') return '普通'
+  return type
 }
 
 const timeSlotLabels: Record<string, string> = {
@@ -263,6 +281,77 @@ export default function OrderCompleteContent() {
                 </div>
               )}
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {order.paymentMethod === 'bank_transfer' && (
+        <Card className="mb-6 border-amber-200 bg-amber-50">
+          <CardContent className="p-6">
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-amber-800">
+              <Building2 className="h-4 w-4" />
+              お振込先情報
+            </h3>
+            {order.bankInfo && (order.bankInfo.bankName || order.bankInfo.accountNumber) ? (
+              <>
+                <dl className="space-y-2 text-sm">
+                  {order.bankInfo.bankName && (
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">銀行名</dt>
+                      <dd className="font-medium">{order.bankInfo.bankName}</dd>
+                    </div>
+                  )}
+                  {order.bankInfo.branchName && (
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">支店名</dt>
+                      <dd className="font-medium">{order.bankInfo.branchName}</dd>
+                    </div>
+                  )}
+                  {order.bankInfo.accountType && (
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">口座種別</dt>
+                      <dd className="font-medium">{formatAccountType(order.bankInfo.accountType)}</dd>
+                    </div>
+                  )}
+                  {order.bankInfo.accountNumber && (
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">口座番号</dt>
+                      <dd className="font-medium font-mono">{order.bankInfo.accountNumber}</dd>
+                    </div>
+                  )}
+                  {order.bankInfo.accountHolder && (
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">口座名義</dt>
+                      <dd className="font-medium">{order.bankInfo.accountHolder}</dd>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">振込金額</dt>
+                    <dd className="font-bold text-amber-800">¥{(order.totalAmount ?? 0).toLocaleString()}</dd>
+                  </div>
+                  {order.bankTransferDeadline && (
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">振込期限</dt>
+                      <dd className="font-bold text-red-600">
+                        {new Date(order.bankTransferDeadline).toLocaleDateString('ja-JP', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          weekday: 'short',
+                        })}
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+                <p className="mt-4 text-xs text-muted-foreground">
+                  ※振込手数料はお客様ご負担となります。期限までに入金が確認できない場合、注文はキャンセルとなります。
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                振込先情報は確認メールに記載しております。メールをご確認ください。
+              </p>
+            )}
           </CardContent>
         </Card>
       )}
