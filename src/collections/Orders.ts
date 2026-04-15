@@ -204,6 +204,14 @@ export const Orders: CollectionConfig = {
               ],
             },
             {
+              name: 'eventName',
+              type: 'text',
+              label: 'イベント名',
+              admin: {
+                description: '結婚式・誕生日パーティーなどのイベント名',
+              },
+            },
+            {
               name: 'eventDateTime',
               type: 'date',
               label: '使用日時（イベント日時）',
