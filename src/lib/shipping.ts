@@ -46,6 +46,20 @@ export function calculateShippingForPlan(input: ShippingCalcInput): ShippingCalc
     }
   }
 
+  // 対応エリア判定（supportedAreas が特定の都道府県を列挙している場合のみ whitelist として機能。
+  // 「全国」が含まれていれば whitelist チェックをスキップ）
+  if (plan.supportedAreas && destinationPrefecture && !plan.supportedAreas.includes('全国')) {
+    const allowed = extractAllPrefectures(plan.supportedAreas)
+    if (allowed.length > 0 && !allowed.some(a => destinationPrefecture === a)) {
+      return {
+        shippingFee: 0,
+        eligible: false,
+        reason: `${plan.name}は${plan.supportedAreas}のみ対応のため、${destinationPrefecture}は対象外です`,
+        breakdown: { method: plan.calculationMethod },
+      }
+    }
+  }
+
   // 送料無料閾値判定
   if (plan.freeThreshold && plan.freeThreshold > 0 && cartSubtotal >= plan.freeThreshold) {
     return {
@@ -135,11 +149,18 @@ export function calculateShippingForPlan(input: ShippingCalcInput): ShippingCalc
 // ─── 2. Helper: 都道府県の抽出 ──────────────────────────────────────────
 
 const PREFECTURE_REGEX = /(東京都|北海道|(?:京都|大阪)府|(?:青森|岩手|宮城|秋田|山形|福島|茨城|栃木|群馬|埼玉|千葉|神奈川|新潟|富山|石川|福井|山梨|長野|岐阜|静岡|愛知|三重|滋賀|兵庫|奈良|和歌山|鳥取|島根|岡山|広島|山口|徳島|香川|愛媛|高知|福岡|佐賀|長崎|熊本|大分|宮崎|鹿児島|沖縄)県)/
+const PREFECTURE_REGEX_GLOBAL = new RegExp(PREFECTURE_REGEX.source, 'g')
 
 export function extractPrefecture(address: string | null | undefined): string | null {
   if (!address) return null
   const m = address.match(PREFECTURE_REGEX)
   return m ? m[1] : null
+}
+
+export function extractAllPrefectures(text: string | null | undefined): string[] {
+  if (!text) return []
+  const matches = text.match(PREFECTURE_REGEX_GLOBAL)
+  return matches ? Array.from(new Set(matches)) : []
 }
 
 // ─── 3. Plan selection ─────────────────────────────────────────────────
