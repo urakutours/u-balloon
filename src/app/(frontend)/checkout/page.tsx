@@ -22,6 +22,30 @@ import {
 import { CalendarIcon, Loader2, MapPin, Truck, ChevronDown, ChevronUp, Clock, MessageSquare, Coins, PartyPopper } from 'lucide-react'
 import { format, addDays, addMonths } from 'date-fns'
 import { ja } from 'date-fns/locale'
+import { cn } from '@/lib/utils'
+
+type PlanOption = {
+  planId: string
+  planName: string
+  carrier: string
+  estimatedDaysMin: number | null
+  estimatedDaysMax: number | null
+  shippingFee: number
+  eligible: boolean
+  reason: string | null
+  breakdown: Record<string, unknown>
+}
+
+function computeScheduledShipDate(
+  plan: PlanOption | undefined,
+  desiredArrivalDate: string | null | undefined,
+): string | undefined {
+  if (!plan || !desiredArrivalDate) return undefined
+  const daysMin = plan.estimatedDaysMin ?? 0
+  const d = new Date(desiredArrivalDate)
+  d.setDate(d.getDate() - daysMin)
+  return d.toISOString()
+}
 
 export default function CheckoutPage() {
   const router = useRouter()
@@ -57,6 +81,10 @@ export default function CheckoutPage() {
     shippingFee: number
     breakdown: string
   } | null>(null)
+
+  // Shipping plan selection
+  const [planOptions, setPlanOptions] = useState<PlanOption[]>([])
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
 
   // Available dates
   const [availableDates, setAvailableDates] = useState<Set<string>>(new Set())
@@ -106,9 +134,26 @@ export default function CheckoutPage() {
       const res = await fetch('/api/calculate-shipping', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ destinationAddress: address, productType: cartProductType, cartSubtotal: subtotal }),
+        body: JSON.stringify({ destinationAddress: address, cartSubtotal: subtotal }),
       })
-      if (res.ok) setShippingResult(await res.json())
+      if (!res.ok) return
+      const data = await res.json()
+      if (data.plans) {
+        let plans = data.plans as PlanOption[]
+        if (cartProductType === 'delivery') {
+          plans = plans.filter((p) => p.carrier === 'self_delivery')
+        }
+        setPlanOptions(plans)
+        const firstEligible = plans.find((p) => p.eligible)
+        if (firstEligible) {
+          setSelectedPlanId(firstEligible.planId)
+          setShippingResult({
+            distanceKm: data.distanceKm ?? 0,
+            shippingFee: firstEligible.shippingFee,
+            breakdown: String(firstEligible.breakdown?.summary ?? ''),
+          })
+        }
+      }
     } catch (err) {
       console.error('Failed to calculate shipping:', err)
     } finally {
@@ -118,9 +163,10 @@ export default function CheckoutPage() {
 
   const isDateDisabled = (date: Date) => !availableDates.has(format(date, 'yyyy-MM-dd'))
 
-  const maxUsablePoints = Math.min(user?.points ?? 0, subtotal + (shippingResult?.shippingFee ?? 0))
+  const selectedPlan = planOptions.find((p) => p.planId === selectedPlanId)
+  const shippingFee = selectedPlan?.shippingFee ?? shippingResult?.shippingFee ?? 0
+  const maxUsablePoints = Math.min(user?.points ?? 0, subtotal + shippingFee)
   const pointsDiscount = Math.min(pointsToUse, maxUsablePoints)
-  const shippingFee = shippingResult?.shippingFee ?? 0
   const totalAmount = subtotal + shippingFee - pointsDiscount
 
   const handleSubmit = async () => {
@@ -134,6 +180,7 @@ export default function CheckoutPage() {
         unitPrice: item.unitPrice,
       }))
 
+      const desiredArrivalDateStr = desiredDate ? format(desiredDate, 'yyyy-MM-dd') : undefined
       const res = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -145,11 +192,14 @@ export default function CheckoutPage() {
           pointsUsed: pointsDiscount,
           deliveryAddress: address,
           deliveryDistance: shippingResult?.distanceKm ?? 0,
-          desiredArrivalDate: desiredDate ? format(desiredDate, 'yyyy-MM-dd') : undefined,
+          desiredArrivalDate: desiredArrivalDateStr,
           desiredTimeSlot: timeSlot || undefined,
           eventName: eventName || undefined,
           eventDateTime: eventDateTime || undefined,
           notes: notes || undefined,
+          shippingPlanId: selectedPlan?.planId,
+          shippingPlanName: selectedPlan?.planName,
+          scheduledShipDate: computeScheduledShipDate(selectedPlan, desiredArrivalDateStr),
         }),
       })
 
@@ -241,7 +291,12 @@ export default function CheckoutPage() {
               <Input
                 placeholder="例: 東京都渋谷区..."
                 value={address}
-                onChange={(e) => { setAddress(e.target.value); setShippingResult(null) }}
+                onChange={(e) => {
+                  setAddress(e.target.value)
+                  setShippingResult(null)
+                  setPlanOptions([])
+                  setSelectedPlanId(null)
+                }}
                 className="text-base sm:text-sm"
               />
               <Button
@@ -257,19 +312,63 @@ export default function CheckoutPage() {
                   <><Truck className="h-4 w-4" /> 送料を計算</>
                 )}
               </Button>
-              {shippingResult && (
-                <div className="rounded-lg bg-brand-pink-light/30 p-3 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-foreground/60">距離: {shippingResult.distanceKm}km</span>
-                    <span className="font-bold text-brand-dark">送料: ¥{shippingResult.shippingFee.toLocaleString()}</span>
-                  </div>
-                  <p className="mt-1 text-xs text-foreground/40">{shippingResult.breakdown}</p>
-                </div>
-              )}
             </div>
           </section>
 
-          {/* 2. Desired Arrival Date */}
+          {/* 2. Shipping Plan Selection */}
+          {planOptions.length > 0 && (
+            <section className="rounded-xl border border-border/60 bg-white p-5 sm:p-6">
+              <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-brand-dark sm:text-base">
+                <Truck className="h-4.5 w-4.5 text-brand-teal" />
+                配送プランを選択
+              </h2>
+              <div className="space-y-3">
+                {planOptions.map((p) => (
+                  <label
+                    key={p.planId}
+                    className={cn(
+                      'flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors',
+                      selectedPlanId === p.planId
+                        ? 'border-brand-teal bg-brand-teal/5'
+                        : 'border-border hover:border-brand-teal/40',
+                      !p.eligible && 'cursor-not-allowed opacity-50',
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="shippingPlan"
+                      value={p.planId}
+                      checked={selectedPlanId === p.planId}
+                      disabled={!p.eligible}
+                      onChange={() => {
+                        if (p.eligible) {
+                          setSelectedPlanId(p.planId)
+                          setShippingResult((prev) => prev ? { ...prev, shippingFee: p.shippingFee } : null)
+                        }
+                      }}
+                      className="mt-1 accent-brand-teal"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-brand-dark">{p.planName}</span>
+                        <span className="font-semibold text-brand-dark">¥{p.shippingFee.toLocaleString()}</span>
+                      </div>
+                      {(p.estimatedDaysMin != null || p.estimatedDaysMax != null) && (
+                        <div className="mt-1 text-sm text-foreground/60">
+                          発送から{p.estimatedDaysMin ?? '-'}〜{p.estimatedDaysMax ?? '-'}日で到着予定
+                        </div>
+                      )}
+                      {p.reason && (
+                        <div className="mt-1 text-sm text-destructive">{p.reason}</div>
+                      )}
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* 3. Desired Arrival Date */}
           <section className="rounded-xl border border-border/60 bg-white p-5 sm:p-6">
             <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-brand-dark sm:text-base">
               <CalendarIcon className="h-4.5 w-4.5 text-brand-teal" />
@@ -318,7 +417,7 @@ export default function CheckoutPage() {
             </div>
           </section>
 
-          {/* 3. Time Slot & Event Info */}
+          {/* 4. Time Slot & Event Info */}
           <section className="rounded-xl border border-border/60 bg-white p-5 sm:p-6">
             <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-brand-dark sm:text-base">
               <Clock className="h-4.5 w-4.5 text-brand-teal" />
@@ -372,7 +471,7 @@ export default function CheckoutPage() {
             </div>
           </section>
 
-          {/* 4. Notes */}
+          {/* 5. Notes */}
           <section className="rounded-xl border border-border/60 bg-white p-5 sm:p-6">
             <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-brand-dark sm:text-base">
               <MessageSquare className="h-4.5 w-4.5 text-brand-teal" />
@@ -387,7 +486,7 @@ export default function CheckoutPage() {
             />
           </section>
 
-          {/* 5. Points */}
+          {/* 6. Points */}
           <section className="rounded-xl border border-border/60 bg-white p-5 sm:p-6">
             <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-brand-dark sm:text-base">
               <Coins className="h-4.5 w-4.5 text-brand-teal" />
@@ -447,7 +546,13 @@ export default function CheckoutPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-foreground/60">送料</span>
-                <span>{shippingResult ? `¥${shippingFee.toLocaleString()}（${shippingResult.distanceKm}km）` : '未計算'}</span>
+                <span>
+                  {selectedPlan
+                    ? `¥${shippingFee.toLocaleString()}`
+                    : shippingResult
+                      ? `¥${shippingFee.toLocaleString()}`
+                      : '未計算'}
+                </span>
               </div>
               {pointsDiscount > 0 && (
                 <div className="flex justify-between text-brand-teal">
@@ -465,13 +570,13 @@ export default function CheckoutPage() {
               className="mt-6 w-full gap-2 bg-brand-dark font-semibold hover:bg-brand-dark/90"
               size="lg"
               onClick={handleSubmit}
-              disabled={submitting || !shippingResult}
+              disabled={submitting || !selectedPlanId}
             >
               {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> 処理中...</> : '決済へ進む'}
             </Button>
-            {!shippingResult && (
+            {!selectedPlanId && (
               <p className="mt-2 text-center text-xs text-foreground/40">
-                送料を計算してから決済に進めます
+                配送プランを選択してから決済に進めます
               </p>
             )}
           </div>
@@ -489,12 +594,12 @@ export default function CheckoutPage() {
             className="w-full gap-2 bg-brand-dark font-semibold hover:bg-brand-dark/90"
             size="lg"
             onClick={handleSubmit}
-            disabled={submitting || !shippingResult}
+            disabled={submitting || !selectedPlanId}
           >
             {submitting ? (
               <><Loader2 className="h-4 w-4 animate-spin" /> 処理中...</>
-            ) : !shippingResult ? (
-              '送料を先に計算してください'
+            ) : !selectedPlanId ? (
+              '配送プランを先に選択してください'
             ) : (
               '決済へ進む'
             )}

@@ -20,6 +20,9 @@ export async function POST(req: NextRequest) {
       desiredTimeSlot,
       eventDateTime,
       notes,
+      shippingPlanId,
+      shippingPlanName,
+      scheduledShipDate,
     } = body
 
     if (!customerId || !items?.length) {
@@ -28,10 +31,13 @@ export async function POST(req: NextRequest) {
 
     const settings = await getSiteSettings()
 
+    // accountType は DB 生値 ('checking' / 'ordinary' / 'savings' / 'normal') で保持し、
+    // 表示側の formatAccountType ヘルパ (email-templates) で日本語に変換する。
+    // これにより変換ロジックが一箇所に集約される。
     const bankInfo = {
       bankName: settings.bankName || '',
       branchName: settings.bankBranchName || '',
-      accountType: settings.bankAccountType === 'checking' ? '当座' : '普通',
+      accountType: settings.bankAccountType || '',
       accountNumber: settings.bankAccountNumber || '',
       accountHolder: settings.bankAccountHolder || '',
     }
@@ -75,7 +81,13 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    const deadline = addDays(new Date(), deadlineDays)
+    let bankTransferDeadline: Date
+    if (scheduledShipDate) {
+      bankTransferDeadline = addDays(new Date(scheduledShipDate), -deadlineDays)
+    } else {
+      console.warn('[create-bank-transfer-order] scheduledShipDate not provided, falling back to orderDate + N days')
+      bankTransferDeadline = addDays(new Date(), deadlineDays)
+    }
 
     const order = await payload.create({
       collection: 'orders',
@@ -94,7 +106,10 @@ export async function POST(req: NextRequest) {
         notes,
         paymentMethod: 'bank_transfer',
         status: 'awaiting_payment',
-        bankTransferDeadline: deadline.toISOString(),
+        shippingPlanId: shippingPlanId ?? null,
+        shippingPlanName: shippingPlanName ?? null,
+        scheduledShipDate: scheduledShipDate ?? null,
+        bankTransferDeadline: bankTransferDeadline.toISOString(),
       },
     })
 
@@ -103,7 +118,7 @@ export async function POST(req: NextRequest) {
       orderNumber: order.orderNumber,
       orderId: order.id,
       bankInfo,
-      deadline: deadline.toISOString(),
+      deadline: bankTransferDeadline.toISOString(),
       totalAmount,
     })
   } catch (error) {

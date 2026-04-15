@@ -5,6 +5,27 @@ import type { Metadata } from 'next'
 import { getStaticPage } from '@/lib/get-static-page'
 import { BlockRenderer } from '@/components/blocks/BlockRenderer'
 import { getSiteSettings } from '@/lib/site-settings'
+import { getActiveSortedPlans } from '@/lib/shipping'
+
+function carrierLabel(carrier: string): string {
+  switch (carrier) {
+    case 'yamato': return 'ヤマト運輸'
+    case 'sagawa': return '佐川急便'
+    case 'yupack': return 'ゆうパック'
+    case 'self_delivery': return 'u-balloon デリバリー便（自社配送）'
+    default: return 'その他'
+  }
+}
+
+function methodLabel(method: string): string {
+  switch (method) {
+    case 'flat': return '一律料金'
+    case 'distance_based': return '距離ベース（基本料金 + 超過分）'
+    case 'regional_table': return '地域別固定'
+    case 'free': return '送料無料'
+    default: return method
+  }
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   const page = await getStaticPage('legal')
@@ -65,12 +86,18 @@ export default async function LegalPage() {
   const bankAccountHolder = settings?.bankAccountHolder || 'カ）ウラク'
   const bankDeadlineDays = settings?.bankTransferDeadlineDays ?? 7
 
-  // 地域別送料テーブル
+  // 地域別送料テーブル（フォールバック用）
   const regionalFees = settings?.shippingRegionalFees
   // 配送不可エリア
   const restrictedAreas = settings?.shippingRestrictedAreas || '沖縄県'
   // 決済方法一覧
   const paymentMethodsText = settings?.paymentMethodsText
+  // 配送プラン（shippingPlans 駆動）
+  const activePlans = getActiveSortedPlans(settings?.shippingPlans)
+  // 配送業者一覧（重複除去）
+  const uniqueCarriers = activePlans.length > 0
+    ? [...new Set(activePlans.map(p => carrierLabel(p.carrier)))].join('、')
+    : null
 
   const legalItems: { label: string; value: React.ReactNode }[] = [
     { label: '販売業者', value: companyName },
@@ -146,7 +173,7 @@ export default async function LegalPage() {
         <>
           クレジットカード：ご注文確定時に決済
           <br />
-          銀行振込：ご注文後{bankDeadlineDays}日以内にお振込みください。期限内にご入金がない場合、ご注文をキャンセルとさせていただく場合がございます。
+          銀行振込：発送予定日の{bankDeadlineDays}日前までにお振込みください。発送予定日はご注文確定後にお知らせいたします。期限内にご入金がない場合、ご注文をキャンセルとさせていただく場合がございます。
         </>
       ),
     },
@@ -168,7 +195,7 @@ export default async function LegalPage() {
       label: '配送業者',
       value: (
         <>
-          ヤマト運輸 / ゆうパック
+          {uniqueCarriers ?? 'ヤマト運輸 / ゆうパック'}
           <br />
           ※商品やお届け先に応じて最適な方法で発送いたします。
         </>
@@ -176,7 +203,78 @@ export default async function LegalPage() {
     },
     {
       label: '送料',
-      value: regionalFees && regionalFees.length > 0 ? (
+      value: activePlans.length > 0 ? (
+        <div className="space-y-4">
+          {activePlans.map((plan) => (
+            <div key={plan.id ?? plan.name} className="rounded-lg border p-3">
+              <p className="mb-2 font-semibold">{plan.name}</p>
+              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                <dt className="font-medium">配送業者</dt>
+                <dd>{carrierLabel(plan.carrier)}</dd>
+                <dt className="font-medium">料金区分</dt>
+                <dd>{methodLabel(plan.calculationMethod)}</dd>
+                <dt className="font-medium">料金</dt>
+                <dd>
+                  {plan.calculationMethod === 'flat' && `一律 ¥${(plan.baseFee ?? 0).toLocaleString()}（税込）`}
+                  {plan.calculationMethod === 'distance_based' && (
+                    <>
+                      基本料金 ¥{(plan.baseFee ?? 0).toLocaleString()}
+                      （{plan.freeDistanceKm ?? 0}km まで）、超過分 ¥{plan.extraPerKmFee ?? 0}/km
+                      {plan.freeThreshold && (
+                        <>、¥{plan.freeThreshold.toLocaleString()}以上で送料無料</>
+                      )}
+                    </>
+                  )}
+                  {plan.calculationMethod === 'free' && '送料無料'}
+                  {plan.calculationMethod === 'regional_table' && '地域別（下表参照）'}
+                </dd>
+                {(plan.estimatedDaysMin != null || plan.estimatedDaysMax != null) && (
+                  <>
+                    <dt className="font-medium">配送日数目安</dt>
+                    <dd>発送から {plan.estimatedDaysMin ?? '-'}〜{plan.estimatedDaysMax ?? '-'} 日</dd>
+                  </>
+                )}
+                {plan.supportedAreas && (
+                  <>
+                    <dt className="font-medium">対応エリア</dt>
+                    <dd>{plan.supportedAreas}</dd>
+                  </>
+                )}
+                {plan.restrictedAreas && (
+                  <>
+                    <dt className="font-medium">配送不可</dt>
+                    <dd>{plan.restrictedAreas}</dd>
+                  </>
+                )}
+              </dl>
+              {plan.calculationMethod === 'regional_table' && plan.regionalFees.length > 0 && (
+                <table className="mt-3 w-full text-sm">
+                  <thead>
+                    <tr>
+                      <th className="text-left font-medium">地域</th>
+                      <th className="text-right font-medium">料金（税込）</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {plan.regionalFees.map((r, i) => (
+                      <tr key={i}>
+                        <td>{r.region}</td>
+                        <td className="text-right">¥{r.fee.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          ))}
+          <p className="text-sm">
+            <strong>※{restrictedAreas}への配送はお受けできません。</strong>
+            バルーンはヘリウムガスで膨らませているため、気圧の変化により破裂する恐れがあります。
+            <br />
+            ※離島へのお届けはお受けできない場合がございます。事前にお問い合わせください。
+          </p>
+        </div>
+      ) : regionalFees && regionalFees.length > 0 ? (
         <>
           {regionalFees.map((item, i) => (
             <React.Fragment key={item.id || i}>

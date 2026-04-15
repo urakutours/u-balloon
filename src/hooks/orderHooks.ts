@@ -2,7 +2,9 @@ import type { CollectionAfterChangeHook, CollectionBeforeChangeHook } from 'payl
 import { earnPoints } from '@/lib/points'
 import { sendEmail } from '@/lib/email'
 import { OrderConfirmEmail, OrderStatusUpdateEmail, PointsEarnedEmail } from '@/lib/email-templates'
+import type { OrderConfirmEmailProps } from '@/lib/email-templates'
 import { sendAdminAlert } from '@/lib/admin-alerts'
+import { getSiteSettings } from '@/lib/site-settings'
 import React from 'react'
 import type { Payload } from 'payload'
 
@@ -29,22 +31,46 @@ async function processOrderCreate(payload: Payload, doc: Record<string, unknown>
       }),
     )
 
+    // Build base email props common to all payment methods
+    const baseEmailProps = {
+      name: ((customer as { name?: string }).name || (customer as { email: string }).email),
+      orderNumber: doc.orderNumber as string,
+      items,
+      deliveryAddress: doc.deliveryAddress as string | undefined,
+      desiredArrivalDate: doc.desiredArrivalDate
+        ? new Date(doc.desiredArrivalDate as string).toLocaleDateString('ja-JP')
+        : undefined,
+      subtotal: doc.subtotal as number,
+      shippingFee: (doc.shippingFee as number) || 0,
+      pointsUsed: (doc.pointsUsed as number) || 0,
+      totalAmount: doc.totalAmount as number,
+      // T2.5 で OrderConfirmEmail の props 型拡張後に受け取られる追加フィールド
+      shippingPlanName: (doc.shippingPlanName as string | undefined) ?? undefined,
+      scheduledShipDate: (doc.scheduledShipDate as string | undefined) ?? undefined,
+    }
+
+    // For bank_transfer orders, add payment-specific props
+    let emailProps: OrderConfirmEmailProps = baseEmailProps
+    if (doc.paymentMethod === 'bank_transfer') {
+      const settings = await getSiteSettings()
+      emailProps = {
+        ...baseEmailProps,
+        paymentMethod: 'bank_transfer',
+        bankInfo: {
+          bankName: settings.bankName ?? '',
+          branchName: settings.bankBranchName ?? '',
+          accountType: settings.bankAccountType ?? '',
+          accountNumber: settings.bankAccountNumber ?? '',
+          accountHolder: settings.bankAccountHolder ?? '',
+        },
+        bankTransferDeadline: (doc.bankTransferDeadline as string | undefined) ?? undefined,
+      }
+    }
+
     await sendEmail({
       to: (customer as { email: string }).email,
       subject: `【uballoon】ご注文確認 ${doc.orderNumber}`,
-      react: React.createElement(OrderConfirmEmail, {
-        name: ((customer as { name?: string }).name || (customer as { email: string }).email),
-        orderNumber: doc.orderNumber as string,
-        items,
-        deliveryAddress: doc.deliveryAddress as string | undefined,
-        desiredArrivalDate: doc.desiredArrivalDate
-          ? new Date(doc.desiredArrivalDate as string).toLocaleDateString('ja-JP')
-          : undefined,
-        subtotal: doc.subtotal as number,
-        shippingFee: (doc.shippingFee as number) || 0,
-        pointsUsed: (doc.pointsUsed as number) || 0,
-        totalAmount: doc.totalAmount as number,
-      }),
+      react: React.createElement(OrderConfirmEmail, emailProps as OrderConfirmEmailProps),
     })
     console.log('[Hook] Order confirm email sent for', doc.orderNumber)
 
@@ -75,6 +101,7 @@ async function processOrderStatusChange(payload: Payload, doc: Record<string, un
         name: customerName,
         orderNumber: doc.orderNumber as string,
         newStatus: doc.status as string,
+        scheduledShipDate: doc.scheduledShipDate as string | undefined,
       }),
     })
     console.log('[Hook] Status update email sent for', doc.orderNumber, '->', doc.status)

@@ -5,6 +5,27 @@ import type { Metadata } from 'next'
 import { getStaticPage } from '@/lib/get-static-page'
 import { BlockRenderer } from '@/components/blocks/BlockRenderer'
 import { getSiteSettings } from '@/lib/site-settings'
+import { getActiveSortedPlans } from '@/lib/shipping'
+
+function carrierLabel(carrier: string): string {
+  switch (carrier) {
+    case 'yamato': return 'ヤマト運輸'
+    case 'sagawa': return '佐川急便'
+    case 'yupack': return 'ゆうパック'
+    case 'self_delivery': return 'u-balloon デリバリー便（自社配送）'
+    default: return 'その他'
+  }
+}
+
+function methodLabel(method: string): string {
+  switch (method) {
+    case 'flat': return '一律料金'
+    case 'distance_based': return '距離ベース（基本料金 + 超過分）'
+    case 'regional_table': return '地域別固定'
+    case 'free': return '送料無料'
+    default: return method
+  }
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   const page = await getStaticPage('delivery')
@@ -48,7 +69,13 @@ export default async function DeliveryPage() {
     getSiteSettings().catch(() => null),
   ])
 
-  // 地域別送料: DB優先、未設定時はフォールバック
+  // 配送プラン駆動
+  const activePlans = getActiveSortedPlans(settings?.shippingPlans)
+  // 配送業者一覧（重複除去）
+  const uniqueCarriers = activePlans.length > 0
+    ? [...new Set(activePlans.map(p => carrierLabel(p.carrier)))].join('、')
+    : null
+  // 地域別送料フォールバック: shippingPlans 未設定時に使用
   const dbFees = settings?.shippingRegionalFees
   const shippingRates = dbFees && dbFees.length > 0
     ? dbFees.map(item => ({
@@ -159,7 +186,7 @@ export default async function DeliveryPage() {
                 <p className="mb-2 text-sm font-semibold text-brand-dark">銀行振込のご注意</p>
                 <ul className="space-y-1 text-sm text-gray-700">
                   <li>・振込手数料はお客様のご負担となります。</li>
-                  <li>・ご注文後{bankDeadlineDays}日以内にお振込みをお願いいたします。</li>
+                  <li>・発送予定日の{bankDeadlineDays}日前までにお振込みをお願いいたします。発送予定日はご注文確定後にお知らせいたします。</li>
                   <li>・ご入金確認後の発送となります。</li>
                   <li>・12:00までにご入金が確認できた場合、当日の発送手配が可能です（在庫状況による）。</li>
                 </ul>
@@ -174,28 +201,101 @@ export default async function DeliveryPage() {
 
               <h3 className="mb-2 text-sm font-semibold text-brand-dark">配送業者</h3>
               <p className="text-sm text-gray-700">
-                ヤマト運輸またはゆうパックにて発送いたします。商品やお届け先に応じて最適な方法を選択しております。
+                {uniqueCarriers ?? 'ヤマト運輸またはゆうパック'}にて発送いたします。商品やお届け先に応じて最適な方法を選択しております。
               </p>
 
-              <h3 className="mb-2 mt-6 text-sm font-semibold text-brand-dark">送料</h3>
-              <div className="overflow-hidden rounded-lg border">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-gray-50">
-                      <th className="px-4 py-3 text-left font-medium text-gray-700">お届け地域</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-700">送料（税込）</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {shippingRates.map((row) => (
-                      <tr key={row.area} className="even:bg-muted/20">
-                        <td className="px-4 py-2.5 text-gray-700">{row.area}</td>
-                        <td className="px-4 py-2.5 text-gray-700">{row.rate}</td>
+              <h3 className="mb-2 mt-6 text-sm font-semibold text-brand-dark">送料・配送プラン</h3>
+              {activePlans.length > 0 ? (
+                <div className="space-y-4">
+                  {activePlans.map((plan) => (
+                    <div key={plan.id ?? plan.name} className="overflow-hidden rounded-lg border">
+                      <div className="bg-gray-50 px-4 py-3">
+                        <p className="font-semibold text-gray-800">{plan.name}</p>
+                        <p className="text-xs text-gray-500">{carrierLabel(plan.carrier)} / {methodLabel(plan.calculationMethod)}</p>
+                      </div>
+                      <div className="px-4 py-3">
+                        <table className="w-full text-sm">
+                          <tbody className="divide-y">
+                            <tr>
+                              <td className="py-2 font-medium text-gray-700 w-1/3">料金</td>
+                              <td className="py-2 text-gray-700">
+                                {plan.calculationMethod === 'flat' && `一律 ¥${(plan.baseFee ?? 0).toLocaleString()}（税込）`}
+                                {plan.calculationMethod === 'distance_based' && (
+                                  <>
+                                    基本料金 ¥{(plan.baseFee ?? 0).toLocaleString()}（{plan.freeDistanceKm ?? 0}km まで）、超過分 ¥{plan.extraPerKmFee ?? 0}/km
+                                    {plan.freeThreshold && <>、¥{plan.freeThreshold.toLocaleString()}以上で送料無料</>}
+                                  </>
+                                )}
+                                {plan.calculationMethod === 'free' && '送料無料'}
+                                {plan.calculationMethod === 'regional_table' && '地域別（下表参照）'}
+                              </td>
+                            </tr>
+                            {(plan.estimatedDaysMin != null || plan.estimatedDaysMax != null) && (
+                              <tr>
+                                <td className="py-2 font-medium text-gray-700">配送日数目安</td>
+                                <td className="py-2 text-gray-700">
+                                  発送から {plan.estimatedDaysMin ?? '-'}〜{plan.estimatedDaysMax ?? '-'} 日
+                                </td>
+                              </tr>
+                            )}
+                            {plan.supportedAreas && (
+                              <tr>
+                                <td className="py-2 font-medium text-gray-700">対応エリア</td>
+                                <td className="py-2 text-gray-700">{plan.supportedAreas}</td>
+                              </tr>
+                            )}
+                            {plan.restrictedAreas && (
+                              <tr>
+                                <td className="py-2 font-medium text-gray-700">配送不可</td>
+                                <td className="py-2 text-gray-700">{plan.restrictedAreas}</td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                        {plan.calculationMethod === 'regional_table' && plan.regionalFees.length > 0 && (
+                          <div className="mt-3 overflow-hidden rounded border">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="bg-gray-50">
+                                  <th className="px-3 py-2 text-left font-medium text-gray-700">地域</th>
+                                  <th className="px-3 py-2 text-right font-medium text-gray-700">料金（税込）</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y">
+                                {plan.regionalFees.map((r, i) => (
+                                  <tr key={i} className="even:bg-muted/20">
+                                    <td className="px-3 py-2 text-gray-700">{r.region}</td>
+                                    <td className="px-3 py-2 text-right text-gray-700">¥{r.fee.toLocaleString()}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="overflow-hidden rounded-lg border">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        <th className="px-4 py-3 text-left font-medium text-gray-700">お届け地域</th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-700">送料（税込）</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y">
+                      {shippingRates.map((row) => (
+                        <tr key={row.area} className="even:bg-muted/20">
+                          <td className="px-4 py-2.5 text-gray-700">{row.area}</td>
+                          <td className="px-4 py-2.5 text-gray-700">{row.rate}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
               <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
                 <p className="mb-1 text-sm font-semibold text-gray-800">沖縄県・離島のお届けについて</p>
@@ -206,25 +306,29 @@ export default async function DeliveryPage() {
                 </p>
               </div>
 
-              <h3 className="mb-2 mt-6 text-sm font-semibold text-brand-dark">配送日数の目安（東京から発送）</h3>
-              <div className="overflow-hidden rounded-lg border">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-gray-50">
-                      <th className="px-4 py-3 text-left font-medium text-gray-700">お届け地域</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-700">お届け日数の目安</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {deliveryDays.map((row) => (
-                      <tr key={row.area} className="even:bg-muted/20">
-                        <td className="px-4 py-2.5 text-gray-700">{row.area}</td>
-                        <td className="px-4 py-2.5 text-gray-700">{row.days}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {activePlans.length === 0 && (
+                <>
+                  <h3 className="mb-2 mt-6 text-sm font-semibold text-brand-dark">配送日数の目安（東京から発送）</h3>
+                  <div className="overflow-hidden rounded-lg border">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-gray-50">
+                          <th className="px-4 py-3 text-left font-medium text-gray-700">お届け地域</th>
+                          <th className="px-4 py-3 text-left font-medium text-gray-700">お届け日数の目安</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {deliveryDays.map((row) => (
+                          <tr key={row.area} className="even:bg-muted/20">
+                            <td className="px-4 py-2.5 text-gray-700">{row.area}</td>
+                            <td className="px-4 py-2.5 text-gray-700">{row.days}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
               <p className="mt-3 text-xs text-gray-500">
                 ※上記は目安です。天候や交通状況、繁忙期等により遅延する場合がございます。
                 <br />

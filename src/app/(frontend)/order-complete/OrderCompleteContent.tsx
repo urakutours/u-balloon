@@ -29,6 +29,8 @@ type OrderData = {
   deliveryAddress?: string
   desiredArrivalDate?: string
   desiredTimeSlot?: string
+  shippingPlanName?: string | null
+  scheduledShipDate?: string | null
   status: string
   createdAt: string
 }
@@ -220,7 +222,7 @@ export default function OrderCompleteContent() {
         </CardContent>
       </Card>
 
-      {(order.deliveryAddress || order.desiredArrivalDate) && (
+      {(order.deliveryAddress || order.desiredArrivalDate || order.shippingPlanName || order.scheduledShipDate) && (
         <Card className="mb-6">
           <CardContent className="p-6">
             <h3 className="mb-3 text-sm font-semibold text-muted-foreground">配送情報</h3>
@@ -229,6 +231,26 @@ export default function OrderCompleteContent() {
                 <div className="flex items-start gap-2">
                   <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                   <span>{order.deliveryAddress}</span>
+                </div>
+              )}
+              {order.shippingPlanName && (
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                  <span>
+                    <span className="text-muted-foreground">配送方法:</span>
+                    <span className="ml-2">{order.shippingPlanName}</span>
+                  </span>
+                </div>
+              )}
+              {order.scheduledShipDate && (
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                  <span>
+                    <span className="text-muted-foreground">発送予定日:</span>
+                    <span className="ml-2">
+                      {new Date(order.scheduledShipDate).toLocaleDateString('ja-JP')}
+                    </span>
+                  </span>
                 </div>
               )}
               {order.desiredArrivalDate && (

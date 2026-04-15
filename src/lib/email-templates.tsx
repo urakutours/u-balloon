@@ -59,7 +59,7 @@ export function WelcomeEmail({ name }: { name: string }) {
 }
 
 // 2. 注文確認メール
-type OrderConfirmEmailProps = {
+export type OrderConfirmEmailProps = {
   name: string
   orderNumber: string
   items: Array<{
@@ -73,6 +73,24 @@ type OrderConfirmEmailProps = {
   shippingFee: number
   pointsUsed: number
   totalAmount: number
+  shippingPlanName?: string
+  scheduledShipDate?: string
+  paymentMethod?: 'stripe' | 'bank_transfer'
+  bankInfo?: {
+    bankName?: string | null
+    branchName?: string | null
+    accountType?: string | null
+    accountNumber?: string | null
+    accountHolder?: string | null
+  }
+  bankTransferDeadline?: string
+}
+
+function formatAccountType(type: string | null | undefined): string {
+  if (!type) return '-'
+  if (type === 'checking') return '当座'
+  if (type === 'ordinary' || type === 'savings' || type === 'normal') return '普通'
+  return type
 }
 
 export function OrderConfirmEmail({
@@ -85,7 +103,25 @@ export function OrderConfirmEmail({
   shippingFee,
   pointsUsed,
   totalAmount,
+  shippingPlanName,
+  scheduledShipDate,
+  paymentMethod,
+  bankInfo,
+  bankTransferDeadline,
 }: OrderConfirmEmailProps) {
+  const labelStyle = { color: '#333', fontWeight: 'bold' as const, margin: '0 0 2px' }
+  const valueStyle = { color: '#525f7f', margin: '0 0 4px' }
+  const bankBoxStyle = {
+    backgroundColor: '#fffbeb',
+    border: '1px solid #f59e0b',
+    borderRadius: '4px',
+    padding: '16px',
+    marginTop: '16px',
+  }
+  const sectionHeadingStyle = { color: '#92400e', fontSize: '14px', margin: '0 0 12px', fontWeight: 'bold' as const }
+  const deadlineStyle = { color: '#dc2626', fontWeight: 'bold' as const, margin: '12px 0 4px' }
+  const noteStyle = { color: '#6b7280', fontSize: '12px', margin: '8px 0 0' }
+
   return (
     <EmailLayout>
       <Heading as="h3" style={{ color: '#333' }}>
@@ -128,6 +164,56 @@ export function OrderConfirmEmail({
           <Text style={{ color: '#525f7f' }}>{desiredArrivalDate}</Text>
         </Section>
       )}
+      {shippingPlanName && (
+        <Section style={{ marginBottom: 8 }}>
+          <Text style={labelStyle}>配送方法</Text>
+          <Text style={valueStyle}>{shippingPlanName}</Text>
+        </Section>
+      )}
+      {scheduledShipDate && (
+        <Section style={{ marginBottom: 8 }}>
+          <Text style={labelStyle}>発送予定日</Text>
+          <Text style={valueStyle}>
+            {new Date(scheduledShipDate).toLocaleDateString('ja-JP', {
+              year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
+            })}
+          </Text>
+        </Section>
+      )}
+
+      {paymentMethod === 'bank_transfer' && bankInfo && (
+        <Section style={bankBoxStyle}>
+          <Heading as="h3" style={sectionHeadingStyle}>お振込先</Heading>
+          <table style={{ width: '100%' }}>
+            <tbody>
+              <tr><td style={labelStyle}>銀行名</td><td style={valueStyle}>{bankInfo.bankName ?? '-'}</td></tr>
+              <tr><td style={labelStyle}>支店名</td><td style={valueStyle}>{bankInfo.branchName ?? '-'}</td></tr>
+              <tr><td style={labelStyle}>口座種別</td><td style={valueStyle}>{formatAccountType(bankInfo.accountType)}</td></tr>
+              <tr><td style={labelStyle}>口座番号</td><td style={valueStyle}>{bankInfo.accountNumber ?? '-'}</td></tr>
+              <tr><td style={labelStyle}>口座名義</td><td style={valueStyle}>{bankInfo.accountHolder ?? '-'}</td></tr>
+            </tbody>
+          </table>
+
+          {bankTransferDeadline && (
+            <Text style={deadlineStyle}>
+              お振込期限: <strong>
+                {new Date(bankTransferDeadline).toLocaleDateString('ja-JP', {
+                  year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
+                })}
+              </strong>
+              {scheduledShipDate && (
+                <span style={{ color: '#64748b', fontSize: 12, display: 'block' }}>
+                  （発送予定日 {new Date(scheduledShipDate).toLocaleDateString('ja-JP')} の前までにお振込ください）
+                </span>
+              )}
+            </Text>
+          )}
+
+          <Text style={noteStyle}>
+            ※お振込手数料はお客様負担となります。期日までにご入金が確認できない場合、注文はキャンセルされます。
+          </Text>
+        </Section>
+      )}
     </EmailLayout>
   )
 }
@@ -146,10 +232,12 @@ export function OrderStatusUpdateEmail({
   name,
   orderNumber,
   newStatus,
+  scheduledShipDate,
 }: {
   name: string
   orderNumber: string
   newStatus: string
+  scheduledShipDate?: string
 }) {
   return (
     <EmailLayout>
@@ -167,6 +255,11 @@ export function OrderStatusUpdateEmail({
           {statusLabels[newStatus] || newStatus}
         </Text>
       </Section>
+      {scheduledShipDate && ['confirmed', 'preparing'].includes(newStatus) && (
+        <Text style={{ color: '#525f7f' }}>
+          発送予定日: {new Date(scheduledShipDate).toLocaleDateString('ja-JP')}
+        </Text>
+      )}
       {newStatus === 'shipped' && (
         <Text style={{ color: '#525f7f' }}>
           商品を発送いたしました。到着までお待ちください。

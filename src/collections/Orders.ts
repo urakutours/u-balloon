@@ -216,6 +216,35 @@ export const Orders: CollectionConfig = {
               },
             },
             {
+              name: 'shippingPlanId',
+              type: 'text',
+              label: '配送プランID',
+              admin: {
+                description: '注文時点の shippingPlans 要素 ID をスナップショット保存します。',
+                readOnly: false,
+              },
+            },
+            {
+              name: 'shippingPlanName',
+              type: 'text',
+              label: '配送プラン名',
+              admin: {
+                description: '注文時点のプラン名を表示用にスナップショット保存します。',
+              },
+            },
+            {
+              name: 'scheduledShipDate',
+              type: 'date',
+              label: '発送予定日',
+              admin: {
+                description: '発送予定日。銀行振込注文の場合、この日の N 日前が振込期限になります（N は SiteSettings の bankTransferDeadlineDays）。',
+                date: {
+                  pickerAppearance: 'dayOnly',
+                  displayFormat: 'yyyy/MM/dd',
+                },
+              },
+            },
+            {
               name: 'trackingInfo',
               type: 'group',
               label: '配送追跡情報',
@@ -264,6 +293,7 @@ export const Orders: CollectionConfig = {
               admin: {
                 date: { pickerAppearance: 'dayOnly' },
                 condition: (data) => data?.paymentMethod === 'bank_transfer',
+                description: '銀行振込の期限。scheduledShipDate が設定されている場合は「発送予定日の N 日前」、未設定時は「注文日 + N 日」の暫定値。',
               },
             },
             {

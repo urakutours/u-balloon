@@ -31,6 +31,9 @@ export async function POST(req: NextRequest) {
       eventDateTime,
       notes,
       subtotal,
+      shippingPlanId,
+      shippingPlanName,
+      scheduledShipDate,
     } = body
 
     if (!items || items.length === 0) {
@@ -72,6 +75,9 @@ export async function POST(req: NextRequest) {
         eventDateTime: eventDateTime || undefined,
         notes: notes || undefined,
         status: 'pending',
+        shippingPlanId: shippingPlanId ?? null,
+        shippingPlanName: shippingPlanName ?? null,
+        scheduledShipDate: scheduledShipDate ?? null,
       },
     })
 

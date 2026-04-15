@@ -19,6 +19,31 @@ export type ShippingRegionalFee = {
   note?: string | null
 }
 
+export type ShippingPlanRegionalFee = {
+  region: string
+  fee: number
+  note?: string | null
+}
+
+export type ShippingPlan = {
+  id?: string | null
+  name: string
+  carrier: 'yamato' | 'sagawa' | 'yupack' | 'self_delivery' | 'other'
+  calculationMethod: 'flat' | 'distance_based' | 'regional_table' | 'free'
+  baseFee: number | null
+  freeDistanceKm: number | null
+  extraPerKmFee: number | null
+  freeThreshold: number | null
+  regionalFees: ShippingPlanRegionalFee[]
+  estimatedDaysMin: number | null
+  estimatedDaysMax: number | null
+  supportedAreas: string | null
+  restrictedAreas: string | null
+  active: boolean
+  sortOrder: number
+  notes: string | null
+}
+
 export type SiteSettingsData = {
   // 会社情報
   companyName: string | null
@@ -78,6 +103,8 @@ export type SiteSettingsData = {
   siteOgImageUrl: string | null
   // 決済方法一覧
   paymentMethodsText: string | null
+  // 配送プラン
+  shippingPlans: ShippingPlan[] | null
 }
 
 export type ActiveStripeKeys = {
@@ -165,6 +192,37 @@ export async function getSiteSettings(): Promise<SiteSettingsData> {
     emailFromName: stringField(doc.emailFromName),
     emailReplyTo: stringField(doc.emailReplyTo),
     adminAlertEmail: stringField(doc.adminAlertEmail),
+    // 配送プラン
+    shippingPlans: (() => {
+      const rawPlans = (doc.shippingPlans as unknown as Array<Record<string, unknown>>) ?? []
+      if (!Array.isArray(rawPlans) || rawPlans.length === 0) return null
+      const plans: ShippingPlan[] = rawPlans.map((p) => {
+        const rawRegional = (p.regionalFees as Array<Record<string, unknown>> | undefined) ?? []
+        return {
+          id: (p.id as string | null | undefined) ?? null,
+          name: String(p.name ?? ''),
+          carrier: (p.carrier as ShippingPlan['carrier']) ?? 'other',
+          calculationMethod: (p.calculationMethod as ShippingPlan['calculationMethod']) ?? 'flat',
+          baseFee: typeof p.baseFee === 'number' ? p.baseFee : p.baseFee != null ? Number(p.baseFee) : null,
+          freeDistanceKm: typeof p.freeDistanceKm === 'number' ? p.freeDistanceKm : p.freeDistanceKm != null ? Number(p.freeDistanceKm) : null,
+          extraPerKmFee: typeof p.extraPerKmFee === 'number' ? p.extraPerKmFee : p.extraPerKmFee != null ? Number(p.extraPerKmFee) : null,
+          freeThreshold: typeof p.freeThreshold === 'number' ? p.freeThreshold : p.freeThreshold != null ? Number(p.freeThreshold) : null,
+          regionalFees: rawRegional.map((r) => ({
+            region: String(r.region ?? ''),
+            fee: typeof r.fee === 'number' ? r.fee : Number(r.fee ?? 0),
+            note: (r.note as string | null | undefined) ?? null,
+          })),
+          estimatedDaysMin: typeof p.estimatedDaysMin === 'number' ? p.estimatedDaysMin : p.estimatedDaysMin != null ? Number(p.estimatedDaysMin) : null,
+          estimatedDaysMax: typeof p.estimatedDaysMax === 'number' ? p.estimatedDaysMax : p.estimatedDaysMax != null ? Number(p.estimatedDaysMax) : null,
+          supportedAreas: (p.supportedAreas as string | null | undefined) ?? null,
+          restrictedAreas: (p.restrictedAreas as string | null | undefined) ?? null,
+          active: Boolean(p.active ?? true),
+          sortOrder: typeof p.sortOrder === 'number' ? p.sortOrder : Number(p.sortOrder ?? 0),
+          notes: (p.notes as string | null | undefined) ?? null,
+        }
+      })
+      return plans
+    })(),
   }
   _cacheExpiresAt = now + CACHE_TTL_MS
   return _cache

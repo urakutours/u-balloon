@@ -1,21 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSiteSettings, type SiteSettingsData } from '@/lib/site-settings'
-
-type ShippingRequest = {
-  destinationAddress: string
-  productType: 'standard' | 'delivery'
-  cartSubtotal: number
-}
+import { getSiteSettings } from '@/lib/site-settings'
+import {
+  calculateShippingForPlan,
+  extractPrefecture,
+  getActiveSortedPlans,
+  getShippingPlanById,
+  buildLegacyPlansFromOldSettings,
+} from '@/lib/shipping'
+import type { SiteSettingsData } from '@/lib/site-settings'
 
 /**
  * Google Maps Distance Matrix API を使って距離を取得
- * API KEY未設定時は10kmの固定値を返す
+ * API KEY未設定時または失敗時は10kmの固定値を返す
  */
-async function getDistanceKm(
+async function fetchDistanceKm(
+  settings: SiteSettingsData,
   destination: string,
-  origin: string,
-  apiKey: string | null,
 ): Promise<{ distanceKm: number; isMock: boolean }> {
+  const origin = settings.shippingOriginAddress || '東京都港区'
+  const apiKey = settings.googleMapsApiKey || null
+
   if (!apiKey) {
     console.log('[Shipping] Google Maps APIキー未設定 → モックモード (10km固定)')
     return { distanceKm: 10, isMock: true }
@@ -52,98 +56,121 @@ async function getDistanceKm(
   }
 }
 
-/**
- * 送料計算ロジック — 料金パラメータは SiteSettings から取得
- */
-function calculateShippingFee(
-  distanceKm: number,
-  productType: 'standard' | 'delivery',
-  cartSubtotal: number,
-  settings: SiteSettingsData,
-): { shippingFee: number; breakdown: string } {
-  const perKmFee = settings.shippingExtraPerKmFee ?? 200
-
-  if (productType === 'standard') {
-    const baseFee = settings.shippingStandardBaseFee ?? 1200
-    const freeKm = settings.shippingStandardFreeDistanceKm ?? 5
-
-    if (distanceKm <= freeKm) {
-      return {
-        shippingFee: baseFee,
-        breakdown: `基本料 ¥${baseFee.toLocaleString()}（${distanceKm}km / ${freeKm}km以内）`,
-      }
-    }
-    const excessKm = distanceKm - freeKm
-    const excessFee = excessKm * perKmFee
-    const total = baseFee + excessFee
-    return {
-      shippingFee: total,
-      breakdown: `基本料 ¥${baseFee.toLocaleString()} + 超過${excessKm}km × ¥${perKmFee} = ¥${total.toLocaleString()}`,
-    }
-  }
-
-  // デリバリー限定商品
-  const baseFee = settings.shippingDeliveryBaseFee ?? 4500
-  const freeKm = settings.shippingDeliveryFreeDistanceKm ?? 10
-  const freeThreshold = settings.shippingDeliveryFreeThreshold ?? 30000
-
-  if (distanceKm <= freeKm) {
-    if (freeThreshold > 0 && cartSubtotal >= freeThreshold) {
-      return {
-        shippingFee: 0,
-        breakdown: `送料無料（商品合計 ¥${cartSubtotal.toLocaleString()} ≥ ¥${freeThreshold.toLocaleString()} / ${distanceKm}km / ${freeKm}km以内）`,
-      }
-    }
-    return {
-      shippingFee: baseFee,
-      breakdown: `基本料 ¥${baseFee.toLocaleString()}（${distanceKm}km / ${freeKm}km以内）`,
-    }
-  }
-
-  // 無料距離超過
-  const excessKm = distanceKm - freeKm
-  const excessFee = excessKm * perKmFee
-
-  if (freeThreshold > 0 && cartSubtotal >= freeThreshold) {
-    return {
-      shippingFee: excessFee,
-      breakdown: `基本料無料（¥${freeThreshold.toLocaleString()}以上）+ 超過${excessKm}km × ¥${perKmFee} = ¥${excessFee.toLocaleString()}`,
-    }
-  }
-
-  const total = baseFee + excessFee
-  return {
-    shippingFee: total,
-    breakdown: `基本料 ¥${baseFee.toLocaleString()} + 超過${excessKm}km × ¥${perKmFee} = ¥${total.toLocaleString()}`,
-  }
-}
-
 export async function POST(req: NextRequest) {
   try {
-    const body: ShippingRequest = await req.json()
-    const { destinationAddress, productType, cartSubtotal } = body
+    const body = await req.json().catch(() => ({}))
+    const {
+      destinationAddress,
+      cartSubtotal = 0,
+      productType,
+      planId,
+    }: {
+      destinationAddress?: string
+      cartSubtotal?: number
+      productType?: 'standard' | 'delivery'
+      planId?: string
+    } = body
 
     if (!destinationAddress) {
       return NextResponse.json({ error: 'destinationAddress は必須です' }, { status: 400 })
     }
-    if (!productType || !['standard', 'delivery'].includes(productType)) {
-      return NextResponse.json({ error: 'productType は standard または delivery を指定してください' }, { status: 400 })
-    }
-    if (cartSubtotal === undefined || cartSubtotal < 0) {
-      return NextResponse.json({ error: 'cartSubtotal は0以上の数値を指定してください' }, { status: 400 })
-    }
 
     const settings = await getSiteSettings()
-    const origin = settings.shippingOriginAddress || '東京都港区'
-    const apiKey = settings.googleMapsApiKey || null
-    const { distanceKm, isMock } = await getDistanceKm(destinationAddress, origin, apiKey)
-    const { shippingFee, breakdown } = calculateShippingFee(distanceKm, productType, cartSubtotal, settings)
+
+    // 取得可能なプランリスト
+    let plans = getActiveSortedPlans(settings.shippingPlans)
+    if (plans.length === 0) {
+      // fallback: 旧フィールドから生成
+      plans = buildLegacyPlansFromOldSettings(settings)
+    }
+
+    if (plans.length === 0) {
+      return NextResponse.json({ error: 'No shipping plans configured' }, { status: 500 })
+    }
+
+    const destinationPrefecture = extractPrefecture(destinationAddress)
+
+    // distance_based プランが1件以上ある場合のみ Distance Matrix API を呼ぶ
+    const anyDistanceBased = plans.some(p => p.calculationMethod === 'distance_based')
+    let distanceKm: number | null = null
+    let isMock = false
+
+    if (anyDistanceBased) {
+      const result = await fetchDistanceKm(settings, destinationAddress)
+      distanceKm = result.distanceKm
+      isMock = result.isMock
+    }
+
+    // planId 指定モード
+    if (planId) {
+      const p = getShippingPlanById(plans, planId)
+      if (!p) {
+        return NextResponse.json({ error: 'plan not found' }, { status: 404 })
+      }
+      const calc = calculateShippingForPlan({ plan: p, distanceKm, cartSubtotal, destinationPrefecture })
+      return NextResponse.json({
+        shippingFee: calc.shippingFee,
+        distanceKm,
+        breakdown: calc.breakdown,
+        shippingPlan: {
+          id: p.id ?? null,
+          name: p.name,
+          carrier: p.carrier,
+          estimatedDaysMin: p.estimatedDaysMin,
+          estimatedDaysMax: p.estimatedDaysMax,
+        },
+        isMock,
+        eligible: calc.eligible,
+        reason: calc.reason ?? null,
+      })
+    }
+
+    // productType 指定モード（後方互換）
+    if (productType === 'delivery' || productType === 'standard') {
+      const preferred =
+        productType === 'delivery'
+          ? (plans.find(p => p.carrier === 'self_delivery') ?? plans[0])
+          : (plans.find(p => p.carrier !== 'self_delivery') ?? plans[0])
+      const calc = calculateShippingForPlan({ plan: preferred, distanceKm, cartSubtotal, destinationPrefecture })
+      return NextResponse.json({
+        shippingFee: calc.shippingFee,
+        distanceKm,
+        breakdown: calc.breakdown,
+        shippingPlan: {
+          id: preferred.id ?? null,
+          name: preferred.name,
+          carrier: preferred.carrier,
+          estimatedDaysMin: preferred.estimatedDaysMin,
+          estimatedDaysMax: preferred.estimatedDaysMax,
+        },
+        isMock,
+        eligible: calc.eligible,
+        reason: calc.reason ?? null,
+      })
+    }
+
+    // 全プランモード（planId も productType も未指定）
+    const results = plans.map(p => {
+      const calc = calculateShippingForPlan({ plan: p, distanceKm, cartSubtotal, destinationPrefecture })
+      return {
+        planId: p.id ?? null,
+        planName: p.name,
+        carrier: p.carrier,
+        estimatedDaysMin: p.estimatedDaysMin,
+        estimatedDaysMax: p.estimatedDaysMax,
+        shippingFee: calc.shippingFee,
+        distanceKm,
+        eligible: calc.eligible,
+        reason: calc.reason ?? null,
+        breakdown: calc.breakdown,
+      }
+    })
 
     return NextResponse.json({
+      plans: results,
       distanceKm,
-      shippingFee,
-      breakdown,
-      ...(isMock ? { note: 'Google Maps APIキー未設定のためモックデータ（10km固定）を使用' } : {}),
+      isMock,
+      destinationPrefecture,
     })
   } catch (err) {
     console.error('[Shipping] Error:', err)

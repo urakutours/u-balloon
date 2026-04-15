@@ -494,7 +494,7 @@ export const SiteSettings: GlobalConfig = {
                   label: '振込期限（日数）',
                   defaultValue: 7,
                   admin: {
-                    description: '注文日から振込期限までの日数。',
+                    description: '発送予定日のこの日数前までに振込いただく期限。例: 3 日前、5 日前。\n注文ごとに発送予定日が設定されていない場合は、注文日基準で暫定計算されます。',
                   },
                 },
               ],
@@ -518,6 +518,196 @@ export const SiteSettings: GlobalConfig = {
                     description: 'Google Maps Distance Matrix API で距離計算に使用する出発地点。',
                   },
                 },
+                // ─── 新: 配送プラン ───
+                {
+                  name: 'shippingPlans',
+                  type: 'array',
+                  label: '配送プラン',
+                  admin: {
+                    description: '配送プランを複数定義できます。プランごとに料金・計算方法・対応エリアを設定します。',
+                    initCollapsed: false,
+                  },
+                  fields: [
+                    {
+                      type: 'row',
+                      fields: [
+                        {
+                          name: 'name',
+                          type: 'text',
+                          label: 'プラン名',
+                          required: true,
+                          admin: { placeholder: '例: ヤマト運輸 宅急便', width: '50%' },
+                        },
+                        {
+                          name: 'carrier',
+                          type: 'select',
+                          label: 'キャリア種別',
+                          defaultValue: 'other',
+                          options: [
+                            { label: 'ヤマト運輸', value: 'yamato' },
+                            { label: '佐川急便', value: 'sagawa' },
+                            { label: 'ゆうパック', value: 'yupack' },
+                            { label: '自社デリバリー便', value: 'self_delivery' },
+                            { label: 'その他', value: 'other' },
+                          ],
+                          admin: { width: '50%' },
+                        },
+                      ],
+                    },
+                    {
+                      name: 'calculationMethod',
+                      type: 'select',
+                      label: '計算方法',
+                      required: true,
+                      defaultValue: 'flat',
+                      options: [
+                        { label: '固定料金', value: 'flat' },
+                        { label: '距離ベース（基本料金 + 超過分）', value: 'distance_based' },
+                        { label: '地域別固定', value: 'regional_table' },
+                        { label: '無料', value: 'free' },
+                      ],
+                      admin: {
+                        description: '計算方法により下の料金フィールドの使い方が変わります。',
+                      },
+                    },
+                    {
+                      type: 'row',
+                      fields: [
+                        {
+                          name: 'baseFee',
+                          type: 'number',
+                          label: '基本料金（円）',
+                          defaultValue: 0,
+                          min: 0,
+                          admin: { width: '33%', description: 'flat / distance_based で使用' },
+                        },
+                        {
+                          name: 'freeDistanceKm',
+                          type: 'number',
+                          label: '無料距離（km）',
+                          min: 0,
+                          admin: { width: '33%', description: 'distance_based で使用' },
+                        },
+                        {
+                          name: 'extraPerKmFee',
+                          type: 'number',
+                          label: '距離超過単価（円/km）',
+                          min: 0,
+                          admin: { width: '34%', description: 'distance_based で使用' },
+                        },
+                      ],
+                    },
+                    {
+                      name: 'freeThreshold',
+                      type: 'number',
+                      label: '送料無料閾値（円）',
+                      min: 0,
+                      admin: {
+                        description: '注文金額がこの金額以上の場合、このプランの送料を無料にします。0 or 未設定で無効。',
+                      },
+                    },
+                    {
+                      name: 'regionalFees',
+                      type: 'array',
+                      label: '地域別送料（計算方法 "地域別固定" で使用）',
+                      admin: {
+                        description: '地域ごとの固定料金。都道府県を区切る「地域名」は都道府県と部分一致する文字列で判定します。',
+                        initCollapsed: true,
+                      },
+                      fields: [
+                        {
+                          type: 'row',
+                          fields: [
+                            {
+                              name: 'region',
+                              type: 'text',
+                              label: '地域名',
+                              required: true,
+                              admin: { placeholder: '例: 東京都', width: '40%' },
+                            },
+                            {
+                              name: 'fee',
+                              type: 'number',
+                              label: '料金（円）',
+                              required: true,
+                              min: 0,
+                              admin: { width: '30%' },
+                            },
+                            {
+                              name: 'note',
+                              type: 'text',
+                              label: '備考',
+                              admin: { width: '30%' },
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                    {
+                      type: 'row',
+                      fields: [
+                        {
+                          name: 'estimatedDaysMin',
+                          type: 'number',
+                          label: '配送日数 最短',
+                          min: 0,
+                          admin: { width: '50%', description: '発送からの日数' },
+                        },
+                        {
+                          name: 'estimatedDaysMax',
+                          type: 'number',
+                          label: '配送日数 最長',
+                          min: 0,
+                          admin: { width: '50%' },
+                        },
+                      ],
+                    },
+                    {
+                      name: 'supportedAreas',
+                      type: 'textarea',
+                      label: '対応可能エリア（説明文）',
+                      admin: {
+                        description: '例: 全国 / 関東のみ / 東京都内のみ など。表示用のメモ。',
+                      },
+                    },
+                    {
+                      name: 'restrictedAreas',
+                      type: 'text',
+                      label: 'このプランの配送不可エリア',
+                      admin: {
+                        description: '例: 沖縄県、離島。カンマ区切り。',
+                      },
+                    },
+                    {
+                      type: 'row',
+                      fields: [
+                        {
+                          name: 'active',
+                          type: 'checkbox',
+                          label: 'アクティブ',
+                          defaultValue: true,
+                          admin: { width: '30%' },
+                        },
+                        {
+                          name: 'sortOrder',
+                          type: 'number',
+                          label: '表示順',
+                          defaultValue: 0,
+                          admin: { width: '30%' },
+                        },
+                      ],
+                    },
+                    {
+                      name: 'notes',
+                      type: 'textarea',
+                      label: '管理者メモ',
+                      admin: {
+                        description: '内部管理用メモ（ユーザーには表示されません）。',
+                      },
+                    },
+                  ],
+                },
+                // ─── 旧: 配送料設定（非推奨・shippingPlans へ移行中） ───
                 {
                   type: 'row',
                   fields: [
@@ -525,7 +715,7 @@ export const SiteSettings: GlobalConfig = {
                       name: 'shippingStandardBaseFee',
                       type: 'number',
                       label: '通常配送 基本料金（円）',
-                      admin: { placeholder: '1200', width: '50%' },
+                      admin: { placeholder: '1200', width: '50%', description: '【旧設定・shippingPlans へ移行中】' },
                     },
                     {
                       name: 'shippingStandardFreeDistanceKm',
@@ -534,7 +724,7 @@ export const SiteSettings: GlobalConfig = {
                       admin: {
                         placeholder: '5',
                         width: '50%',
-                        description: 'この距離以内は基本料金のみ。超過分に距離単価が加算されます。',
+                        description: '【旧設定・shippingPlans へ移行中】この距離以内は基本料金のみ。超過分に距離単価が加算されます。',
                       },
                     },
                   ],
@@ -546,13 +736,13 @@ export const SiteSettings: GlobalConfig = {
                       name: 'shippingDeliveryBaseFee',
                       type: 'number',
                       label: 'デリバリー配送 基本料金（円）',
-                      admin: { placeholder: '4500', width: '50%' },
+                      admin: { placeholder: '4500', width: '50%', description: '【旧設定・shippingPlans へ移行中】' },
                     },
                     {
                       name: 'shippingDeliveryFreeDistanceKm',
                       type: 'number',
                       label: 'デリバリー配送 無料距離（km）',
-                      admin: { placeholder: '10', width: '50%' },
+                      admin: { placeholder: '10', width: '50%', description: '【旧設定・shippingPlans へ移行中】' },
                     },
                   ],
                 },
@@ -566,7 +756,7 @@ export const SiteSettings: GlobalConfig = {
                       admin: {
                         placeholder: '200',
                         width: '50%',
-                        description: '無料距離を超えた場合の1kmあたりの追加料金。通常・デリバリー共通。',
+                        description: '【旧設定・shippingPlans へ移行中】無料距離を超えた場合の1kmあたりの追加料金。通常・デリバリー共通。',
                       },
                     },
                     {
@@ -576,7 +766,7 @@ export const SiteSettings: GlobalConfig = {
                       admin: {
                         placeholder: '30000',
                         width: '50%',
-                        description: '注文金額がこの金額以上の場合、デリバリー基本料を無料にする。0で無効。',
+                        description: '【旧設定・shippingPlans へ移行中】注文金額がこの金額以上の場合、デリバリー基本料を無料にする。0で無効。',
                       },
                     },
                   ],
@@ -586,7 +776,7 @@ export const SiteSettings: GlobalConfig = {
                   type: 'array',
                   label: '地域別送料テーブル',
                   admin: {
-                    description: '地域ごとの送料一覧。ご利用ガイドページと特定商取引法ページに表示されます。無料の場合は 0 を入力してください。',
+                    description: '【旧設定・shippingPlans へ移行中】地域ごとの送料一覧。ご利用ガイドページと特定商取引法ページに表示されます。無料の場合は 0 を入力してください。',
                   },
                   fields: [
                     {
@@ -625,7 +815,7 @@ export const SiteSettings: GlobalConfig = {
                   type: 'text',
                   label: '配送不可エリア',
                   admin: {
-                    description: '配送できないエリア。特定商取引法ページ・ご利用ガイドページに表示されます。例: 沖縄県、離島',
+                    description: '【旧設定・shippingPlans へ移行中】配送できないエリア。特定商取引法ページ・ご利用ガイドページに表示されます。例: 沖縄県、離島',
                     placeholder: '沖縄県、離島',
                   },
                 },
