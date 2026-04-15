@@ -34,17 +34,7 @@ type PlanOption = {
   eligible: boolean
   reason: string | null
   breakdown: Record<string, unknown>
-}
-
-function computeScheduledShipDate(
-  plan: PlanOption | undefined,
-  desiredArrivalDate: string | null | undefined,
-): string | undefined {
-  if (!plan || !desiredArrivalDate) return undefined
-  const daysMin = plan.estimatedDaysMin ?? 0
-  const d = new Date(desiredArrivalDate)
-  d.setDate(d.getDate() - daysMin)
-  return d.toISOString()
+  scheduledShipDate: string | null
 }
 
 export default function CheckoutPage() {
@@ -85,6 +75,9 @@ export default function CheckoutPage() {
   // Shipping plan selection
   const [planOptions, setPlanOptions] = useState<PlanOption[]>([])
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
+
+  // 営業日補正済み発送予定日（サーバーから取得）
+  const [scheduledShipDate, setScheduledShipDate] = useState<string | null>(null)
 
   // Available dates
   const [availableDates, setAvailableDates] = useState<Set<string>>(new Set())
@@ -127,14 +120,19 @@ export default function CheckoutPage() {
     fetchDates()
   }, [cartProductType])
 
-  const calculateShipping = useCallback(async () => {
+  const calculateShipping = useCallback(async (arrivalDateOverride?: string) => {
     if (!address.trim()) return
     setShippingCalculating(true)
+    const desiredArrivalDateStr = arrivalDateOverride ?? (desiredDate ? format(desiredDate, 'yyyy-MM-dd') : undefined)
     try {
       const res = await fetch('/api/calculate-shipping', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ destinationAddress: address, cartSubtotal: subtotal }),
+        body: JSON.stringify({
+          destinationAddress: address,
+          cartSubtotal: subtotal,
+          desiredArrivalDate: desiredArrivalDateStr,
+        }),
       })
       if (!res.ok) return
       const data = await res.json()
@@ -152,6 +150,9 @@ export default function CheckoutPage() {
             shippingFee: firstEligible.shippingFee,
             breakdown: String(firstEligible.breakdown?.summary ?? ''),
           })
+          setScheduledShipDate(firstEligible.scheduledShipDate ?? null)
+        } else {
+          setScheduledShipDate(null)
         }
       }
     } catch (err) {
@@ -159,7 +160,7 @@ export default function CheckoutPage() {
     } finally {
       setShippingCalculating(false)
     }
-  }, [address, cartProductType, subtotal])
+  }, [address, cartProductType, desiredDate, subtotal])
 
   const isDateDisabled = (date: Date) => !availableDates.has(format(date, 'yyyy-MM-dd'))
 
@@ -168,6 +169,9 @@ export default function CheckoutPage() {
   const maxUsablePoints = Math.min(user?.points ?? 0, subtotal + shippingFee)
   const pointsDiscount = Math.min(pointsToUse, maxUsablePoints)
   const totalAmount = subtotal + shippingFee - pointsDiscount
+
+  // 全プランが ineligible または 0 件かどうかの判定
+  const hasIneligibleOnly = planOptions.length > 0 && planOptions.every((p) => !p.eligible)
 
   const handleSubmit = async () => {
     if (!user) return
@@ -199,7 +203,7 @@ export default function CheckoutPage() {
           notes: notes || undefined,
           shippingPlanId: selectedPlan?.planId,
           shippingPlanName: selectedPlan?.planName,
-          scheduledShipDate: computeScheduledShipDate(selectedPlan, desiredArrivalDateStr),
+          scheduledShipDate: scheduledShipDate ?? undefined,
         }),
       })
 
@@ -296,6 +300,7 @@ export default function CheckoutPage() {
                   setShippingResult(null)
                   setPlanOptions([])
                   setSelectedPlanId(null)
+                  setScheduledShipDate(null)
                 }}
                 className="text-base sm:text-sm"
               />
@@ -303,7 +308,7 @@ export default function CheckoutPage() {
                 variant="outline"
                 size="sm"
                 className="w-full gap-2 sm:w-auto"
-                onClick={calculateShipping}
+                onClick={() => calculateShipping()}
                 disabled={!address.trim() || shippingCalculating}
               >
                 {shippingCalculating ? (
@@ -344,6 +349,7 @@ export default function CheckoutPage() {
                         if (p.eligible) {
                           setSelectedPlanId(p.planId)
                           setShippingResult((prev) => prev ? { ...prev, shippingFee: p.shippingFee } : null)
+                          setScheduledShipDate(p.scheduledShipDate ?? null)
                         }
                       }}
                       className="mt-1 accent-brand-teal"
@@ -400,7 +406,16 @@ export default function CheckoutPage() {
                     <Calendar
                       mode="single"
                       selected={desiredDate}
-                      onSelect={(date) => { setDesiredDate(date); setDatePickerOpen(false) }}
+                      onSelect={(date) => {
+                        setDesiredDate(date)
+                        setDatePickerOpen(false)
+                        // 住所が入力済みなら到着希望日変更時に shipping を再計算して scheduledShipDate を更新
+                        if (date && address.trim()) {
+                          calculateShipping(format(date, 'yyyy-MM-dd'))
+                        } else {
+                          setScheduledShipDate(null)
+                        }
+                      }}
                       disabled={isDateDisabled}
                       fromDate={addDays(new Date(), 1)}
                       toDate={addMonths(new Date(), 3)}
@@ -570,11 +585,16 @@ export default function CheckoutPage() {
               className="mt-6 w-full gap-2 bg-brand-dark font-semibold hover:bg-brand-dark/90"
               size="lg"
               onClick={handleSubmit}
-              disabled={submitting || !selectedPlanId}
+              disabled={submitting || !selectedPlanId || hasIneligibleOnly}
             >
               {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> 処理中...</> : '決済へ進む'}
             </Button>
-            {!selectedPlanId && (
+            {hasIneligibleOnly && (
+              <p className="mt-2 text-center text-xs text-destructive">
+                お届け先エリアに対応する配送プランがありません。住所をご確認ください
+              </p>
+            )}
+            {!selectedPlanId && !hasIneligibleOnly && (
               <p className="mt-2 text-center text-xs text-foreground/40">
                 配送プランを選択してから決済に進めます
               </p>
@@ -594,10 +614,12 @@ export default function CheckoutPage() {
             className="w-full gap-2 bg-brand-dark font-semibold hover:bg-brand-dark/90"
             size="lg"
             onClick={handleSubmit}
-            disabled={submitting || !selectedPlanId}
+            disabled={submitting || !selectedPlanId || hasIneligibleOnly}
           >
             {submitting ? (
               <><Loader2 className="h-4 w-4 animate-spin" /> 処理中...</>
+            ) : hasIneligibleOnly ? (
+              '対応エリア外のため注文できません'
             ) : !selectedPlanId ? (
               '配送プランを先に選択してください'
             ) : (

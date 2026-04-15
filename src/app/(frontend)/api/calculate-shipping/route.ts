@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getPayload } from 'payload'
+import config from '@payload-config'
 import { getSiteSettings } from '@/lib/site-settings'
 import {
   calculateShippingForPlan,
@@ -8,6 +10,12 @@ import {
   buildLegacyPlansFromOldSettings,
 } from '@/lib/shipping'
 import type { SiteSettingsData } from '@/lib/site-settings'
+import {
+  fetchBusinessCalendarMap,
+  previousBusinessDay,
+  nextBusinessDay,
+  formatDateStr,
+} from '@/lib/business-calendar'
 
 /**
  * Google Maps Distance Matrix API を使って距離を取得
@@ -56,6 +64,67 @@ async function fetchDistanceKm(
   }
 }
 
+/**
+ * 暫定 shipDate（YYYY-MM-DD）を受け取り、BusinessCalendar で営業日補正した日付を返す。
+ *
+ * - 非営業日なら previousBusinessDay で直前営業日に寄せる
+ * - estimatedDaysMin === 0（当日配送）の特例: today の翌営業日を下限とする
+ */
+async function computeScheduledShipDate(
+  desiredArrivalDate: string,
+  estimatedDaysMin: number,
+): Promise<string> {
+  // カレンダー取得範囲: 前後 60 日
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const desired = parseLocalDate(desiredArrivalDate)
+
+  const rangeFrom = new Date(today)
+  rangeFrom.setDate(rangeFrom.getDate() - 1)
+  const rangeTo = new Date(desired)
+  rangeTo.setDate(rangeTo.getDate() + 1)
+
+  let calendarMap
+  try {
+    const payload = await getPayload({ config })
+    calendarMap = await fetchBusinessCalendarMap(
+      payload,
+      formatDateStr(rangeFrom),
+      formatDateStr(rangeTo),
+    )
+  } catch {
+    // Payload 取得失敗時は空 Map で継続（非営業日補正なし、regression しない）
+    calendarMap = new Map()
+  }
+
+  if (estimatedDaysMin === 0) {
+    // 当日配送: 発送予定日 = 到着希望日の前日を起点にするが、today の翌営業日を下限とする
+    const prevDay = new Date(desired)
+    prevDay.setDate(prevDay.getDate() - 1)
+    const adjusted = previousBusinessDay(prevDay, calendarMap)
+
+    // today 翌営業日（= 最早発送可能日）を下限として Math.max
+    const todayPlusOne = new Date(today)
+    todayPlusOne.setDate(todayPlusOne.getDate() + 1)
+    const lowerBound = nextBusinessDay(todayPlusOne, calendarMap)
+
+    return adjusted >= lowerBound ? formatDateStr(adjusted) : formatDateStr(lowerBound)
+  }
+
+  // 通常ケース: desiredArrivalDate - estimatedDaysMin 日 → previousBusinessDay で補正
+  const tentative = new Date(desired)
+  tentative.setDate(tentative.getDate() - estimatedDaysMin)
+  const adjusted = previousBusinessDay(tentative, calendarMap)
+  return formatDateStr(adjusted)
+}
+
+/** YYYY-MM-DD を UTC ズレなしでパースする */
+function parseLocalDate(dateStr: string): Date {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}))
@@ -64,11 +133,13 @@ export async function POST(req: NextRequest) {
       cartSubtotal = 0,
       productType,
       planId,
+      desiredArrivalDate,
     }: {
       destinationAddress?: string
       cartSubtotal?: number
       productType?: 'standard' | 'delivery'
       planId?: string
+      desiredArrivalDate?: string
     } = body
 
     if (!destinationAddress) {
@@ -123,6 +194,15 @@ export async function POST(req: NextRequest) {
     if (planId) {
       const p = targetPlans[0]
       const calc = calculateShippingForPlan({ plan: p, distanceKm, cartSubtotal, destinationPrefecture })
+
+      let scheduledShipDate: string | undefined
+      if (desiredArrivalDate && calc.eligible) {
+        scheduledShipDate = await computeScheduledShipDate(
+          desiredArrivalDate,
+          p.estimatedDaysMin ?? 0,
+        )
+      }
+
       return NextResponse.json({
         shippingFee: calc.shippingFee,
         distanceKm,
@@ -137,6 +217,7 @@ export async function POST(req: NextRequest) {
         isMock,
         eligible: calc.eligible,
         reason: calc.reason ?? null,
+        scheduledShipDate: scheduledShipDate ?? null,
       })
     }
 
@@ -144,6 +225,15 @@ export async function POST(req: NextRequest) {
     if (productType === 'delivery' || productType === 'standard') {
       const preferred = targetPlans[0]
       const calc = calculateShippingForPlan({ plan: preferred, distanceKm, cartSubtotal, destinationPrefecture })
+
+      let scheduledShipDate: string | undefined
+      if (desiredArrivalDate && calc.eligible) {
+        scheduledShipDate = await computeScheduledShipDate(
+          desiredArrivalDate,
+          preferred.estimatedDaysMin ?? 0,
+        )
+      }
+
       return NextResponse.json({
         shippingFee: calc.shippingFee,
         distanceKm,
@@ -158,25 +248,38 @@ export async function POST(req: NextRequest) {
         isMock,
         eligible: calc.eligible,
         reason: calc.reason ?? null,
+        scheduledShipDate: scheduledShipDate ?? null,
       })
     }
 
     // 全プランモード（planId も productType も未指定）
-    const results = plans.map(p => {
-      const calc = calculateShippingForPlan({ plan: p, distanceKm, cartSubtotal, destinationPrefecture })
-      return {
-        planId: p.id ?? null,
-        planName: p.name,
-        carrier: p.carrier,
-        estimatedDaysMin: p.estimatedDaysMin,
-        estimatedDaysMax: p.estimatedDaysMax,
-        shippingFee: calc.shippingFee,
-        distanceKm,
-        eligible: calc.eligible,
-        reason: calc.reason ?? null,
-        breakdown: calc.breakdown,
-      }
-    })
+    const results = await Promise.all(
+      plans.map(async (p) => {
+        const calc = calculateShippingForPlan({ plan: p, distanceKm, cartSubtotal, destinationPrefecture })
+
+        let scheduledShipDate: string | undefined
+        if (desiredArrivalDate && calc.eligible) {
+          scheduledShipDate = await computeScheduledShipDate(
+            desiredArrivalDate,
+            p.estimatedDaysMin ?? 0,
+          )
+        }
+
+        return {
+          planId: p.id ?? null,
+          planName: p.name,
+          carrier: p.carrier,
+          estimatedDaysMin: p.estimatedDaysMin,
+          estimatedDaysMax: p.estimatedDaysMax,
+          shippingFee: calc.shippingFee,
+          distanceKm,
+          eligible: calc.eligible,
+          reason: calc.reason ?? null,
+          breakdown: calc.breakdown,
+          scheduledShipDate: scheduledShipDate ?? null,
+        }
+      }),
+    )
 
     return NextResponse.json({
       plans: results,
