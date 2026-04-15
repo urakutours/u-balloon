@@ -154,6 +154,7 @@ export async function POST(req: NextRequest) {
     const errStack = error instanceof Error ? error.stack : undefined
     console.error('[create-bank-transfer-order] Error:', errMsg)
     if (errStack) console.error(errStack)
-    return NextResponse.json({ error: `Internal server error: ${errMsg}` }, { status: 500 })
+    // 詳細エラーはログにのみ残し、ユーザーには汎用メッセージを返す
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
