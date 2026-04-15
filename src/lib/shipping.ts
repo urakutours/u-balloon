@@ -94,7 +94,8 @@ export function calculateShippingForPlan(input: ShippingCalcInput): ShippingCalc
       const freeKm = plan.freeDistanceKm ?? 0
       const perKm = plan.extraPerKmFee ?? 0
       const extraDistance = Math.max(0, distanceKm - freeKm)
-      const extraFee = Math.ceil(extraDistance) * perKm
+      // 端数 km × 単価 → 円単位で切り上げ（距離側で ceil すると端数 km × perKm 分が過大になる）
+      const extraFee = Math.ceil(extraDistance * perKm)
       const freeDistanceApplied = distanceKm <= freeKm
       return {
         shippingFee: base + extraFee,
