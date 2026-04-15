@@ -136,7 +136,10 @@ export async function POST(req: NextRequest) {
       totalAmount: resolvedTotal,
     })
   } catch (error) {
-    console.error('Bank transfer order error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    const errMsg = error instanceof Error ? error.message : String(error)
+    const errStack = error instanceof Error ? error.stack : undefined
+    console.error('[create-bank-transfer-order] Error:', errMsg)
+    if (errStack) console.error(errStack)
+    return NextResponse.json({ error: `Internal server error: ${errMsg}` }, { status: 500 })
   }
 }
