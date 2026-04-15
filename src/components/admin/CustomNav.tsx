@@ -172,12 +172,96 @@ export default function CustomNav() {
     }
   }, [isNarrow])
 
-  // NOTE: paginator ランタイム拡張 (< > 1 2 3 4 5 — N) は
-  // React の再レンダリングとの競合で動作が不安定になったため撤回。
-  // Payload デフォルトの `< > 1 2 — N` 表示で運用する。
-  // 将来的に numberOfNeighbors を増やしたい場合は
-  // scripts/patch-payload-paginator.mjs が Vercel ビルド時に
-  // numberOfNeighbors を 1 → 4 に書き換える（現状は効いていない）。
+  // NOTE: paginator 自体は Payload デフォルトの `< > 1 2 — N` 表示。
+  // React 再レンダと競合するため paginator の中身には手を出さない。
+  // 代わりに .page-controls 内に「ページジャンプ入力」を別要素として追加する。
+
+  // --- Page jump input (< > 1 2 — N の横に [N] ページへ ボタン) ---
+  useEffect(() => {
+    const injectJump = () => {
+      const pageControls = document.querySelector<HTMLElement>('.page-controls')
+      if (!pageControls) return
+      if (pageControls.querySelector('.page-jump')) return // 既に注入済み
+
+      const paginator = pageControls.querySelector<HTMLElement>('.paginator')
+      if (!paginator) return
+
+      const pages = Array.from(paginator.querySelectorAll<HTMLButtonElement>('.paginator__page'))
+      if (pages.length === 0) return
+      const lastPage = parseInt(pages[pages.length - 1].textContent || '1', 10)
+      if (isNaN(lastPage) || lastPage <= 1) return
+
+      // Create jump UI
+      const jumpDiv = document.createElement('div')
+      jumpDiv.className = 'page-jump'
+
+      const input = document.createElement('input')
+      input.type = 'number'
+      input.min = '1'
+      input.max = String(lastPage)
+      input.placeholder = '1'
+      input.setAttribute('aria-label', 'ジャンプ先ページ')
+
+      const btn = document.createElement('button')
+      btn.type = 'button'
+      btn.textContent = 'ページへ'
+      btn.setAttribute('aria-label', '指定ページへ移動')
+
+      const navigate = () => {
+        const raw = parseInt(input.value, 10)
+        if (isNaN(raw)) return
+        // 範囲外は自動補正 (1 〜 lastPage)
+        const clipped = Math.max(1, Math.min(raw, lastPage))
+
+        // Pagination の onChange を fiber 経由で取得してソフトナビ
+        const anyPage = paginator.querySelector<HTMLButtonElement>('.paginator__page')
+        if (anyPage) {
+          const fiberKey = Object.keys(anyPage).find((k) => k.startsWith('__reactFiber'))
+          if (fiberKey) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            let fiber: any = (anyPage as any)[fiberKey]
+            while (fiber) {
+              if (fiber.memoizedProps && typeof fiber.memoizedProps.onChange === 'function') {
+                fiber.memoizedProps.onChange(clipped)
+                input.value = ''
+                return
+              }
+              fiber = fiber.return
+            }
+          }
+        }
+
+        // Fallback: URL ハードナビ
+        const url = new URL(window.location.href)
+        url.searchParams.set('page', String(clipped))
+        window.location.href = url.toString()
+      }
+
+      btn.addEventListener('click', navigate)
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault()
+          navigate()
+        }
+      })
+
+      jumpDiv.appendChild(input)
+      jumpDiv.appendChild(btn)
+
+      // .page-controls__page-info の前に挿入（paginator → jump → pageInfo → per-page の順）
+      const pageInfo = pageControls.querySelector('.page-controls__page-info')
+      if (pageInfo) {
+        pageControls.insertBefore(jumpDiv, pageInfo)
+      } else {
+        pageControls.appendChild(jumpDiv)
+      }
+    }
+
+    injectJump()
+    const observer = new MutationObserver(() => injectJump())
+    observer.observe(document.body, { childList: true, subtree: true })
+    return () => observer.disconnect()
+  }, [])
 
   // Restore open sections from localStorage + auto-expand active group
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
@@ -299,6 +383,57 @@ export default function CustomNav() {
         [data-theme] .app-header__mobile-nav-toggler {
           display: none !important;
         }
+        /* ページジャンプ UI（全ビューポート共通の見た目） */
+        .page-jump {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12px;
+        }
+        .page-jump input {
+          width: 54px;
+          padding: 4px 6px;
+          border: 1px solid var(--theme-elevation-200, #cbd5e1);
+          border-radius: 4px;
+          background: var(--theme-bg, #fff);
+          color: var(--theme-text, #1e293b);
+          font-size: 12px;
+          text-align: center;
+          -moz-appearance: textfield;
+        }
+        .page-jump input::-webkit-outer-spin-button,
+        .page-jump input::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        .page-jump input:focus {
+          outline: none;
+          border-color: var(--theme-success-500, #22c55e);
+        }
+        .page-jump button {
+          padding: 4px 10px;
+          border: 1px solid var(--theme-elevation-200, #cbd5e1);
+          border-radius: 4px;
+          background: var(--theme-elevation-50, #f8fafc);
+          color: var(--theme-text, #1e293b);
+          font-size: 12px;
+          cursor: pointer;
+          white-space: nowrap;
+        }
+        .page-jump button:hover {
+          background: var(--theme-elevation-100, #f1f5f9);
+        }
+
+        /* paginator は常に独立行で表示（PC/モバイル共通） */
+        [data-theme] .page-controls {
+          flex-wrap: wrap !important;
+          align-items: center !important;
+          gap: 12px !important;
+        }
+        [data-theme] .page-controls > .paginator {
+          flex-basis: 100% !important;
+        }
+
         @media (max-width: 1023px) {
           [data-theme] .template-default,
           [data-theme] .template-default.template-default--nav-hydrated,
@@ -315,17 +450,19 @@ export default function CustomNav() {
           [data-theme] .template-default .template-default__wrap {
             padding-top: 56px !important;
           }
-          /* ページネーションを中央揃え + 折り返し対応。
-             .paginator は 100% 幅で独立行に、page-info/per-page は次行に折り返して中央配置 */
+          /* Narrow: 全要素中央配置、paginator は中身も中央 */
           [data-theme] .page-controls {
             justify-content: center !important;
-            align-items: center !important;
-            flex-wrap: wrap !important;
-            gap: 12px !important;
           }
           [data-theme] .page-controls > .paginator {
-            flex-basis: 100% !important;
             justify-content: center !important;
+          }
+        }
+        /* モバイル (<768px): ページジャンプも独立行に */
+        @media (max-width: 767px) {
+          [data-theme] .page-controls > .page-jump {
+            flex-basis: 100% !important;
+            justify-content: center;
           }
         }
         /* モバイル (<768px): .template-default__wrap の左右 padding をゼロに。
