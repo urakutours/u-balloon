@@ -158,9 +158,6 @@ export async function POST(req: NextRequest) {
         isMock,
         eligible: calc.eligible,
         reason: calc.reason ?? null,
-        _debugVersion: 'whitelist-v1',
-        _debugDest: destinationPrefecture,
-        _debugPlanSupportedAreas: preferred.supportedAreas,
       })
     }
 

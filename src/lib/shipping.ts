@@ -50,7 +50,6 @@ export function calculateShippingForPlan(input: ShippingCalcInput): ShippingCalc
   // 「全国」が含まれていれば whitelist チェックをスキップ）
   if (plan.supportedAreas && destinationPrefecture && !plan.supportedAreas.includes('全国')) {
     const allowed = extractAllPrefectures(plan.supportedAreas)
-    console.log(`[shipping:whitelist] plan=${plan.name} supportedAreas=${plan.supportedAreas} allowed=${JSON.stringify(allowed)} dest=${destinationPrefecture}`)
     if (allowed.length > 0 && !allowed.some(a => destinationPrefecture === a)) {
       return {
         shippingFee: 0,
