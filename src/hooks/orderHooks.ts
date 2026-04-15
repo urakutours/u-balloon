@@ -3,6 +3,7 @@ import { earnPoints } from '@/lib/points'
 import { sendEmail } from '@/lib/email'
 import { OrderConfirmEmail, OrderStatusUpdateEmail, PointsEarnedEmail } from '@/lib/email-templates'
 import type { OrderConfirmEmailProps } from '@/lib/email-templates'
+import { renderEmailBlocks } from '@/lib/email-template-renderer'
 import { sendAdminAlert } from '@/lib/admin-alerts'
 import { getSiteSettings } from '@/lib/site-settings'
 import React from 'react'
@@ -96,6 +97,13 @@ async function processOrderCreate(payload: Payload, doc: Record<string, unknown>
         bankTransferDeadline: (doc.bankTransferDeadline as string | undefined) ?? undefined,
       }
     }
+
+    // Fetch DB-driven text blocks for order-confirm template (hybrid approach)
+    const blocksResult = await renderEmailBlocks('order-confirm', {
+      name: baseEmailProps.name,
+      orderNumber: baseEmailProps.orderNumber,
+    })
+    emailProps = { ...emailProps, blocks: blocksResult?.blocks ?? {} }
 
     await sendEmail({
       to: (customer as { email: string }).email,

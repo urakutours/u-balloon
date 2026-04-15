@@ -93,6 +93,8 @@ export type OrderConfirmEmailProps = {
     accountHolder?: string | null
   }
   bankTransferDeadline?: string
+  /** DB から取得したブロックテキスト。キーが無い場合はコード内デフォルト文言にフォールバック */
+  blocks?: Record<string, string>
 }
 
 function formatAccountType(type: string | null | undefined): string {
@@ -125,7 +127,17 @@ export function OrderConfirmEmail({
   cardLast4,
   bankInfo,
   bankTransferDeadline,
+  blocks = {},
 }: OrderConfirmEmailProps) {
+  const greeting = blocks['greeting'] ?? `${name} 様、ご注文ありがとうございます。`
+  const intro = blocks['intro'] ?? '以下の内容でご注文を承りました。内容をご確認ください。'
+  const bankTransferLead =
+    blocks['bank_transfer_lead'] ??
+    '以下の口座までお振込みをお願いいたします。期限までにご入金が確認できない場合、ご注文はキャンセルとなります。'
+  const thanksMessage = blocks['thanks_message'] ?? 'この度はご注文いただきありがとうございました。'
+  const footerNote =
+    blocks['footer_note'] ??
+    'ご不明な点はお問い合わせページよりお気軽にご連絡ください。\nuballoon - バルーンギフトEC'
   const labelStyle = { color: '#333', fontWeight: 'bold' as const, margin: '0 0 2px' }
   const valueStyle = { color: '#525f7f', margin: '0 0 4px' }
   const bankBoxStyle = {
@@ -147,7 +159,10 @@ export function OrderConfirmEmail({
         ご注文確認
       </Heading>
       <Text style={{ color: '#525f7f' }}>
-        {name} 様、ご注文ありがとうございます。
+        {greeting}
+      </Text>
+      <Text style={{ color: '#525f7f' }}>
+        {intro}
       </Text>
       <Text style={{ color: '#525f7f', fontWeight: 'bold' }}>
         注文番号: {orderNumber}
@@ -252,6 +267,9 @@ export function OrderConfirmEmail({
 
       {paymentMethod === 'bank_transfer' && bankInfo && (
         <Section style={bankBoxStyle}>
+          <Text style={{ color: '#92400e', fontSize: '14px', margin: '0 0 12px' }}>
+            {bankTransferLead}
+          </Text>
           <Heading as="h3" style={sectionHeadingStyle}>お振込先</Heading>
           <table style={{ width: '100%' }}>
             <tbody>
@@ -283,6 +301,13 @@ export function OrderConfirmEmail({
           </Text>
         </Section>
       )}
+
+      <Text style={{ color: '#525f7f', marginTop: '16px' }}>
+        {thanksMessage}
+      </Text>
+      <Text style={{ color: '#8898aa', fontSize: '12px', whiteSpace: 'pre-wrap' as const }}>
+        {footerNote}
+      </Text>
     </EmailLayout>
   )
 }
