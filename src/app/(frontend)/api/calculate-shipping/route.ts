@@ -90,8 +90,26 @@ export async function POST(req: NextRequest) {
 
     const destinationPrefecture = extractPrefecture(destinationAddress)
 
-    // distance_based プランが1件以上ある場合のみ Distance Matrix API を呼ぶ
-    const anyDistanceBased = plans.some(p => p.calculationMethod === 'distance_based')
+    // 対象プランを先に絞り込む（planId > productType > 全プラン）
+    // そのうえで distance_based が含まれている場合だけ Distance Matrix API を呼ぶ
+    let targetPlans: typeof plans
+    if (planId) {
+      const p = getShippingPlanById(plans, planId)
+      if (!p) {
+        return NextResponse.json({ error: 'plan not found' }, { status: 404 })
+      }
+      targetPlans = [p]
+    } else if (productType === 'delivery' || productType === 'standard') {
+      const preferred =
+        productType === 'delivery'
+          ? (plans.find(p => p.carrier === 'self_delivery') ?? plans[0])
+          : (plans.find(p => p.carrier !== 'self_delivery') ?? plans[0])
+      targetPlans = [preferred]
+    } else {
+      targetPlans = plans
+    }
+
+    const anyDistanceBased = targetPlans.some(p => p.calculationMethod === 'distance_based')
     let distanceKm: number | null = null
     let isMock = false
 
@@ -101,12 +119,9 @@ export async function POST(req: NextRequest) {
       isMock = result.isMock
     }
 
-    // planId 指定モード
+    // planId 指定モード（targetPlans は 1 件確定）
     if (planId) {
-      const p = getShippingPlanById(plans, planId)
-      if (!p) {
-        return NextResponse.json({ error: 'plan not found' }, { status: 404 })
-      }
+      const p = targetPlans[0]
       const calc = calculateShippingForPlan({ plan: p, distanceKm, cartSubtotal, destinationPrefecture })
       return NextResponse.json({
         shippingFee: calc.shippingFee,
@@ -125,12 +140,9 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // productType 指定モード（後方互換）
+    // productType 指定モード（後方互換、targetPlans は 1 件確定）
     if (productType === 'delivery' || productType === 'standard') {
-      const preferred =
-        productType === 'delivery'
-          ? (plans.find(p => p.carrier === 'self_delivery') ?? plans[0])
-          : (plans.find(p => p.carrier !== 'self_delivery') ?? plans[0])
+      const preferred = targetPlans[0]
       const calc = calculateShippingForPlan({ plan: preferred, distanceKm, cartSubtotal, destinationPrefecture })
       return NextResponse.json({
         shippingFee: calc.shippingFee,
