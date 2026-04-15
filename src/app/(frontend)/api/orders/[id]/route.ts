@@ -37,7 +37,16 @@ export async function GET(
       return NextResponse.json({ error: '権限がありません' }, { status: 403 })
     }
 
-    // For bank_transfer orders, attach bankInfo from site settings
+    // getSiteSettings for bank info and shippingCarrier resolution
+    const settings = await getSiteSettings()
+
+    // Resolve shippingCarrier from shippingPlanId via SiteSettings.shippingPlans
+    const shippingPlanId = order.shippingPlanId as string | null | undefined
+    const shippingCarrier: string | null = shippingPlanId && settings.shippingPlans
+      ? (settings.shippingPlans.find((p) => p.id === shippingPlanId)?.carrier ?? null)
+      : null
+
+    // Attach bankInfo for bank_transfer orders
     let bankInfo: {
       bankName: string | null
       branchName: string | null
@@ -47,7 +56,6 @@ export async function GET(
     } | null = null
 
     if (order.paymentMethod === 'bank_transfer') {
-      const settings = await getSiteSettings()
       bankInfo = {
         bankName: settings.bankName,
         branchName: settings.bankBranchName,
@@ -57,9 +65,19 @@ export async function GET(
       }
     }
 
+    // Extract customer name and email (depth:1 expands customer object)
+    const customerObj = typeof order.customer === 'object' && order.customer !== null
+      ? (order.customer as { id: string; name?: string | null; email?: string | null })
+      : null
+    const customerName = customerObj?.name ?? null
+    const customerEmail = customerObj?.email ?? null
+
     return NextResponse.json({
       ...order,
       bankInfo,
+      shippingCarrier,
+      customerName,
+      customerEmail,
     })
   } catch (error) {
     console.error('[api/orders/[id]] error:', error)

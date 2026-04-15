@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { CheckCircle, Loader2, Package, MapPin, CalendarDays, Gift, Building2 } from 'lucide-react'
+import { CheckCircle, Loader2, Package, MapPin, CalendarDays, Gift, Building2, CreditCard, FileText, PartyPopper, User } from 'lucide-react'
 import { purchase as trackPurchase } from '@/lib/gtag'
+import { formatTimeSlot, formatCarrier, formatPaymentMethod, formatReceivedAt } from '@/lib/order-display-helpers'
 
 type OrderItem = {
   product: { title?: string; id: string } | string
@@ -38,12 +39,19 @@ type OrderData = {
   desiredArrivalDate?: string
   desiredTimeSlot?: string
   shippingPlanName?: string | null
+  shippingCarrier?: string | null
   scheduledShipDate?: string | null
   status: string
   createdAt: string
-  paymentMethod?: 'stripe' | 'bank_transfer'
+  paymentMethod?: 'stripe' | 'bank_transfer' | string
+  cardLast4?: string | null
   bankTransferDeadline?: string | null
   bankInfo?: BankInfo | null
+  customerName?: string | null
+  customerEmail?: string | null
+  eventName?: string | null
+  eventDateTime?: string | null
+  notes?: string | null
 }
 
 /**
@@ -66,12 +74,6 @@ function formatAccountType(type: string | null | undefined): string {
   return type
 }
 
-const timeSlotLabels: Record<string, string> = {
-  morning: '午前',
-  afternoon: '午後',
-  evening: '夕方',
-  night: '夜',
-}
 
 export default function OrderCompleteContent() {
   const searchParams = useSearchParams()
@@ -204,6 +206,11 @@ export default function OrderCompleteContent() {
               {order.orderNumber}
             </Badge>
           </div>
+          {order.createdAt && (
+            <p className="mb-4 text-xs text-muted-foreground">
+              受付日時: {formatReceivedAt(order.createdAt)}
+            </p>
+          )}
 
           <Separator className="mb-4" />
 
@@ -253,7 +260,7 @@ export default function OrderCompleteContent() {
         </CardContent>
       </Card>
 
-      {(order.deliveryAddress || order.desiredArrivalDate || order.shippingPlanName || order.scheduledShipDate) && (
+      {(order.deliveryAddress || order.desiredArrivalDate || order.desiredTimeSlot || order.shippingPlanName || order.shippingCarrier || order.scheduledShipDate) && (
         <Card className="mb-6">
           <CardContent className="p-6">
             <h3 className="mb-3 text-sm font-semibold text-muted-foreground">配送情報</h3>
@@ -273,6 +280,15 @@ export default function OrderCompleteContent() {
                   </span>
                 </div>
               )}
+              {order.shippingCarrier && (
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                  <span>
+                    <span className="text-muted-foreground">配送業者:</span>
+                    <span className="ml-2">{formatCarrier(order.shippingCarrier)}</span>
+                  </span>
+                </div>
+              )}
               {order.scheduledShipDate && (
                 <div className="flex items-center gap-2">
                   <CalendarDays className="h-4 w-4 text-muted-foreground" />
@@ -289,7 +305,16 @@ export default function OrderCompleteContent() {
                   <CalendarDays className="h-4 w-4 text-muted-foreground" />
                   <span>
                     到着希望日: {parseDateStr(order.desiredArrivalDate).toLocaleDateString('ja-JP')}
-                    {order.desiredTimeSlot && ` ${timeSlotLabels[order.desiredTimeSlot] || order.desiredTimeSlot}`}
+                    {order.desiredTimeSlot && ` ${formatTimeSlot(order.desiredTimeSlot)}`}
+                  </span>
+                </div>
+              )}
+              {!order.desiredArrivalDate && order.desiredTimeSlot && (
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                  <span>
+                    <span className="text-muted-foreground">希望時間帯:</span>
+                    <span className="ml-2">{formatTimeSlot(order.desiredTimeSlot)}</span>
                   </span>
                 </div>
               )}
@@ -365,6 +390,66 @@ export default function OrderCompleteContent() {
                 振込先情報は確認メールに記載しております。メールをご確認ください。
               </p>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* お客様情報 */}
+      {(order.customerName || order.customerEmail) && (
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+              <User className="h-4 w-4" />
+              お客様情報
+            </h3>
+            <div className="space-y-1 text-sm">
+              {order.customerName && <p>{order.customerName}</p>}
+              {order.customerEmail && <p className="text-muted-foreground">{order.customerEmail}</p>}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* お支払い方法 */}
+      <Card className="mb-6">
+        <CardContent className="p-6">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+            <CreditCard className="h-4 w-4" />
+            お支払い方法
+          </h3>
+          <p className="text-sm">
+            {formatPaymentMethod(order.paymentMethod, order.cardLast4 ?? undefined)}
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* イベント情報 */}
+      {(order.eventName || order.eventDateTime) && (
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+              <PartyPopper className="h-4 w-4" />
+              イベント情報
+            </h3>
+            <div className="space-y-1 text-sm">
+              {order.eventName && <p className="font-medium">{order.eventName}</p>}
+              {order.eventDateTime && (
+                <p className="text-muted-foreground">{formatReceivedAt(order.eventDateTime)}</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 備考 */}
+      {order.notes && (
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+              <FileText className="h-4 w-4" />
+              備考
+            </h3>
+            <p className="whitespace-pre-wrap text-sm">{order.notes}</p>
           </CardContent>
         </Card>
       )}
