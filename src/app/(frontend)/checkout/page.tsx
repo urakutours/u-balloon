@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { CalendarIcon, Loader2, MapPin, Truck, ChevronDown, ChevronUp, Clock, MessageSquare, Coins, PartyPopper } from 'lucide-react'
+import { CalendarIcon, Loader2, MapPin, Truck, ChevronDown, ChevronUp, Clock, MessageSquare, Coins, PartyPopper, CreditCard, Building2 } from 'lucide-react'
 import { format, addDays, addMonths } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
@@ -83,6 +83,7 @@ export default function CheckoutPage() {
   const [availableDates, setAvailableDates] = useState<Set<string>>(new Set())
   const [datesLoading, setDatesLoading] = useState(true)
 
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'bank_transfer'>('stripe')
   const [submitting, setSubmitting] = useState(false)
   const [summaryOpen, setSummaryOpen] = useState(false)
 
@@ -185,34 +186,58 @@ export default function CheckoutPage() {
       }))
 
       const desiredArrivalDateStr = desiredDate ? format(desiredDate, 'yyyy-MM-dd') : undefined
-      const res = await fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          items: checkoutItems,
-          subtotal,
-          shippingFee,
-          pointsUsed: pointsDiscount,
-          deliveryAddress: address,
-          deliveryDistance: shippingResult?.distanceKm ?? 0,
-          desiredArrivalDate: desiredArrivalDateStr,
-          desiredTimeSlot: timeSlot || undefined,
-          eventName: eventName || undefined,
-          eventDateTime: eventDateTime || undefined,
-          notes: notes || undefined,
-          shippingPlanId: selectedPlan?.planId,
-          shippingPlanName: selectedPlan?.planName,
-          scheduledShipDate: scheduledShipDate ?? undefined,
-        }),
-      })
+      const commonBody = {
+        items: checkoutItems,
+        subtotal,
+        shippingFee,
+        pointsUsed: pointsDiscount,
+        deliveryAddress: address,
+        deliveryDistance: shippingResult?.distanceKm ?? 0,
+        desiredArrivalDate: desiredArrivalDateStr,
+        desiredTimeSlot: timeSlot || undefined,
+        eventName: eventName || undefined,
+        eventDateTime: eventDateTime || undefined,
+        notes: notes || undefined,
+        shippingPlanId: selectedPlan?.planId,
+        shippingPlanName: selectedPlan?.planName,
+        scheduledShipDate: scheduledShipDate ?? undefined,
+      }
 
-      const data = await res.json()
-      if (res.ok && data.url) {
-        clearCart()
-        window.location.href = data.url
+      if (paymentMethod === 'stripe') {
+        const res = await fetch('/api/create-checkout-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(commonBody),
+        })
+        const data = await res.json()
+        if (res.ok && data.url) {
+          clearCart()
+          window.location.href = data.url
+        } else {
+          alert(data.error || '注文の作成に失敗しました')
+        }
       } else {
-        alert(data.error || '注文の作成に失敗しました')
+        // 銀行振込
+        const res = await fetch('/api/create-bank-transfer-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            ...commonBody,
+            customerId: user.id,
+            totalAmount,
+          }),
+        })
+        const data = await res.json()
+        if (res.ok && data.orderId) {
+          clearCart()
+          window.location.href = `/order-complete?order_id=${data.orderId}`
+        } else if (res.status === 503) {
+          alert('現在銀行振込は利用できません。クレジットカード決済をご利用ください。')
+        } else {
+          alert(data.error || '注文の作成に失敗しました')
+        }
       }
     } catch {
       alert('注文の作成中にエラーが発生しました')
@@ -374,7 +399,65 @@ export default function CheckoutPage() {
             </section>
           )}
 
-          {/* 3. Desired Arrival Date */}
+          {/* 3. Payment Method */}
+          <section aria-labelledby="payment-method-heading" className="rounded-xl border border-border/60 bg-white p-5 sm:p-6">
+            <h2 id="payment-method-heading" className="mb-4 flex items-center gap-2 text-sm font-bold text-brand-dark sm:text-base">
+              <CreditCard className="h-4.5 w-4.5 text-brand-teal" />
+              お支払い方法
+            </h2>
+            <div className="space-y-3">
+              <label className={cn(
+                'flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors',
+                paymentMethod === 'stripe'
+                  ? 'border-brand-teal bg-brand-teal/5'
+                  : 'border-border hover:border-brand-teal/40',
+              )}>
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="stripe"
+                  checked={paymentMethod === 'stripe'}
+                  onChange={() => setPaymentMethod('stripe')}
+                  className="mt-1 accent-brand-teal"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="h-4 w-4 text-brand-teal" />
+                    <span className="font-semibold text-brand-dark">クレジットカード（Stripe）</span>
+                  </div>
+                  <p className="mt-1 text-sm text-foreground/60">
+                    Visa / Mastercard / JCB など。即時決済で安全にご購入いただけます。
+                  </p>
+                </div>
+              </label>
+              <label className={cn(
+                'flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors',
+                paymentMethod === 'bank_transfer'
+                  ? 'border-brand-teal bg-brand-teal/5'
+                  : 'border-border hover:border-brand-teal/40',
+              )}>
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="bank_transfer"
+                  checked={paymentMethod === 'bank_transfer'}
+                  onChange={() => setPaymentMethod('bank_transfer')}
+                  className="mt-1 accent-brand-teal"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-brand-teal" />
+                    <span className="font-semibold text-brand-dark">銀行振込（前払い）</span>
+                  </div>
+                  <p className="mt-1 text-sm text-foreground/60">
+                    注文確定後、振込先情報をメールでお送りします。振込期限までにお振込みください。
+                  </p>
+                </div>
+              </label>
+            </div>
+          </section>
+
+          {/* 4. Desired Arrival Date */}
           <section className="rounded-xl border border-border/60 bg-white p-5 sm:p-6">
             <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-brand-dark sm:text-base">
               <CalendarIcon className="h-4.5 w-4.5 text-brand-teal" />
@@ -432,7 +515,7 @@ export default function CheckoutPage() {
             </div>
           </section>
 
-          {/* 4. Time Slot & Event Info */}
+          {/* 5. Time Slot & Event Info */}
           <section className="rounded-xl border border-border/60 bg-white p-5 sm:p-6">
             <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-brand-dark sm:text-base">
               <Clock className="h-4.5 w-4.5 text-brand-teal" />
@@ -486,7 +569,7 @@ export default function CheckoutPage() {
             </div>
           </section>
 
-          {/* 5. Notes */}
+          {/* 6. Notes */}
           <section className="rounded-xl border border-border/60 bg-white p-5 sm:p-6">
             <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-brand-dark sm:text-base">
               <MessageSquare className="h-4.5 w-4.5 text-brand-teal" />
@@ -501,7 +584,7 @@ export default function CheckoutPage() {
             />
           </section>
 
-          {/* 6. Points */}
+          {/* 7. Points */}
           <section className="rounded-xl border border-border/60 bg-white p-5 sm:p-6">
             <h2 className="mb-4 flex items-center gap-2 text-sm font-bold text-brand-dark sm:text-base">
               <Coins className="h-4.5 w-4.5 text-brand-teal" />
@@ -587,7 +670,11 @@ export default function CheckoutPage() {
               onClick={handleSubmit}
               disabled={submitting || !selectedPlanId || hasIneligibleOnly}
             >
-              {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> 処理中...</> : '決済へ進む'}
+              {submitting
+                ? <><Loader2 className="h-4 w-4 animate-spin" /> 処理中...</>
+                : paymentMethod === 'bank_transfer'
+                  ? '注文を確定する（銀行振込）'
+                  : '決済へ進む'}
             </Button>
             {hasIneligibleOnly && (
               <p className="mt-2 text-center text-xs text-destructive">
@@ -622,6 +709,8 @@ export default function CheckoutPage() {
               '対応エリア外のため注文できません'
             ) : !selectedPlanId ? (
               '配送プランを先に選択してください'
+            ) : paymentMethod === 'bank_transfer' ? (
+              '注文を確定する（銀行振込）'
             ) : (
               '決済へ進む'
             )}
