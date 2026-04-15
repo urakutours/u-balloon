@@ -64,5 +64,35 @@ export const EmailTemplates: CollectionConfig = {
         description: '参考用: このテンプレートで使える変数の一覧',
       },
     },
+    {
+      name: 'bodyBlocks',
+      type: 'array',
+      label: '本文ブロック（ハイブリッド方式）',
+      admin: {
+        description:
+          'レイアウトは React 側、可変テキストだけ DB から差し替えるブロック群。blockKey が空なら既存 body フォールバック',
+        initCollapsed: true,
+      },
+      fields: [
+        {
+          name: 'blockKey',
+          type: 'text',
+          label: 'ブロックキー',
+          required: true,
+          admin: {
+            description: '例: greeting / intro / bank_transfer_lead / footer_note',
+          },
+        },
+        {
+          name: 'content',
+          type: 'textarea',
+          label: '内容',
+          required: true,
+          admin: {
+            description: '変数は {{name}} / {{orderNumber}} のように使える',
+          },
+        },
+      ],
+    },
   ],
 }
