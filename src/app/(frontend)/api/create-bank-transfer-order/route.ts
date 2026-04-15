@@ -6,9 +6,17 @@ import { getSiteSettings } from '@/lib/site-settings'
 
 export async function POST(req: NextRequest) {
   try {
+    const payload = await getPayload({ config })
+
+    // Authenticate user — body の customerId は無視し、セッションから取得した user.id を使う
+    const { user } = await payload.auth({ headers: req.headers })
+    if (!user) {
+      return NextResponse.json({ error: 'ログインしてください' }, { status: 401 })
+    }
+    const resolvedCustomerId = user.id
+
     const body = await req.json()
     const {
-      customerId,
       items,
       deliveryAddress,
       deliveryDistance,
@@ -17,6 +25,7 @@ export async function POST(req: NextRequest) {
       totalAmount,
       desiredArrivalDate,
       desiredTimeSlot,
+      eventName,
       eventDateTime,
       notes,
       shippingPlanId,
@@ -26,9 +35,13 @@ export async function POST(req: NextRequest) {
 
     // 数値系は明示的に Number() で変換し NaN を 0 にフォールバック
     const pointsUsed = Math.max(0, Math.floor(Number(body.pointsUsed) || 0))
+    const resolvedTotal = Math.max(0, Number(totalAmount) || 0)
+    const resolvedSubtotal = Math.max(0, Number(subtotal) || 0)
+    const resolvedShippingFee = Math.max(0, Number(shippingFee) || 0)
+    const resolvedDistance = Math.max(0, Number(deliveryDistance) || 0)
 
-    if (!customerId || !items?.length) {
-      return NextResponse.json({ error: 'customerId and items are required' }, { status: 400 })
+    if (!items?.length) {
+      return NextResponse.json({ error: 'items are required' }, { status: 400 })
     }
 
     const settings = await getSiteSettings()
@@ -53,12 +66,10 @@ export async function POST(req: NextRequest) {
 
     const deadlineDays = settings.bankTransferDeadlineDays ?? 7
 
-    const payload = await getPayload({ config })
-
     // Deduct points if used
     if (pointsUsed > 0) {
-      const user = await payload.findByID({ collection: 'users', id: customerId })
-      const currentPoints = (user.points as number) ?? 0
+      const userRecord = await payload.findByID({ collection: 'users', id: resolvedCustomerId })
+      const currentPoints = (userRecord.points as number) ?? 0
 
       if (currentPoints < pointsUsed) {
         return NextResponse.json({ error: 'Insufficient points' }, { status: 400 })
@@ -68,7 +79,7 @@ export async function POST(req: NextRequest) {
       await payload.create({
         collection: 'point-transactions',
         data: {
-          user: customerId,
+          user: resolvedCustomerId,
           type: 'use',
           amount: -pointsUsed,
           balance: newBalance,
@@ -77,7 +88,7 @@ export async function POST(req: NextRequest) {
       })
       await payload.update({
         collection: 'users',
-        id: customerId,
+        id: resolvedCustomerId,
         data: { points: newBalance },
         context: { skipPointAdjustHook: true },
       })
@@ -94,16 +105,17 @@ export async function POST(req: NextRequest) {
     const order = await payload.create({
       collection: 'orders',
       data: {
-        customer: customerId,
+        customer: resolvedCustomerId,
         items,
         deliveryAddress,
-        deliveryDistance,
-        shippingFee: shippingFee || 0,
-        subtotal,
+        deliveryDistance: resolvedDistance,
+        shippingFee: resolvedShippingFee,
+        subtotal: resolvedSubtotal,
         pointsUsed: pointsUsed || 0,
-        totalAmount,
+        totalAmount: resolvedTotal,
         desiredArrivalDate,
         desiredTimeSlot,
+        eventName: eventName || undefined,
         eventDateTime,
         notes,
         paymentMethod: 'bank_transfer',
@@ -121,7 +133,7 @@ export async function POST(req: NextRequest) {
       orderId: order.id,
       bankInfo,
       deadline: bankTransferDeadline.toISOString(),
-      totalAmount,
+      totalAmount: resolvedTotal,
     })
   } catch (error) {
     console.error('Bank transfer order error:', error)
