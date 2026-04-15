@@ -44,6 +44,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'items are required' }, { status: 400 })
     }
 
+    // クライアントは { productId, quantity, selectedOptions, unitPrice } 形式で送ってくるので、
+    // Orders コレクションの items 配列フィールドの形（product 関係）に変換する
+    const orderItems = (items as Array<{
+      productId: string | number
+      quantity: number
+      selectedOptions: unknown
+      unitPrice: number
+    }>).map((item) => ({
+      product: item.productId,
+      quantity: item.quantity,
+      selectedOptions: item.selectedOptions,
+      unitPrice: item.unitPrice,
+    }))
+
     const settings = await getSiteSettings()
 
     // accountType は DB 生値 ('checking' / 'ordinary' / 'savings' / 'normal') で保持し、
@@ -106,7 +120,7 @@ export async function POST(req: NextRequest) {
       collection: 'orders',
       data: {
         customer: resolvedCustomerId,
-        items,
+        items: orderItems,
         deliveryAddress,
         deliveryDistance: resolvedDistance,
         shippingFee: resolvedShippingFee,
