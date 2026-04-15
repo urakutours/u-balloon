@@ -31,28 +31,58 @@ async function processOrderCreate(payload: Payload, doc: Record<string, unknown>
       }),
     )
 
+    // Resolve shippingCarrier from SiteSettings.shippingPlans using shippingPlanId
+    // getSiteSettings() is always called for bank_transfer anyway, so hoist it here
+    const settings = await getSiteSettings()
+    const shippingPlanId = doc.shippingPlanId as string | undefined
+    const resolvedCarrier: string | undefined = shippingPlanId && settings.shippingPlans
+      ? (settings.shippingPlans.find((p) => p.id === shippingPlanId)?.carrier ?? undefined)
+      : undefined
+
     // Build base email props common to all payment methods
     const baseEmailProps = {
       name: ((customer as { name?: string }).name || (customer as { email: string }).email),
+      email: (customer as { email: string }).email,
       orderNumber: doc.orderNumber as string,
       items,
       deliveryAddress: doc.deliveryAddress as string | undefined,
       desiredArrivalDate: doc.desiredArrivalDate
         ? new Date(doc.desiredArrivalDate as string).toLocaleDateString('ja-JP')
         : undefined,
+      desiredTimeSlot: (doc.desiredTimeSlot as string | undefined) ?? undefined,
+      receivedAt: doc.createdAt
+        ? new Date(doc.createdAt as string).toLocaleString('ja-JP', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        : undefined,
+      shippingCarrier: resolvedCarrier,
+      eventName: (doc.eventName as string | undefined) ?? undefined,
+      eventDateTime: doc.eventDateTime
+        ? new Date(doc.eventDateTime as string).toLocaleString('ja-JP', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        : undefined,
+      notes: (doc.notes as string | undefined) ?? undefined,
       subtotal: doc.subtotal as number,
       shippingFee: (doc.shippingFee as number) || 0,
       pointsUsed: (doc.pointsUsed as number) || 0,
       totalAmount: doc.totalAmount as number,
-      // T2.5 で OrderConfirmEmail の props 型拡張後に受け取られる追加フィールド
       shippingPlanName: (doc.shippingPlanName as string | undefined) ?? undefined,
       scheduledShipDate: (doc.scheduledShipDate as string | undefined) ?? undefined,
+      paymentMethod: (doc.paymentMethod as string | undefined) ?? 'stripe',
     }
 
     // For bank_transfer orders, add payment-specific props
     let emailProps: OrderConfirmEmailProps = baseEmailProps
     if (doc.paymentMethod === 'bank_transfer') {
-      const settings = await getSiteSettings()
       emailProps = {
         ...baseEmailProps,
         paymentMethod: 'bank_transfer',

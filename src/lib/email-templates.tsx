@@ -9,6 +9,7 @@ import {
   Heading,
   Hr,
 } from '@react-email/components'
+import { formatTimeSlot, formatCarrier, formatPaymentMethod } from './order-display-helpers'
 
 // Common layout wrapper
 function EmailLayout({ children }: { children: React.ReactNode }) {
@@ -61,6 +62,7 @@ export function WelcomeEmail({ name }: { name: string }) {
 // 2. 注文確認メール
 export type OrderConfirmEmailProps = {
   name: string
+  email?: string
   orderNumber: string
   items: Array<{
     productName: string
@@ -69,13 +71,20 @@ export type OrderConfirmEmailProps = {
   }>
   deliveryAddress?: string
   desiredArrivalDate?: string
+  desiredTimeSlot?: string
+  receivedAt?: string
+  shippingCarrier?: string
+  eventName?: string
+  eventDateTime?: string
+  notes?: string
   subtotal: number
   shippingFee: number
   pointsUsed: number
   totalAmount: number
   shippingPlanName?: string
   scheduledShipDate?: string
-  paymentMethod?: 'stripe' | 'bank_transfer'
+  paymentMethod?: 'stripe' | 'bank_transfer' | 'credit_card' | string
+  cardLast4?: string
   bankInfo?: {
     bankName?: string | null
     branchName?: string | null
@@ -95,10 +104,17 @@ function formatAccountType(type: string | null | undefined): string {
 
 export function OrderConfirmEmail({
   name,
+  email,
   orderNumber,
   items,
   deliveryAddress,
   desiredArrivalDate,
+  desiredTimeSlot,
+  receivedAt,
+  shippingCarrier,
+  eventName,
+  eventDateTime,
+  notes,
   subtotal,
   shippingFee,
   pointsUsed,
@@ -106,6 +122,7 @@ export function OrderConfirmEmail({
   shippingPlanName,
   scheduledShipDate,
   paymentMethod,
+  cardLast4,
   bankInfo,
   bankTransferDeadline,
 }: OrderConfirmEmailProps) {
@@ -121,6 +138,8 @@ export function OrderConfirmEmail({
   const sectionHeadingStyle = { color: '#92400e', fontSize: '14px', margin: '0 0 12px', fontWeight: 'bold' as const }
   const deadlineStyle = { color: '#dc2626', fontWeight: 'bold' as const, margin: '12px 0 4px' }
   const noteStyle = { color: '#6b7280', fontSize: '12px', margin: '8px 0 0' }
+  const infoSectionStyle = { backgroundColor: '#f8f9fa', padding: '12px 16px', borderRadius: '4px', marginBottom: '12px' }
+  const infoHeadingStyle = { color: '#333', fontWeight: 'bold' as const, margin: '0 0 8px', fontSize: '13px' }
 
   return (
     <EmailLayout>
@@ -133,6 +152,26 @@ export function OrderConfirmEmail({
       <Text style={{ color: '#525f7f', fontWeight: 'bold' }}>
         注文番号: {orderNumber}
       </Text>
+      {receivedAt && (
+        <Text style={{ color: '#8898aa', fontSize: '12px', margin: '0 0 16px' }}>
+          受付日時: {receivedAt}
+        </Text>
+      )}
+
+      {/* お客様情報 */}
+      <Section style={infoSectionStyle}>
+        <Text style={infoHeadingStyle}>お客様情報</Text>
+        <Text style={{ ...valueStyle, margin: '0 0 2px' }}>{name}</Text>
+        {email && <Text style={{ ...valueStyle, margin: 0 }}>{email}</Text>}
+      </Section>
+
+      {/* お支払い方法 */}
+      <Section style={infoSectionStyle}>
+        <Text style={infoHeadingStyle}>お支払い方法</Text>
+        <Text style={{ ...valueStyle, margin: 0 }}>
+          {formatPaymentMethod(paymentMethod, cardLast4)}
+        </Text>
+      </Section>
 
       <Section style={{ backgroundColor: '#f0f4f8', padding: '16px', borderRadius: '4px' }}>
         <Text style={{ color: '#333', fontWeight: 'bold', marginBottom: '8px' }}>ご注文内容</Text>
@@ -161,13 +200,28 @@ export function OrderConfirmEmail({
       {desiredArrivalDate && (
         <Section>
           <Text style={{ color: '#333', fontWeight: 'bold' }}>到着希望日</Text>
-          <Text style={{ color: '#525f7f' }}>{desiredArrivalDate}</Text>
+          <Text style={{ color: '#525f7f' }}>
+            {desiredArrivalDate}
+            {desiredTimeSlot && `（${formatTimeSlot(desiredTimeSlot)}）`}
+          </Text>
+        </Section>
+      )}
+      {!desiredArrivalDate && desiredTimeSlot && (
+        <Section>
+          <Text style={{ color: '#333', fontWeight: 'bold' }}>希望時間帯</Text>
+          <Text style={{ color: '#525f7f' }}>{formatTimeSlot(desiredTimeSlot)}</Text>
         </Section>
       )}
       {shippingPlanName && (
         <Section style={{ marginBottom: 8 }}>
           <Text style={labelStyle}>配送方法</Text>
           <Text style={valueStyle}>{shippingPlanName}</Text>
+        </Section>
+      )}
+      {shippingCarrier && (
+        <Section style={{ marginBottom: 8 }}>
+          <Text style={labelStyle}>配送業者</Text>
+          <Text style={valueStyle}>{formatCarrier(shippingCarrier)}</Text>
         </Section>
       )}
       {scheduledShipDate && (
@@ -178,6 +232,21 @@ export function OrderConfirmEmail({
               year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
             })}
           </Text>
+        </Section>
+      )}
+
+      {(eventName || eventDateTime) && (
+        <Section style={{ ...infoSectionStyle, marginTop: '12px' }}>
+          <Text style={infoHeadingStyle}>イベント情報</Text>
+          {eventName && <Text style={{ ...valueStyle, margin: '0 0 2px' }}>{eventName}</Text>}
+          {eventDateTime && <Text style={{ ...valueStyle, margin: 0 }}>{eventDateTime}</Text>}
+        </Section>
+      )}
+
+      {notes && (
+        <Section style={{ ...infoSectionStyle, marginTop: '12px' }}>
+          <Text style={infoHeadingStyle}>備考</Text>
+          <Text style={{ ...valueStyle, margin: 0, whiteSpace: 'pre-wrap' as const }}>{notes}</Text>
         </Section>
       )}
 
