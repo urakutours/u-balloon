@@ -53,6 +53,7 @@ const s3Plugins = process.env.R2_BUCKET
   : []
 
 export default buildConfig({
+  serverURL: process.env.NEXT_PUBLIC_APP_URL || '',
   admin: {
     user: Users.slug,
     theme: 'all',
