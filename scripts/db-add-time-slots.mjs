@@ -1,9 +1,11 @@
 /**
- * SiteSettings の shippingPlans[].availableTimeSlots (nested array) 用の
+ * SiteSettings の checkout 再設計で追加された array/nested-array フィールド用の
  * DB テーブルを作成する一度きりのマイグレーションスクリプト。
  *
- * 不在だったため本番 admin の /api/admin/dashboard が 500 で詰まっていた。
- * Error: relation "site_settings_shipping_plans_available_time_slots" does not exist
+ * 対象テーブル（すべて本番で relation does not exist と報告されていた）:
+ *   - site_settings_shipping_plans_available_time_slots
+ *   - site_settings_gift_settings_message_card_templates
+ *   - site_settings_gift_settings_wrapping_options
  *
  * スキーマは Payload v3 (@payloadcms/drizzle) の setColumnID + traverseFields ロジックに
  * 基づき、user-defined `id` text フィールドがあると varchar PK になる規則に従う。
@@ -51,6 +53,45 @@ const stmts = [
 
   `CREATE INDEX IF NOT EXISTS site_settings_shipping_plans_available_time_slots_parent_id_idx
   ON site_settings_shipping_plans_available_time_slots (_parent_id)`,
+
+  // ─── gift_settings_message_card_templates (top-level array under collapsible) ───
+  // user-defined `id` text → varchar PK
+  // fields: id(text), label(text), sort_order(numeric), body(text), active(boolean)
+  `CREATE TABLE IF NOT EXISTS site_settings_gift_settings_message_card_templates (
+  id varchar PRIMARY KEY,
+  _order integer NOT NULL,
+  _parent_id integer NOT NULL REFERENCES site_settings(id) ON DELETE CASCADE,
+  label varchar,
+  sort_order numeric DEFAULT 0,
+  body text,
+  active boolean DEFAULT true
+)`,
+
+  `CREATE INDEX IF NOT EXISTS site_settings_gift_settings_message_card_templates_order_idx
+  ON site_settings_gift_settings_message_card_templates (_order)`,
+
+  `CREATE INDEX IF NOT EXISTS site_settings_gift_settings_message_card_templates_parent_id_idx
+  ON site_settings_gift_settings_message_card_templates (_parent_id)`,
+
+  // ─── gift_settings_wrapping_options (top-level array under collapsible) ───
+  // user-defined `id` text → varchar PK
+  // fields: id(text), label(text), fee_amount(numeric), description(text), active(boolean), sort_order(numeric)
+  `CREATE TABLE IF NOT EXISTS site_settings_gift_settings_wrapping_options (
+  id varchar PRIMARY KEY,
+  _order integer NOT NULL,
+  _parent_id integer NOT NULL REFERENCES site_settings(id) ON DELETE CASCADE,
+  label varchar,
+  fee_amount numeric DEFAULT 0,
+  description text,
+  active boolean DEFAULT true,
+  sort_order numeric DEFAULT 0
+)`,
+
+  `CREATE INDEX IF NOT EXISTS site_settings_gift_settings_wrapping_options_order_idx
+  ON site_settings_gift_settings_wrapping_options (_order)`,
+
+  `CREATE INDEX IF NOT EXISTS site_settings_gift_settings_wrapping_options_parent_id_idx
+  ON site_settings_gift_settings_wrapping_options (_parent_id)`,
 ]
 
 try {
@@ -72,18 +113,15 @@ try {
     const r = await pool.query(`
       SELECT table_name FROM information_schema.tables
       WHERE table_schema = 'public'
-        AND table_name = 'site_settings_shipping_plans_available_time_slots'
+        AND table_name IN (
+          'site_settings_shipping_plans_available_time_slots',
+          'site_settings_gift_settings_message_card_templates',
+          'site_settings_gift_settings_wrapping_options'
+        )
+      ORDER BY table_name
     `)
     console.log('\nVerification:')
     for (const row of r.rows) console.log('  ✓', row.table_name)
-
-    const cols = await pool.query(`
-      SELECT column_name, data_type FROM information_schema.columns
-      WHERE table_name = 'site_settings_shipping_plans_available_time_slots'
-      ORDER BY ordinal_position
-    `)
-    console.log('Columns:')
-    for (const c of cols.rows) console.log('  -', c.column_name, c.data_type)
   }
 
   console.log('\n=== Done ===\n')
