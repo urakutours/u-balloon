@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getPayload } from 'payload'
+import { getPayload, type Payload } from 'payload'
 import config from '@payload-config'
 import {
   ensureGA4Client,
@@ -55,9 +55,23 @@ function prevPeriodLabel(period: string): string {
 }
 
 // ============================================================
+// Helper: swallow a single query failure so one broken aggregation
+// cannot take the entire dashboard down (defense in depth).
+// ============================================================
+async function safe<T>(label: string, p: Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await p
+  } catch (err) {
+    console.error(`[dashboard] ${label} failed:`, err instanceof Error ? err.message : err)
+    return fallback
+  }
+}
+
+// ============================================================
 // Main handler
 // ============================================================
 export async function GET(req: NextRequest) {
+  try {
   const payload = await getPayload({ config })
 
   // Auth check
@@ -143,25 +157,27 @@ export async function GET(req: NextRequest) {
     lowStockResult,
     siteSettings,
   ] = await Promise.all([
-    getRevenueSummary(payload, periodStart, periodEnd),
-    getRevenueSummary(payload, prevStart, prevEnd),
-    getStatusDistribution(payload),
-    getCustomerMetrics(payload),
-    getDailyRevenue(payload, periodStart, periodEnd),
-    getTopProducts(payload),
-    getNewMembersCount(payload, periodStart, periodEnd),
-    getPendingCount(payload),
-    getShippingCounts(payload),
-    getDeliverySlotCounts(payload),
+    safe('getRevenueSummary(current)', getRevenueSummary(payload, periodStart, periodEnd), { revenue: 0, orderCount: 0 }),
+    safe('getRevenueSummary(previous)', getRevenueSummary(payload, prevStart, prevEnd), { revenue: 0, orderCount: 0 }),
+    safe('getStatusDistribution', getStatusDistribution(payload), {
+      pending: 0, awaiting_payment: 0, confirmed: 0, preparing: 0, shipped: 0, delivered: 0, cancelled: 0,
+    }),
+    safe('getCustomerMetrics', getCustomerMetrics(payload), { repeatRate: 0, avgLTV: 0, avgOrderValue: 0 }),
+    safe('getDailyRevenue', getDailyRevenue(payload, periodStart, periodEnd), [] as Array<{ date: string; orders: number; revenue: number }>),
+    safe('getTopProducts', getTopProducts(payload), [] as Array<{ name: string; salesCount: number; revenue: number }>),
+    safe('getNewMembersCount', getNewMembersCount(payload, periodStart, periodEnd), 0),
+    safe('getPendingCount', getPendingCount(payload), 0),
+    safe('getShippingCounts', getShippingCounts(payload), { today: 0, tomorrow: 0 }),
+    safe('getDeliverySlotCounts', getDeliverySlotCounts(payload), { morning: 0, afternoon: 0, evening: 0, night: 0, unspecified: 0 }),
     // Recent 5 orders — small result, keep as payload.find for depth resolution
-    payload.find({
+    safe('recentOrders', payload.find({
       collection: 'orders',
       sort: '-createdAt',
       limit: 5,
       depth: 1,
-    }),
+    }), { docs: [] } as unknown as Awaited<ReturnType<Payload['find']>>),
     // Upcoming holidays — needs business-calendar collection
-    payload.find({
+    safe('upcomingHolidays', payload.find({
       collection: 'business-calendar',
       where: {
         and: [
@@ -172,9 +188,9 @@ export async function GET(req: NextRequest) {
       },
       sort: 'date',
       limit: 20,
-    }),
+    }), { docs: [] } as unknown as Awaited<ReturnType<Payload['find']>>),
     // Low stock products — needs products collection
-    payload.find({
+    safe('lowStockProducts', payload.find({
       collection: 'products',
       where: {
         and: [
@@ -186,8 +202,8 @@ export async function GET(req: NextRequest) {
       sort: 'stock',
       limit: 10,
       depth: 0,
-    }),
-    payload.findGlobal({ slug: 'site-settings' }),
+    }), { docs: [] } as unknown as Awaited<ReturnType<Payload['find']>>),
+    safe('siteSettings', payload.findGlobal({ slug: 'site-settings' }), null),
   ])
 
   // ============================================================
@@ -317,4 +333,11 @@ export async function GET(req: NextRequest) {
       end: periodEnd.toISOString(),
     },
   })
+  } catch (err) {
+    console.error('[dashboard] unexpected error:', err instanceof Error ? err.stack ?? err.message : err)
+    return NextResponse.json(
+      { error: 'ダッシュボードの取得に失敗しました' },
+      { status: 500 },
+    )
+  }
 }
