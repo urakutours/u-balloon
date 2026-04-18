@@ -11,6 +11,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+
+const PREFECTURES = [
+  '北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県',
+  '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県',
+  '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県', '岐阜県',
+  '静岡県', '愛知県', '三重県', '滋賀県', '京都府', '大阪府', '兵庫県',
+  '奈良県', '和歌山県', '鳥取県', '島根県', '岡山県', '広島県', '山口県',
+  '徳島県', '香川県', '愛媛県', '高知県', '福岡県', '佐賀県', '長崎県',
+  '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県',
+]
 
 type PointTransaction = {
   id: string
@@ -57,6 +74,7 @@ export default function AccountPage() {
   const [isEditing, setIsEditing] = useState(false)
   const [editError, setEditError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [prefecture, setPrefecture] = useState('')
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -103,12 +121,24 @@ export default function AccountPage() {
     }
   }
 
+  const handleEditStart = () => {
+    setPrefecture(user?.prefecture || '')
+    setEditError('')
+    setIsEditing(true)
+  }
+
   const handleProfileUpdate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setEditError('')
     setIsSaving(true)
 
     const formData = new FormData(e.currentTarget)
+    const postalCode = (formData.get('postalCode') as string | null) ?? ''
+    const addressLine1 = (formData.get('addressLine1') as string | null) ?? ''
+    const addressLine2 = (formData.get('addressLine2') as string | null) ?? ''
+    const defaultAddress = [prefecture, addressLine1, addressLine2]
+      .filter(Boolean)
+      .join(' ')
 
     try {
       const res = await fetch(`/api/users/${user!.id}`, {
@@ -117,13 +147,24 @@ export default function AccountPage() {
         credentials: 'include',
         body: JSON.stringify({
           name: formData.get('name'),
+          nameKana: formData.get('nameKana'),
           phone: formData.get('phone'),
-          defaultAddress: formData.get('defaultAddress'),
+          mobilePhone: formData.get('mobilePhone'),
+          postalCode,
+          prefecture,
+          addressLine1,
+          addressLine2,
+          defaultAddress,
         }),
       })
 
       if (!res.ok) {
-        throw new Error('更新に失敗しました')
+        const data = await res.json().catch(() => ({}))
+        const msg =
+          data?.errors?.[0]?.message ||
+          data?.message ||
+          '更新に失敗しました'
+        throw new Error(msg)
       }
 
       await refreshUser()
@@ -170,7 +211,7 @@ export default function AccountPage() {
                 <CardDescription>登録情報の確認・編集</CardDescription>
               </div>
               {!isEditing && (
-                <Button variant="outline" size="sm" className="border-brand-teal text-brand-teal hover:bg-brand-teal/5" onClick={() => setIsEditing(true)}>
+                <Button variant="outline" size="sm" className="border-brand-teal text-brand-teal hover:bg-brand-teal/5" onClick={handleEditStart}>
                   編集
                 </Button>
               )}
@@ -185,7 +226,11 @@ export default function AccountPage() {
                   )}
                   <div className="space-y-2">
                     <Label htmlFor="editName">氏名</Label>
-                    <Input id="editName" name="name" defaultValue={user.name || ''} />
+                    <Input id="editName" name="name" defaultValue={user.name || ''} placeholder="山田 太郎" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editNameKana">フリガナ</Label>
+                    <Input id="editNameKana" name="nameKana" defaultValue={user.nameKana || ''} placeholder="ヤマダ タロウ" />
                   </div>
                   <div className="space-y-2">
                     <Label>メールアドレス</Label>
@@ -193,11 +238,38 @@ export default function AccountPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="editPhone">電話番号</Label>
-                    <Input id="editPhone" name="phone" defaultValue={user.phone || ''} />
+                    <Input id="editPhone" name="phone" defaultValue={user.phone || ''} placeholder="09012345678" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="editAddress">住所</Label>
-                    <Input id="editAddress" name="defaultAddress" defaultValue={user.defaultAddress || ''} />
+                    <Label htmlFor="editMobilePhone">携帯電話番号</Label>
+                    <Input id="editMobilePhone" name="mobilePhone" defaultValue={user.mobilePhone || ''} placeholder="電話番号と同じ場合は空欄" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editPostalCode">郵便番号</Label>
+                    <Input id="editPostalCode" name="postalCode" defaultValue={user.postalCode || ''} placeholder="1234567" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editPrefecture">都道府県</Label>
+                    <Select value={prefecture} onValueChange={(v) => setPrefecture(v ?? '')}>
+                      <SelectTrigger id="editPrefecture">
+                        <SelectValue placeholder="都道府県を選択..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PREFECTURES.map((pref) => (
+                          <SelectItem key={pref} value={pref}>
+                            {pref}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editAddressLine1">市区町村・番地</Label>
+                    <Input id="editAddressLine1" name="addressLine1" defaultValue={user.addressLine1 || ''} placeholder="渋谷区渋谷 1-2-3" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editAddressLine2">建物名・部屋番号</Label>
+                    <Input id="editAddressLine2" name="addressLine2" defaultValue={user.addressLine2 || ''} placeholder="○○ビル 101" />
                   </div>
                   <div className="flex gap-2">
                     <Button type="submit" disabled={isSaving} className="bg-brand-dark hover:bg-brand-dark/90">
@@ -215,6 +287,10 @@ export default function AccountPage() {
                     <p className="font-medium">{user.name || '未設定'}</p>
                   </div>
                   <div>
+                    <span className="text-sm text-muted-foreground">フリガナ</span>
+                    <p className="font-medium">{user.nameKana || '未設定'}</p>
+                  </div>
+                  <div>
                     <span className="text-sm text-muted-foreground">メールアドレス</span>
                     <p className="font-medium">{user.email}</p>
                   </div>
@@ -222,9 +298,23 @@ export default function AccountPage() {
                     <span className="text-sm text-muted-foreground">電話番号</span>
                     <p className="font-medium">{user.phone || '未設定'}</p>
                   </div>
+                  {user.mobilePhone && (
+                    <div>
+                      <span className="text-sm text-muted-foreground">携帯電話番号</span>
+                      <p className="font-medium">{user.mobilePhone}</p>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-sm text-muted-foreground">郵便番号</span>
+                    <p className="font-medium">{user.postalCode || '未設定'}</p>
+                  </div>
                   <div>
                     <span className="text-sm text-muted-foreground">住所</span>
-                    <p className="font-medium">{user.defaultAddress || '未設定'}</p>
+                    <p className="font-medium">
+                      {[user.prefecture, user.addressLine1, user.addressLine2]
+                        .filter(Boolean)
+                        .join(' ') || user.defaultAddress || '未設定'}
+                    </p>
                   </div>
                 </div>
               )}

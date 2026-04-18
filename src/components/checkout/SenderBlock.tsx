@@ -27,7 +27,13 @@ type User = {
   id: string
   email: string
   name?: string
+  nameKana?: string
   phone?: string
+  mobilePhone?: string
+  postalCode?: string
+  prefecture?: string
+  addressLine1?: string
+  addressLine2?: string
   defaultAddress?: string
   points: number
   role: 'admin' | 'customer'
@@ -103,6 +109,12 @@ export function SenderBlock({ value, onChange, user, isGuest }: Props) {
   }
 
   if (!isGuest && user) {
+    const address =
+      [user.prefecture, user.addressLine1, user.addressLine2]
+        .filter(Boolean)
+        .join(' ') ||
+      user.defaultAddress ||
+      '未設定'
     return (
       <section className="rounded-xl border border-border/60 bg-white p-5 sm:p-6">
         <h2 className="mb-4 text-sm font-bold text-brand-dark sm:text-base">送り主情報</h2>
@@ -111,6 +123,12 @@ export function SenderBlock({ value, onChange, user, isGuest }: Props) {
             <dt className="w-24 shrink-0 text-foreground/60">お名前</dt>
             <dd className="text-brand-dark">{user.name ?? '未設定'}</dd>
           </div>
+          {user.nameKana && (
+            <div className="flex gap-3">
+              <dt className="w-24 shrink-0 text-foreground/60">フリガナ</dt>
+              <dd className="text-brand-dark">{user.nameKana}</dd>
+            </div>
+          )}
           <div className="flex gap-3">
             <dt className="w-24 shrink-0 text-foreground/60">メール</dt>
             <dd className="text-brand-dark">{user.email}</dd>
@@ -119,10 +137,20 @@ export function SenderBlock({ value, onChange, user, isGuest }: Props) {
             <dt className="w-24 shrink-0 text-foreground/60">電話番号</dt>
             <dd className="text-brand-dark">{user.phone ?? '未設定'}</dd>
           </div>
+          {user.postalCode && (
+            <div className="flex gap-3">
+              <dt className="w-24 shrink-0 text-foreground/60">郵便番号</dt>
+              <dd className="text-brand-dark">{user.postalCode}</dd>
+            </div>
+          )}
+          <div className="flex gap-3">
+            <dt className="w-24 shrink-0 text-foreground/60">住所</dt>
+            <dd className="text-brand-dark">{address}</dd>
+          </div>
         </dl>
         <p className="mt-4 text-xs text-foreground/40">
           情報を変更するには{' '}
-          <Link href="/mypage" className="text-brand-teal underline underline-offset-2">
+          <Link href="/account" className="text-brand-teal underline underline-offset-2">
             マイページ
           </Link>{' '}
           からご変更ください。

@@ -52,8 +52,31 @@ const s3Plugins = process.env.R2_BUCKET
     ]
   : []
 
+const vercelUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+  ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  : process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : undefined
+
+const resolvedServerURL =
+  process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes('localhost')
+    ? process.env.NEXT_PUBLIC_APP_URL
+    : vercelUrl || process.env.NEXT_PUBLIC_APP_URL || ''
+
+const allowedOrigins = [
+  resolvedServerURL,
+  process.env.NEXT_PUBLIC_APP_URL,
+  vercelUrl,
+  'https://u-balloon.vercel.app',
+  'https://u-balloon.com',
+  'https://www.u-balloon.com',
+  'http://localhost:3000',
+].filter((v): v is string => Boolean(v))
+
 export default buildConfig({
-  serverURL: process.env.NEXT_PUBLIC_APP_URL || '',
+  serverURL: resolvedServerURL,
+  cors: allowedOrigins,
+  csrf: allowedOrigins,
   admin: {
     user: Users.slug,
     theme: 'all',

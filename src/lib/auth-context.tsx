@@ -6,7 +6,13 @@ type User = {
   id: string
   email: string
   name?: string
+  nameKana?: string
   phone?: string
+  mobilePhone?: string
+  postalCode?: string
+  prefecture?: string
+  addressLine1?: string
+  addressLine2?: string
   defaultAddress?: string
   points: number
   role: 'admin' | 'customer'
@@ -46,7 +52,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             id: data.user.id,
             email: data.user.email,
             name: data.user.name,
+            nameKana: data.user.nameKana,
             phone: data.user.phone,
+            mobilePhone: data.user.mobilePhone,
+            postalCode: data.user.postalCode,
+            prefecture: data.user.prefecture,
+            addressLine1: data.user.addressLine1,
+            addressLine2: data.user.addressLine2,
             defaultAddress: data.user.defaultAddress,
             points: data.user.points ?? 0,
             role: data.user.role,
@@ -83,7 +95,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       id: data.user.id,
       email: data.user.email,
       name: data.user.name,
+      nameKana: data.user.nameKana,
       phone: data.user.phone,
+      mobilePhone: data.user.mobilePhone,
+      postalCode: data.user.postalCode,
+      prefecture: data.user.prefecture,
+      addressLine1: data.user.addressLine1,
+      addressLine2: data.user.addressLine2,
       defaultAddress: data.user.defaultAddress,
       points: data.user.points ?? 0,
       role: data.user.role,
