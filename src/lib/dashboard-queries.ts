@@ -180,7 +180,7 @@ export async function getDailyRevenue(
       COALESCE(SUM(o.total_amount), 0)::numeric AS revenue
     FROM date_series ds
     LEFT JOIN orders o
-      ON DATE(o.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Tokyo') = ds.day
+      ON DATE(o.created_at AT TIME ZONE 'Asia/Tokyo') = ds.day
       AND o.status::text != 'cancelled'
     GROUP BY ds.day
     ORDER BY ds.day
@@ -270,16 +270,17 @@ export interface ShippingCounts {
 
 export async function getShippingCounts(payload: Payload): Promise<ShippingCounts> {
   const result = await db(payload).execute(sql`
+    WITH jst AS (
+      SELECT (now() AT TIME ZONE 'Asia/Tokyo')::date AS today
+    )
     SELECT
       COUNT(*) FILTER (
-        WHERE DATE(desired_arrival_date AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Tokyo')
-              = CURRENT_DATE AT TIME ZONE 'Asia/Tokyo'
+        WHERE (desired_arrival_date AT TIME ZONE 'Asia/Tokyo')::date = jst.today
       )::int AS today,
       COUNT(*) FILTER (
-        WHERE DATE(desired_arrival_date AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Tokyo')
-              = (CURRENT_DATE AT TIME ZONE 'Asia/Tokyo') + INTERVAL '1 day'
+        WHERE (desired_arrival_date AT TIME ZONE 'Asia/Tokyo')::date = jst.today + INTERVAL '1 day'
       )::int AS tomorrow
-    FROM orders
+    FROM orders, jst
     WHERE status::text NOT IN ('cancelled', 'delivered')
       AND desired_arrival_date IS NOT NULL
   `)
@@ -309,8 +310,8 @@ export async function getDeliverySlotCounts(payload: Payload): Promise<DeliveryS
       COUNT(*)::int AS count
     FROM orders
     WHERE status::text NOT IN ('cancelled', 'delivered')
-      AND DATE(desired_arrival_date AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Tokyo')
-          = CURRENT_DATE AT TIME ZONE 'Asia/Tokyo'
+      AND (desired_arrival_date AT TIME ZONE 'Asia/Tokyo')::date
+          = (now() AT TIME ZONE 'Asia/Tokyo')::date
     GROUP BY desired_time_slot
   `)
 

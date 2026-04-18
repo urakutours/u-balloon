@@ -323,30 +323,59 @@ function Bars({ data, t }: { data: BarItem[]; t: T }) {
   const fontSize1 = compact ? 9 : 11
   const fontSize2 = compact ? 8 : 10
   const labelH = 26 // fixed height reserved for 2-line label area
+  const barAreaH = 110                      // bar+value-label area height
+  const valueLabelH = compact ? 0 : 14      // reserved px for "x万" value label
+  const maxBarPx = barAreaH - valueLabelH   // 96px on non-compact, 110 on compact
 
   // Today's bar takes priority for highlight; fall back to max-value bar
   const anyToday = data.some(d => d.isToday)
 
   return (
     <div style={{ width: '100%', overflow: 'hidden', minWidth: 0 }}>
-      {/* Bar area */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap, height: 110, width: '100%' }}>
+      {/* Bar area — align bars to bottom; each column is fixed-height so px bar heights work */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap, height: barAreaH, width: '100%' }}>
         {data.map((d, i) => {
-          const h = (d.value / max) * 100
+          const ratio = d.value / max
+          const barPx = d.value > 0 ? Math.max(Math.round(ratio * maxBarPx), 4) : 2
           const highlighted = anyToday ? !!d.isToday : (d.value === max && d.value > 0)
           return (
-            <div key={i} style={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div
+              key={i}
+              style={{
+                flex: '1 1 0',
+                minWidth: 0,
+                height: '100%',                 // fill the 110px row so the bar lays on a known box
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'flex-end',     // keep bar pinned to bottom
+                alignItems: 'center',
+              }}
+            >
               {!compact && (
-                <span style={{ fontSize: 10, color: t.textMuted, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', marginBottom: 4 }}>
-                  {d.value > 0 ? `${(d.value / 10000).toFixed(0)}万` : '—'}
+                <span
+                  style={{
+                    fontSize: 10,
+                    color: t.textMuted,
+                    fontWeight: 500,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    marginBottom: 4,
+                    height: valueLabelH - 4,    // so bar can consume remaining px deterministically
+                    lineHeight: `${valueLabelH - 4}px`,
+                  }}
+                >
+                  {d.value > 0 ? `${(d.value / 10000).toFixed(1)}万` : '—'}
                 </span>
               )}
-              <div style={{
-                width: '100%', height: `${Math.max(h, 3)}%`, minHeight: 3,
-                borderRadius: compact ? '3px 3px 1px 1px' : '6px 6px 3px 3px',
-                background: highlighted ? t.barActive : t.barDefault,
-                transition: 'height 0.6s cubic-bezier(0.34,1.56,0.64,1)',
-              }} />
+              <div
+                style={{
+                  width: '100%',
+                  height: barPx,                // px, not %
+                  borderRadius: compact ? '3px 3px 1px 1px' : '6px 6px 3px 3px',
+                  background: highlighted ? t.barActive : t.barDefault,
+                  transition: 'height 0.6s cubic-bezier(0.34,1.56,0.64,1)',
+                }}
+              />
             </div>
           )
         })}
