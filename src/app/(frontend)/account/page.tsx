@@ -133,6 +133,7 @@ export default function AccountPage() {
     setIsSaving(true)
 
     const formData = new FormData(e.currentTarget)
+    const email = ((formData.get('email') as string | null) ?? '').trim()
     const postalCode = (formData.get('postalCode') as string | null) ?? ''
     const addressLine1 = (formData.get('addressLine1') as string | null) ?? ''
     const addressLine2 = (formData.get('addressLine2') as string | null) ?? ''
@@ -140,12 +141,19 @@ export default function AccountPage() {
       .filter(Boolean)
       .join(' ')
 
+    if (!email) {
+      setEditError('メールアドレスを入力してください')
+      setIsSaving(false)
+      return
+    }
+
     try {
       const res = await fetch(`/api/users/${user!.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
+          email,
           name: formData.get('name'),
           nameKana: formData.get('nameKana'),
           phone: formData.get('phone'),
@@ -233,8 +241,18 @@ export default function AccountPage() {
                     <Input id="editNameKana" name="nameKana" defaultValue={user.nameKana || ''} placeholder="ヤマダ タロウ" />
                   </div>
                   <div className="space-y-2">
-                    <Label>メールアドレス</Label>
-                    <Input value={user.email} disabled />
+                    <Label htmlFor="editEmail">メールアドレス</Label>
+                    <Input
+                      id="editEmail"
+                      name="email"
+                      type="email"
+                      defaultValue={user.email}
+                      required
+                      autoComplete="email"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      変更するとログイン用メールアドレスも更新されます。
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="editPhone">電話番号</Label>
