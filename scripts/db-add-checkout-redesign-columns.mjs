@@ -17,16 +17,16 @@
  *   sender.senderPhone                    → orders.sender_sender_phone
  *   sender.senderPostalCode               → orders.sender_sender_postal_code
  *   sender.senderPrefecture               → orders.sender_sender_prefecture
- *   sender.senderAddressLine1             → orders.sender_sender_address_line_1
- *   sender.senderAddressLine2             → orders.sender_sender_address_line_2
+ *   sender.senderAddressLine1             → orders.sender_sender_address_line1
+ *   sender.senderAddressLine2             → orders.sender_sender_address_line2
  *   recipient.recipientSameAsSender       → orders.recipient_recipient_same_as_sender
  *   recipient.recipientName               → orders.recipient_recipient_name
  *   recipient.recipientNameKana           → orders.recipient_recipient_name_kana
  *   recipient.recipientPhone              → orders.recipient_recipient_phone
  *   recipient.recipientPostalCode         → orders.recipient_recipient_postal_code
  *   recipient.recipientPrefecture         → orders.recipient_recipient_prefecture
- *   recipient.recipientAddressLine1       → orders.recipient_recipient_address_line_1
- *   recipient.recipientAddressLine2       → orders.recipient_recipient_address_line_2
+ *   recipient.recipientAddressLine1       → orders.recipient_recipient_address_line1
+ *   recipient.recipientAddressLine2       → orders.recipient_recipient_address_line2
  *   recipient.recipientDesiredArrivalDate → orders.recipient_recipient_desired_arrival_date
  *   recipient.recipientDesiredTimeSlotValue → orders.recipient_recipient_desired_time_slot_value
  *   recipient.recipientDesiredTimeSlotLabel → orders.recipient_recipient_desired_time_slot_label
@@ -74,16 +74,16 @@ const EXPECTED_COLUMNS = [
   'sender_sender_phone',
   'sender_sender_postal_code',
   'sender_sender_prefecture',
-  'sender_sender_address_line_1',
-  'sender_sender_address_line_2',
+  'sender_sender_address_line1',
+  'sender_sender_address_line2',
   'recipient_recipient_same_as_sender',
   'recipient_recipient_name',
   'recipient_recipient_name_kana',
   'recipient_recipient_phone',
   'recipient_recipient_postal_code',
   'recipient_recipient_prefecture',
-  'recipient_recipient_address_line_1',
-  'recipient_recipient_address_line_2',
+  'recipient_recipient_address_line1',
+  'recipient_recipient_address_line2',
   'recipient_recipient_desired_arrival_date',
   'recipient_recipient_desired_time_slot_value',
   'recipient_recipient_desired_time_slot_label',
