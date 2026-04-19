@@ -330,6 +330,10 @@ function StatusBadge({ status, themeKey }: { status: string; themeKey: ThemeKey 
   const c = palette[status as keyof typeof palette] ?? { bg: '#f3f4f6', text: '#374151', dot: '#9ca3af' }
   return (
     <span style={{
+      // Grid セル内では grid item が blockify されるため、justifySelf / width を
+      // 明示しないとセル全幅に広がってしまう。
+      justifySelf: 'start',
+      width: 'fit-content',
       display: 'inline-flex', alignItems: 'center', gap: 5,
       padding: '4px 10px', borderRadius: 20,
       background: c.bg, color: c.text,
