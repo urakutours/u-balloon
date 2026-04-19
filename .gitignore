@@ -20,3 +20,6 @@ next-env.d.ts
 
 # Secrets ディレクトリ
 .secrets/
+
+# DB backup dumps (contains encrypted secrets)
+scripts/backups/

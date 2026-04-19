@@ -20,6 +20,8 @@ import {
   getPendingCount,
   getShippingCounts,
   getDeliverySlotCounts,
+  getUnrespondedInquiryCount,
+  getRecentInquiries,
 } from '@/lib/dashboard-queries'
 
 export default async function Dashboard() {
@@ -49,6 +51,8 @@ export default async function Dashboard() {
     upcomingHolidays,
     lowStockResult,
     siteSettings,
+    unrespondedInquiryCount,
+    recentInquiriesResult,
   ] = await Promise.all([
     getRevenueSummary(payload, weekStart, weekEnd),
     getRevenueSummary(payload, prevWeekStart, prevWeekEnd),
@@ -92,6 +96,8 @@ export default async function Dashboard() {
       depth: 0,
     }),
     payload.findGlobal({ slug: 'site-settings' }).catch(() => null),
+    getUnrespondedInquiryCount(payload).catch(() => 0),
+    getRecentInquiries(payload, 5).catch(() => ({ inquiries: [], recent24hCount: 0 })),
   ])
 
   // Pad daily trend to full Mon–Sun week (SQL may return fewer days if week hasn't ended)
@@ -162,7 +168,9 @@ export default async function Dashboard() {
       totalOrders: Object.values(statusCounts).reduce((a, b) => a + b, 0),
       todayDeliveryCount: shipping.today,
       tomorrowDeliveryCount: shipping.tomorrow,
+      unrespondedInquiryCount,
     },
+    recentInquiries: recentInquiriesResult.inquiries,
     comparison: {
       prevRevenue: prevWeekRevenue.revenue,
       prevOrderCount: prevWeekRevenue.orderCount,

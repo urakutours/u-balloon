@@ -18,6 +18,7 @@ import {
   getPendingCount,
   getShippingCounts,
   getDeliverySlotCounts,
+  getUnrespondedInquiryCount,
 } from '@/lib/dashboard-queries'
 import {
   startOfDay,
@@ -156,6 +157,7 @@ export async function GET(req: NextRequest) {
     upcomingHolidays,
     lowStockResult,
     siteSettings,
+    unrespondedInquiryCount,
   ] = await Promise.all([
     safe('getRevenueSummary(current)', getRevenueSummary(payload, periodStart, periodEnd), { revenue: 0, orderCount: 0 }),
     safe('getRevenueSummary(previous)', getRevenueSummary(payload, prevStart, prevEnd), { revenue: 0, orderCount: 0 }),
@@ -204,6 +206,7 @@ export async function GET(req: NextRequest) {
       depth: 0,
     }), { docs: [] } as unknown as Awaited<ReturnType<Payload['find']>>),
     safe('siteSettings', payload.findGlobal({ slug: 'site-settings' }), null),
+    safe('getUnrespondedInquiryCount', getUnrespondedInquiryCount(payload), 0),
   ])
 
   // ============================================================
@@ -273,6 +276,7 @@ export async function GET(req: NextRequest) {
         statusDist.preparing + statusDist.shipped + statusDist.delivered + statusDist.cancelled,
       todayDeliveryCount: shipping.today,
       tomorrowDeliveryCount: shipping.tomorrow,
+      unrespondedInquiryCount,
     },
     comparison: {
       prevRevenue: previous.revenue,

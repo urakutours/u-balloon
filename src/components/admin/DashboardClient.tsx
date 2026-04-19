@@ -4,6 +4,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useTheme } from '@payloadcms/ui'
 import { format } from 'date-fns'
 import { ja } from 'date-fns/locale'
+import OrdersDialog from '@/components/admin/dashboard/OrdersDialog'
+import InquiriesDialog from '@/components/admin/dashboard/InquiriesDialog'
 
 // ============================================================
 // Theme definitions (ec-dashboard-v2 palette)
@@ -123,6 +125,15 @@ const TIME_SLOT_LABELS: Record<string, string> = {
   unspecified: '未指定',
 }
 
+export interface InquiryItem {
+  id: string
+  formTitle: string
+  submitterEmail: string | null
+  status: string
+  createdAt: string
+  dataPreview: string
+}
+
 export interface DashboardData {
   summary: {
     orderCount: number
@@ -132,7 +143,9 @@ export interface DashboardData {
     totalOrders: number
     todayDeliveryCount: number
     tomorrowDeliveryCount: number
+    unrespondedInquiryCount?: number
   }
+  recentInquiries?: InquiryItem[]
   comparison?: {
     prevRevenue: number
     prevOrderCount: number
@@ -267,15 +280,37 @@ function KeyMetricCard({ label, value, accent, t }: {
 }
 
 /** KPI card */
-function KpiCard({ label, value, sub, subColor, icon, t }: {
+function KpiCard({ label, value, sub, subColor, icon, t, onClick, pulseDot }: {
   label: string; value: string; sub: string; subColor?: string; icon: React.ReactNode; t: T
+  onClick?: () => void
+  pulseDot?: boolean
 }) {
+  const isClickable = !!onClick
   return (
-    <div style={{
-      background: t.surface, borderRadius: 16, padding: '20px 22px',
-      border: `1px solid ${t.border}`, boxShadow: t.cardShadow,
-      transition: 'all .3s',
-    }}>
+    <div
+      role={isClickable ? 'button' : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={isClickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick?.() } : undefined}
+      style={{
+        position: 'relative',
+        background: t.surface, borderRadius: 16, padding: '20px 22px',
+        border: `1px solid ${t.border}`, boxShadow: t.cardShadow,
+        transition: 'all .3s',
+        cursor: isClickable ? 'pointer' : 'default',
+      }}
+      onMouseEnter={isClickable ? (e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = `0 4px 12px rgba(0,0,0,0.1)` } : undefined}
+      onMouseLeave={isClickable ? (e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = t.cardShadow } : undefined}
+    >
+      {pulseDot && (
+        <span style={{
+          position: 'absolute', top: 12, right: 12,
+          width: 10, height: 10, borderRadius: '50%',
+          background: '#ef4444',
+          boxShadow: '0 0 0 0 rgba(239,68,68,0.4)',
+          animation: 'ub-pulse 1.5s ease-in-out infinite',
+        }} />
+      )}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
         <span style={{ fontSize: 12, fontWeight: 500, color: t.textMuted }}>{label}</span>
         <div style={{
@@ -493,6 +528,8 @@ function formatDuration(sec: number): string {
 // ============================================================
 // Main component
 // ============================================================
+type DialogKind = 'revenue' | 'orders' | 'pending' | 'shipping-today' | 'unresponded' | 'recent-inquiries'
+
 export default function DashboardClient({ initialData }: { initialData: DashboardData }) {
   const { theme, setTheme } = useTheme()
   const themeKey: ThemeKey = theme === 'dark' ? 'dark' : 'light'
@@ -505,6 +542,9 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
   const [loading, setLoading] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+
+  // Dialog state
+  const [activeDialog, setActiveDialog] = useState<{ kind: DialogKind; title: string } | null>(null)
 
   // --- Breakpoint detection (3段階) ---
   const [breakpoint, setBreakpoint] = useState<'mobile' | 'tablet' | 'desktop'>('desktop')
@@ -732,14 +772,28 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
   const revChange = formatChange(cmp?.revenueChangeRate)
   const ordChange = formatChange(cmp?.orderChangeRate)
 
+  // Inquiry data
+  const unrespondedInquiryCount = data.summary.unrespondedInquiryCount ?? initialData.summary.unrespondedInquiryCount ?? 0
+  const recentInquiries = data.recentInquiries ?? initialData.recentInquiries ?? []
+  const recent24hNewCount = recentInquiries.filter(inq => {
+    if (inq.status !== 'new') return false
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    return new Date(inq.createdAt) > cutoff
+  }).length
+
   // KPI cards
-  const kpiCards = [
+  const kpiCards: Array<{
+    label: string; value: string; sub: string; subColor?: string; icon: React.ReactNode
+    kind: DialogKind
+    pulseDot?: boolean
+  }> = [
     {
       label: `${periodLabel}の売上`,
       value: yen(data.summary.revenue),
       sub: revChange.text,
       subColor: revChange.color,
       icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={t.accent} strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></svg>,
+      kind: 'revenue',
     },
     {
       label: `${periodLabel}の注文`,
@@ -747,6 +801,7 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
       sub: ordChange.text,
       subColor: ordChange.color,
       icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={t.purple} strokeWidth="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 01-8 0" /></svg>,
+      kind: 'orders',
     },
     {
       label: '要対応',
@@ -754,6 +809,7 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
       sub: '保留中 + 入金待ち',
       subColor: t.warning,
       icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={t.warning} strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>,
+      kind: 'pending',
     },
     {
       label: '本日の配送',
@@ -761,6 +817,16 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
       sub: `明日: ${tomorrowDeliveryCount}件`,
       subColor: t.textSecondary,
       icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={t.success} strokeWidth="2"><rect x="1" y="3" width="15" height="13" /><polygon points="16 8 20 8 23 11 23 16 16 16 16 8" /><circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" /></svg>,
+      kind: 'shipping-today',
+    },
+    {
+      label: '未対応問い合わせ',
+      value: `${unrespondedInquiryCount}件`,
+      sub: recent24hNewCount > 0 ? '新着あり' : '未対応の問い合わせ',
+      subColor: recent24hNewCount > 0 ? t.danger : t.textMuted,
+      icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={t.danger} strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></svg>,
+      kind: 'unresponded',
+      pulseDot: recent24hNewCount > 0,
     },
   ]
 
@@ -885,14 +951,63 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
       )}
 
       {/* ===== KPI Cards ===== */}
+      <style>{`@keyframes ub-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.4)} 50%{box-shadow:0 0 0 6px rgba(239,68,68,0)} }`}</style>
       <div style={{
         display: 'grid',
-        gridTemplateColumns: isNarrow ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+        gridTemplateColumns: isNarrow ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)',
         gap: isNarrow ? 12 : 16,
         marginBottom: isNarrow ? 16 : 24,
       }}>
-        {kpiCards.map((card, i) => <KpiCard key={i} {...card} t={t} />)}
+        {kpiCards.map((card, i) => {
+          // On narrow viewports (2 columns), 5 cards produce a 2+2+1 layout —
+          // make the last card span both columns so it centers nicely.
+          const spanFull = isNarrow && i === kpiCards.length - 1 && kpiCards.length % 2 === 1
+          return (
+            <div key={i} style={spanFull ? { gridColumn: '1 / -1' } : undefined}>
+              <KpiCard
+                label={card.label}
+                value={card.value}
+                sub={card.sub}
+                subColor={card.subColor}
+                icon={card.icon}
+                pulseDot={card.pulseDot}
+                t={t}
+                onClick={() => setActiveDialog({ kind: card.kind, title: card.label })}
+              />
+            </div>
+          )
+        })}
       </div>
+
+      {/* ===== 直近休業日バナー ===== */}
+      {(() => {
+        const now = new Date()
+        const weekLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+        const upcomingThisWeek = (data.upcomingHolidays ?? initialData.upcomingHolidays ?? []).filter(h => {
+          const d = new Date(h.date)
+          return d >= now && d <= weekLater
+        })
+        if (upcomingThisWeek.length === 0) return null
+        const labels = upcomingThisWeek.map(h => {
+          const d = new Date(h.date)
+          const DAY_NAMES = ['日', '月', '火', '水', '木', '金', '土']
+          return `${d.getMonth() + 1}/${d.getDate()}(${DAY_NAMES[d.getDay()]})`
+        }).join(', ')
+        return (
+          <div style={{
+            marginBottom: isNarrow ? 12 : 16,
+            padding: '8px 14px', borderRadius: 10,
+            background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)',
+            color: t.warning, fontSize: 12, fontWeight: 500,
+            display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            今週の休業日: {labels}
+          </div>
+        )
+      })()}
 
       {/* ===== Charts Row ===== */}
       <div style={{
@@ -1206,7 +1321,77 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
 
       </div>
 
+      {/* ===== 最近の問い合わせ ===== */}
+      {recentInquiries.length > 0 && (
+        <Card t={t} style={{ padding: 24, marginTop: isNarrow ? 12 : 16 }}>
+          <CardHeader
+            title="最近の問い合わせ" sub="直近の受信一覧"
+            right={
+              <button
+                type="button"
+                onClick={() => setActiveDialog({ kind: 'recent-inquiries', title: '最近の問い合わせ' })}
+                style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${t.border}`, background: t.surface, fontSize: 12, fontWeight: 500, color: t.accent, cursor: 'pointer' }}
+              >全て見る →</button>
+            }
+            t={t}
+          />
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {recentInquiries.slice(0, 5).map((inq, i) => (
+              <a
+                key={inq.id}
+                href={`/admin/collections/form-submissions/${inq.id}`}
+                style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '10px 0',
+                  borderBottom: i < Math.min(recentInquiries.length, 5) - 1 ? `1px solid ${t.borderLight}` : 'none',
+                  textDecoration: 'none', color: 'inherit',
+                }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: t.text }}>{inq.formTitle}</div>
+                  {inq.submitterEmail && (
+                    <div style={{ fontSize: 11, color: t.textMuted }}>{inq.submitterEmail}</div>
+                  )}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                  <span style={{
+                    fontSize: 11, padding: '2px 7px', borderRadius: 12, fontWeight: 600,
+                    background: inq.status === 'new' ? 'rgba(239,68,68,0.1)' : inq.status === 'resolved' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
+                    color: inq.status === 'new' ? t.danger : inq.status === 'resolved' ? t.success : t.warning,
+                  }}>
+                    {inq.status === 'new' ? '未対応' : inq.status === 'resolved' ? '対応済み' : '対応中'}
+                  </span>
+                  <span style={{ fontSize: 11, color: t.textMuted }}>
+                    {format(new Date(inq.createdAt), 'MM/dd HH:mm')}
+                  </span>
+                </div>
+              </a>
+            ))}
+          </div>
+        </Card>
+      )}
+
       <style>{`@keyframes ub-spin { to { transform: rotate(360deg); } }`}</style>
+
+      {/* ===== Dialogs ===== */}
+      {activeDialog && (activeDialog.kind === 'revenue' || activeDialog.kind === 'orders' || activeDialog.kind === 'pending' || activeDialog.kind === 'shipping-today') && (
+        <OrdersDialog
+          open={!!activeDialog}
+          onOpenChange={(open) => { if (!open) setActiveDialog(null) }}
+          kind={activeDialog.kind as 'revenue' | 'orders' | 'pending' | 'shipping-today'}
+          title={activeDialog.title}
+          from={period === 'custom' && customStart ? customStart : undefined}
+          to={period === 'custom' && customEnd ? customEnd : undefined}
+        />
+      )}
+      {activeDialog && (activeDialog.kind === 'unresponded' || activeDialog.kind === 'recent-inquiries') && (
+        <InquiriesDialog
+          open={!!activeDialog}
+          onOpenChange={(open) => { if (!open) setActiveDialog(null) }}
+          kind={activeDialog.kind === 'unresponded' ? 'unresponded' : 'recent'}
+          title={activeDialog.title}
+        />
+      )}
     </div>
   )
 }

@@ -60,6 +60,7 @@ const I = {
 interface SubItem {
   label: string
   href: string
+  badge?: number
 }
 
 interface NavGroup {
@@ -75,9 +76,9 @@ const SETTINGS_CHILDREN: SubItem[] = [
   { label: 'サイト設定', href: '/admin/globals/site-settings' },
 ]
 
-function buildNav(pendingCount: number): NavGroup[] {
+function buildNav(pendingCount: number, unrespondedInquiryCount: number): NavGroup[] {
   return [
-    { label: '概要', icon: I.grid, href: '/admin' },
+    { label: 'ダッシュボード', icon: I.grid, href: '/admin' },
     {
       label: '注文管理', icon: I.bag, href: '/admin/collections/orders',
       badge: pendingCount > 0 ? pendingCount : undefined,
@@ -98,11 +99,12 @@ function buildNav(pendingCount: number): NavGroup[] {
     },
     {
       label: 'サイト管理', icon: I.edit, href: '/admin/collections/pages',
+      badge: unrespondedInquiryCount > 0 ? unrespondedInquiryCount : undefined,
       children: [
         { label: '固定ページ', href: '/admin/collections/pages' },
         { label: 'ブログ記事', href: '/admin/collections/posts' },
         { label: 'フォーム', href: '/admin/collections/forms' },
-        { label: 'お問い合わせ受信', href: '/admin/collections/form-submissions' },
+        { label: 'お問い合わせ受信', href: '/admin/collections/form-submissions', badge: unrespondedInquiryCount > 0 ? unrespondedInquiryCount : undefined },
         { label: 'メールテンプレート', href: '/admin/collections/email-templates' },
       ],
     },
@@ -136,6 +138,7 @@ export default function CustomNav() {
 
   const [hoveredIdx, setHoveredIdx] = useState<string | null>(null)
   const [pendingCount, setPendingCount] = useState(0)
+  const [unrespondedInquiryCount, setUnrespondedInquiryCount] = useState(0)
   const [stripeMode, setStripeMode] = useState<'test' | 'live'>('test')
   const pathname = usePathname() ?? '/admin'
 
@@ -284,6 +287,14 @@ export default function CustomNav() {
       .catch(() => {})
   }, [])
 
+  // Fetch unresponded inquiry count
+  useEffect(() => {
+    fetch('/api/admin/dashboard/inquiries?kind=count', { credentials: 'include' })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data?.count != null) setUnrespondedInquiryCount(data.count) })
+      .catch(() => {})
+  }, [])
+
   // Fetch Stripe mode for badge
   useEffect(() => {
     fetch('/api/admin/stripe-mode', { credentials: 'include' })
@@ -294,7 +305,7 @@ export default function CustomNav() {
 
   // Auto-expand the group containing the active page (additive, never closes others)
   useEffect(() => {
-    const nav = buildNav(pendingCount)
+    const nav = buildNav(pendingCount, unrespondedInquiryCount)
     for (const group of nav) {
       if (group.children?.some(c => pathname.startsWith(c.href))) {
         setOpenGroups(prev => {
@@ -310,7 +321,7 @@ export default function CustomNav() {
         return new Set(prev).add('設定')
       })
     }
-  }, [pathname, pendingCount])
+  }, [pathname, pendingCount, unrespondedInquiryCount])
 
   const toggleGroup = useCallback((label: string) => {
     setOpenGroups(prev => {
@@ -321,7 +332,7 @@ export default function CustomNav() {
     })
   }, [])
 
-  const navItems = buildNav(pendingCount)
+  const navItems = buildNav(pendingCount, unrespondedInquiryCount)
 
   const isActive = (href: string) => {
     if (href === '/admin') return pathname === '/admin' || pathname === '/admin/'
@@ -679,7 +690,14 @@ export default function CustomNav() {
                           textDecoration: 'none', transition: 'all .12s',
                         }}
                       >
-                        {child.label}
+                        <span style={{ flex: 1 }}>{child.label}</span>
+                        {child.badge != null && (
+                          <span style={{
+                            background: t.danger, color: 'white',
+                            fontSize: 10, fontWeight: 700, borderRadius: 10,
+                            padding: '2px 6px', lineHeight: '1.2',
+                          }}>{child.badge}</span>
+                        )}
                       </Link>
                     )
                   })}

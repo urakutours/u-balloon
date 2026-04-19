@@ -292,6 +292,82 @@ export async function getShippingCounts(payload: Payload): Promise<ShippingCount
 }
 
 // ============================================================
+// 10. Unresponded inquiry count (form-submissions where status = 'new')
+// ============================================================
+
+export async function getUnrespondedInquiryCount(payload: Payload): Promise<number> {
+  const result = await db(payload).execute(sql`
+    SELECT COUNT(*)::int AS count
+    FROM form_submissions
+    WHERE status::text = 'new'
+  `)
+  return Number((result.rows[0] as { count: number } | undefined)?.count ?? 0)
+}
+
+// ============================================================
+// 11. Recent inquiries (form-submissions, latest N, depth=1)
+// ============================================================
+
+export interface InquiryItem {
+  id: string
+  formTitle: string
+  submitterEmail: string | null
+  status: string
+  createdAt: string
+  dataPreview: string
+}
+
+export async function getRecentInquiries(
+  payload: Payload,
+  limit = 5,
+): Promise<{ inquiries: InquiryItem[]; recent24hCount: number }> {
+  const [result, recentRow] = await Promise.all([
+    payload.find({
+      collection: 'form-submissions',
+      sort: '-createdAt',
+      limit,
+      depth: 1,
+    }),
+    db(payload).execute(sql`
+      SELECT COUNT(*)::int AS count
+      FROM form_submissions
+      WHERE status::text = 'new'
+        AND created_at >= NOW() - INTERVAL '24 hours'
+    `),
+  ])
+
+  const recent24hCount = Number(
+    (recentRow.rows[0] as { count: number } | undefined)?.count ?? 0,
+  )
+
+  const inquiries = result.docs.map((doc) => {
+    const form = doc.form as { title?: string } | null
+    const dataRaw = doc.data as Record<string, unknown> | null
+    // Extract first text-like value from data JSON for preview
+    let dataPreview = ''
+    if (dataRaw && typeof dataRaw === 'object') {
+      const entries = Object.entries(dataRaw)
+      for (const [, v] of entries) {
+        if (typeof v === 'string' && v.trim()) {
+          dataPreview = v.trim().slice(0, 50)
+          break
+        }
+      }
+    }
+    return {
+      id: String(doc.id),
+      formTitle: form?.title ?? 'フォーム',
+      submitterEmail: (doc.submitterEmail as string | null) ?? null,
+      status: (doc.status as string) ?? 'new',
+      createdAt: doc.createdAt as string,
+      dataPreview,
+    }
+  })
+
+  return { inquiries, recent24hCount }
+}
+
+// ============================================================
 // 9. Delivery time slot breakdown for today
 // ============================================================
 
