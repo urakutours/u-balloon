@@ -72,10 +72,14 @@ function StatusBadge({ status }: { status: string }) {
   const text = STATUS_TEXT[status] ?? '#374151'
   return (
     <span style={{
+      // Grid セル内では grid item が blockify されるので、
+      // justifySelf: 'start' を付けないとセル全幅に広がってしまう。
+      justifySelf: 'start',
       display: 'inline-flex', alignItems: 'center', gap: 4,
       padding: '3px 8px', borderRadius: 20,
       background: bg, color: text,
       fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap',
+      width: 'fit-content',
     }}>
       {STATUS_LABELS[status] ?? status}
     </span>
@@ -210,9 +214,15 @@ export default function OrdersDialog({ open, onOpenChange, kind, title, from, to
                     fontSize: 13,
                   }}
                 >
-                  <span style={{ fontWeight: 600, color: '#6366f1', fontSize: 12 }}>
+                  <a
+                    href={`/admin/collections/orders/${o.id}`}
+                    style={{
+                      fontWeight: 600, color: '#6366f1', fontSize: 12,
+                      textDecoration: 'none',
+                    }}
+                  >
                     {o.orderNumber || '-'}
-                  </span>
+                  </a>
                   <span style={{ fontWeight: 500 }}>{o.customerName}</span>
                   <span style={{ fontWeight: 600 }}>{yen(o.totalAmount)}</span>
                   <StatusBadge status={o.status} />
