@@ -154,7 +154,11 @@ export default function CustomNav() {
 
   // Sync with Payload's built-in hamburger toggle — watches .app-header--nav-open class
   const [isNavOpen, setIsNavOpen] = useState(true)
+  // hydration 完了フラグ。narrow 初回レンダ時のチラ見え防止に使う。
+  const [mounted, setMounted] = useState(false)
   useEffect(() => {
+    setMounted(true)
+
     const appHeader = document.querySelector('.app-header')
     if (!appHeader) return
 
@@ -445,6 +449,16 @@ export default function CustomNav() {
           flex-basis: 100% !important;
         }
 
+        /* narrow viewport で hydration 完了前は sidebar を画面外に固定する。
+           これによりページ遷移時の一瞬の flash を抑える。
+           transition: none により「mount 後の初回 translate」もアニメさせない。*/
+        @media (max-width: 1023px) {
+          nav[data-ub-nav][data-mounted="false"] {
+            transform: translateX(-100%) !important;
+            transition: none !important;
+            box-shadow: none !important;
+          }
+        }
         @media (max-width: 1023px) {
           [data-theme] .template-default,
           [data-theme] .template-default.template-default--nav-hydrated,
@@ -536,7 +550,12 @@ export default function CustomNav() {
           }}
         />
       )}
-      <nav aria-label="主ナビゲーション" style={navStyle}>
+      <nav
+        aria-label="主ナビゲーション"
+        data-ub-nav=""
+        data-mounted={mounted ? 'true' : 'false'}
+        style={navStyle}
+      >
 
       {/* Logo */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 12px', marginBottom: stripeMode === 'test' ? 10 : 32 }}>
@@ -657,6 +676,7 @@ export default function CustomNav() {
                   href={group.href}
                   onMouseEnter={() => setHoveredIdx(hoverKey)}
                   onMouseLeave={() => setHoveredIdx(null)}
+                  onClick={closeNavOnNarrow}
                   style={headerStyle}
                 >{headerContent}</Link>
               )}
@@ -681,6 +701,7 @@ export default function CustomNav() {
                         href={child.href}
                         onMouseEnter={() => setHoveredIdx(childHoverKey)}
                         onMouseLeave={() => setHoveredIdx(null)}
+                        onClick={closeNavOnNarrow}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 8,
                           padding: '7px 12px', borderRadius: 8,
@@ -759,6 +780,7 @@ export default function CustomNav() {
                     href={child.href}
                     onMouseEnter={() => setHoveredIdx(childHoverKey)}
                     onMouseLeave={() => setHoveredIdx(null)}
+                    onClick={closeNavOnNarrow}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8,
                       padding: '7px 12px', borderRadius: 8,

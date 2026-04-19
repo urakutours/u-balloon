@@ -23,3 +23,6 @@ next-env.d.ts
 
 # DB backup dumps (contains encrypted secrets)
 scripts/backups/
+
+# E2E / ローカル検証で取得する Payload の session cookie
+pl-cookie.txt
