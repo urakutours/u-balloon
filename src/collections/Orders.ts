@@ -346,7 +346,10 @@ export const Orders: CollectionConfig = {
             {
               name: 'sender',
               type: 'group',
-              label: '送り主情報',
+              // 内部 DB カラム名は sender/senderName のまま（マイグレーション回避）。
+              // EC の情報構造では「発送元」より「注文者 = 連絡先 = データの起点」が一次概念
+              // なので、ラベルと UI 表示のみ「注文者」に統一する。
+              label: '注文者情報',
               fields: [
                 {
                   name: 'senderName',
@@ -399,7 +402,7 @@ export const Orders: CollectionConfig = {
                 {
                   name: 'recipientSameAsSender',
                   type: 'checkbox',
-                  label: '送り主と同じ',
+                  label: '注文者と同じ',
                   defaultValue: true,
                 },
                 {

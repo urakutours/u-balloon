@@ -117,7 +117,7 @@ export function SenderBlock({ value, onChange, user, isGuest }: Props) {
       '未設定'
     return (
       <section className="rounded-xl border border-border/60 bg-white p-5 sm:p-6">
-        <h2 className="mb-4 text-sm font-bold text-brand-dark sm:text-base">送り主情報</h2>
+        <h2 className="mb-4 text-sm font-bold text-brand-dark sm:text-base">注文者情報</h2>
         <dl className="space-y-2 text-sm">
           <div className="flex gap-3">
             <dt className="w-24 shrink-0 text-foreground/60">お名前</dt>
@@ -161,7 +161,7 @@ export function SenderBlock({ value, onChange, user, isGuest }: Props) {
 
   return (
     <section className="rounded-xl border border-border/60 bg-white p-5 sm:p-6">
-      <h2 className="mb-4 text-sm font-bold text-brand-dark sm:text-base">送り主情報</h2>
+      <h2 className="mb-4 text-sm font-bold text-brand-dark sm:text-base">注文者情報</h2>
       <div className="space-y-4">
         <div>
           <Label htmlFor="sender-name" className="mb-1.5 block text-sm font-semibold text-brand-dark">

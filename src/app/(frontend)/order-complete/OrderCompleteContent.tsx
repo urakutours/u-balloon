@@ -451,13 +451,13 @@ export default function OrderCompleteContent() {
         </Card>
       )}
 
-      {/* 送り主情報（新フォーム対応） */}
+      {/* 注文者情報（旧称: 送り主情報） */}
       {order.sender && (order.sender.senderName || order.sender.senderPhone || order.sender.senderEmail) && (
         <Card className="mb-6">
           <CardContent className="p-6">
             <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
               <User className="h-4 w-4" />
-              送り主情報
+              注文者情報
             </h3>
             <div className="space-y-1 text-sm">
               {order.sender.senderName && <p className="font-medium">{order.sender.senderName}</p>}
@@ -487,7 +487,7 @@ export default function OrderCompleteContent() {
               送り先情報
             </h3>
             {order.recipient.recipientSameAsSender ? (
-              <p className="text-sm text-muted-foreground">送り主と同じ</p>
+              <p className="text-sm text-muted-foreground">注文者と同じ</p>
             ) : (
               <div className="space-y-1 text-sm">
                 {order.recipient.recipientName && <p className="font-medium">{order.recipient.recipientName}</p>}
