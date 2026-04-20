@@ -151,7 +151,7 @@ export function RecipientBlock({ value, onChange, senderSnapshot, availableTimeS
             className="mt-1 accent-brand-teal"
           />
           <div className="flex-1">
-            <span className="font-semibold text-brand-dark">お客様情報と同じ</span>
+            <span className="font-semibold text-brand-dark">注文者情報と同じ</span>
           </div>
         </label>
 

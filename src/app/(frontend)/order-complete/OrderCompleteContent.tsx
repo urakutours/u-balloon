@@ -435,48 +435,45 @@ export default function OrderCompleteContent() {
         </Card>
       )}
 
-      {/* お客様情報 */}
-      {(order.customerName || order.customerEmail) && (
-        <Card className="mb-6">
-          <CardContent className="p-6">
-            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-              <User className="h-4 w-4" />
-              お客様情報
-            </h3>
-            <div className="space-y-1 text-sm">
-              {order.customerName && <p>{order.customerName}</p>}
-              {order.customerEmail && <p className="text-muted-foreground">{order.customerEmail}</p>}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* 注文者情報（旧称: 送り主情報） */}
-      {order.sender && (order.sender.senderName || order.sender.senderPhone || order.sender.senderEmail) && (
-        <Card className="mb-6">
-          <CardContent className="p-6">
-            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-              <User className="h-4 w-4" />
-              注文者情報
-            </h3>
-            <div className="space-y-1 text-sm">
-              {order.sender.senderName && <p className="font-medium">{order.sender.senderName}</p>}
-              {order.sender.senderPhone && <p className="text-muted-foreground">{order.sender.senderPhone}</p>}
-              {order.sender.senderEmail && <p className="text-muted-foreground">{order.sender.senderEmail}</p>}
-              {(order.sender.senderPostalCode || order.sender.senderPrefecture || order.sender.senderAddressLine1) && (
-                <p className="text-muted-foreground">
-                  {[
-                    order.sender.senderPostalCode ? `〒${order.sender.senderPostalCode}` : '',
-                    order.sender.senderPrefecture,
-                    order.sender.senderAddressLine1,
-                    order.sender.senderAddressLine2,
-                  ].filter(Boolean).join(' ')}
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* 注文者情報（旧称: 送り主情報）。sender が無い場合は customerName/customerEmail にフォールバック */}
+      {(() => {
+        const hasSender = !!order.sender && !!(order.sender.senderName || order.sender.senderPhone || order.sender.senderEmail)
+        if (!hasSender && !order.customerName && !order.customerEmail) return null
+        return (
+          <Card className="mb-6">
+            <CardContent className="p-6">
+              <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                <User className="h-4 w-4" />
+                注文者情報
+              </h3>
+              <div className="space-y-1 text-sm">
+                {hasSender ? (
+                  <>
+                    {order.sender!.senderName && <p className="font-medium">{order.sender!.senderName}</p>}
+                    {order.sender!.senderPhone && <p className="text-muted-foreground">{order.sender!.senderPhone}</p>}
+                    {order.sender!.senderEmail && <p className="text-muted-foreground">{order.sender!.senderEmail}</p>}
+                    {(order.sender!.senderPostalCode || order.sender!.senderPrefecture || order.sender!.senderAddressLine1) && (
+                      <p className="text-muted-foreground">
+                        {[
+                          order.sender!.senderPostalCode ? `〒${order.sender!.senderPostalCode}` : '',
+                          order.sender!.senderPrefecture,
+                          order.sender!.senderAddressLine1,
+                          order.sender!.senderAddressLine2,
+                        ].filter(Boolean).join(' ')}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {order.customerName && <p className="font-medium">{order.customerName}</p>}
+                    {order.customerEmail && <p className="text-muted-foreground">{order.customerEmail}</p>}
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )
+      })()}
 
       {/* 送り先情報（新フォーム対応） */}
       {order.recipient && (

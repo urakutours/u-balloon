@@ -220,32 +220,32 @@ export function OrderConfirmEmail({
         </Text>
       )}
 
-      {/* お客様情報 */}
-      <Section style={infoSectionStyle}>
-        <Text style={infoHeadingStyle}>お客様情報</Text>
-        <Text style={{ ...valueStyle, margin: '0 0 2px' }}>{name}</Text>
-        {email && <Text style={{ ...valueStyle, margin: 0 }}>{email}</Text>}
-      </Section>
-
       {/* 注文者情報（旧称: 送り主情報） */}
-      {senderInfo && (senderInfo.senderName || senderInfo.senderEmail || senderInfo.senderPhone) && (
-        <Section style={{ ...infoSectionStyle, marginTop: '12px' }}>
-          <Text style={infoHeadingStyle}>注文者情報</Text>
-          {senderInfo.senderName && <Text style={{ ...valueStyle, margin: '0 0 2px' }}>{senderInfo.senderName}</Text>}
-          {senderInfo.senderPhone && <Text style={{ ...valueStyle, margin: '0 0 2px' }}>{senderInfo.senderPhone}</Text>}
-          {senderInfo.senderEmail && <Text style={{ ...valueStyle, margin: '0 0 2px' }}>{senderInfo.senderEmail}</Text>}
-          {(senderInfo.senderPostalCode || senderInfo.senderPrefecture || senderInfo.senderAddressLine1) && (
-            <Text style={{ ...valueStyle, margin: 0 }}>
-              {[
-                senderInfo.senderPostalCode ? `〒${senderInfo.senderPostalCode}` : '',
-                senderInfo.senderPrefecture,
-                senderInfo.senderAddressLine1,
-                senderInfo.senderAddressLine2,
-              ].filter(Boolean).join(' ')}
-            </Text>
-          )}
-        </Section>
-      )}
+      <Section style={infoSectionStyle}>
+        <Text style={infoHeadingStyle}>注文者情報</Text>
+        {senderInfo && (senderInfo.senderName || senderInfo.senderEmail || senderInfo.senderPhone) ? (
+          <>
+            {senderInfo.senderName && <Text style={{ ...valueStyle, margin: '0 0 2px' }}>{senderInfo.senderName}</Text>}
+            {senderInfo.senderPhone && <Text style={{ ...valueStyle, margin: '0 0 2px' }}>{senderInfo.senderPhone}</Text>}
+            {senderInfo.senderEmail && <Text style={{ ...valueStyle, margin: '0 0 2px' }}>{senderInfo.senderEmail}</Text>}
+            {(senderInfo.senderPostalCode || senderInfo.senderPrefecture || senderInfo.senderAddressLine1) && (
+              <Text style={{ ...valueStyle, margin: 0 }}>
+                {[
+                  senderInfo.senderPostalCode ? `〒${senderInfo.senderPostalCode}` : '',
+                  senderInfo.senderPrefecture,
+                  senderInfo.senderAddressLine1,
+                  senderInfo.senderAddressLine2,
+                ].filter(Boolean).join(' ')}
+              </Text>
+            )}
+          </>
+        ) : (
+          <>
+            <Text style={{ ...valueStyle, margin: '0 0 2px' }}>{name}</Text>
+            {email && <Text style={{ ...valueStyle, margin: 0 }}>{email}</Text>}
+          </>
+        )}
+      </Section>
 
       {/* 送り先情報（新フォーム対応） */}
       {recipientInfo && (recipientInfo.recipientSameAsSender !== undefined || recipientInfo.recipientName) && (
