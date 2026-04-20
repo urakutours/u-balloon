@@ -152,7 +152,7 @@ export default function CheckoutPage() {
     return 'standard'
   })()
 
-  // 配送先住所（送り先別指定 or 注文者と同じ）
+  // 配送先住所（送り先別指定 or お客様と同じ）
   const destinationAddress = recipient.sameAsSender
     ? `${sender.prefecture}${sender.addressLine1}${sender.addressLine2}`
     : `${recipient.prefecture}${recipient.addressLine1}${recipient.addressLine2}`
@@ -396,7 +396,7 @@ export default function CheckoutPage() {
             <div className="flex items-center gap-3 rounded-xl border border-brand-teal/30 bg-brand-teal/5 p-4">
               <LogIn className="h-5 w-5 shrink-0 text-brand-teal" />
               <p className="text-sm text-brand-dark">
-                会員の方はログインすると注文者情報の入力が不要です。
+                会員の方はログインするとお客様情報の入力が不要です。
                 <Link
                   href={`/login?redirect=/checkout`}
                   className="ml-1 font-semibold text-brand-teal underline underline-offset-2"
@@ -407,7 +407,7 @@ export default function CheckoutPage() {
             </div>
           )}
 
-          {/* 2. SenderBlock — 注文者情報（内部コンポーネント名は SenderBlock のまま） */}
+          {/* 2. SenderBlock — お客様情報（内部コンポーネント名は SenderBlock のまま） */}
           <SenderBlock
             value={sender}
             onChange={setSender}
@@ -669,7 +669,7 @@ export default function CheckoutPage() {
             </div>
             <span
               className="mt-6 block w-full"
-              title={isGuestInvalid ? '必須項目（注文者情報）を入力してください' : undefined}
+              title={isGuestInvalid ? '必須項目（お客様情報）を入力してください' : undefined}
             >
               <Button
                 className="w-full gap-2 bg-brand-dark font-semibold hover:bg-brand-dark/90"
@@ -712,7 +712,7 @@ export default function CheckoutPage() {
           </div>
           <span
             className="block w-full"
-            title={isGuestInvalid ? '必須項目（注文者情報）を入力してください' : undefined}
+            title={isGuestInvalid ? '必須項目（お客様情報）を入力してください' : undefined}
           >
             <Button
               className="w-full gap-2 bg-brand-dark font-semibold hover:bg-brand-dark/90"
@@ -729,7 +729,7 @@ export default function CheckoutPage() {
               ) : !selectedPlanId ? (
                 '配送プランを選択してください'
               ) : isGuestInvalid ? (
-                '注文者情報を入力してください'
+                'お客様情報を入力してください'
               ) : paymentMethod === 'bank_transfer' ? (
                 '注文を確定する（銀行振込）'
               ) : (

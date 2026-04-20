@@ -128,7 +128,7 @@ export type OrderConfirmEmailProps = {
     accountHolder?: string | null
   }
   bankTransferDeadline?: string
-  /** 注文者情報（旧称: 送り主情報）。内部 prop 名は senderInfo のまま */
+  /** お客様情報（旧称: 送り主→注文者）。内部 prop 名は senderInfo のまま */
   senderInfo?: SenderInfo
   /** 送り先情報（新フォーム対応） */
   recipientInfo?: RecipientInfo
@@ -220,9 +220,9 @@ export function OrderConfirmEmail({
         </Text>
       )}
 
-      {/* 注文者情報（旧称: 送り主情報） */}
+      {/* お客様情報（旧称: 送り主→注文者。内部 prop 名 senderInfo は維持） */}
       <Section style={infoSectionStyle}>
-        <Text style={infoHeadingStyle}>注文者情報</Text>
+        <Text style={infoHeadingStyle}>お客様情報</Text>
         {senderInfo && (senderInfo.senderName || senderInfo.senderEmail || senderInfo.senderPhone) ? (
           <>
             {senderInfo.senderName && <Text style={{ ...valueStyle, margin: '0 0 2px' }}>{senderInfo.senderName}</Text>}
@@ -252,7 +252,7 @@ export function OrderConfirmEmail({
         <Section style={{ ...infoSectionStyle, marginTop: '12px' }}>
           <Text style={infoHeadingStyle}>送り先情報</Text>
           {recipientInfo.recipientSameAsSender ? (
-            <Text style={{ ...valueStyle, margin: 0 }}>注文者と同じ</Text>
+            <Text style={{ ...valueStyle, margin: 0 }}>お客様情報と同じ</Text>
           ) : (
             <>
               {recipientInfo.recipientName && <Text style={{ ...valueStyle, margin: '0 0 2px' }}>{recipientInfo.recipientName}</Text>}

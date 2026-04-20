@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
       配送業者: CARRIER_LABELS[(tracking?.carrier as string) || ''] || (tracking?.carrier ?? ''),
       追跡番号: tracking?.trackingNumber ?? '',
       備考: order.notes ?? '',
-      // 注文者情報（旧称: 送り主情報。内部キーは sender_ のまま）
+      // お客様情報（命名遷移: 送り主 → 注文者 → お客様。内部キーは sender_ のまま）
       sender_name: sender?.senderName ?? '',
       sender_email: sender?.senderEmail ?? '',
       sender_phone: sender?.senderPhone ?? '',
@@ -173,16 +173,16 @@ export async function GET(request: NextRequest) {
     { key: '配送業者', label: '配送業者' },
     { key: '追跡番号', label: '追跡番号' },
     { key: '備考', label: '備考' },
-    // 注文者情報（旧称: 送り主情報）
-    { key: 'sender_name', label: '注文者_氏名' },
-    { key: 'sender_email', label: '注文者_メール' },
-    { key: 'sender_phone', label: '注文者_電話番号' },
-    { key: 'sender_postal_code', label: '注文者_郵便番号' },
-    { key: 'sender_prefecture', label: '注文者_都道府県' },
-    { key: 'sender_address_line1', label: '注文者_住所1' },
-    { key: 'sender_address_line2', label: '注文者_住所2' },
+    // お客様情報（命名遷移: 送り主 → 注文者 → お客様）
+    { key: 'sender_name', label: 'お客様_氏名' },
+    { key: 'sender_email', label: 'お客様_メール' },
+    { key: 'sender_phone', label: 'お客様_電話番号' },
+    { key: 'sender_postal_code', label: 'お客様_郵便番号' },
+    { key: 'sender_prefecture', label: 'お客様_都道府県' },
+    { key: 'sender_address_line1', label: 'お客様_住所1' },
+    { key: 'sender_address_line2', label: 'お客様_住所2' },
     // 送り先情報
-    { key: 'recipient_same_as_sender', label: '送り先_注文者と同じ' },
+    { key: 'recipient_same_as_sender', label: '送り先_お客様情報と同じ' },
     { key: 'recipient_name', label: '送り先_氏名' },
     { key: 'recipient_phone', label: '送り先_電話番号' },
     { key: 'recipient_postal_code', label: '送り先_郵便番号' },

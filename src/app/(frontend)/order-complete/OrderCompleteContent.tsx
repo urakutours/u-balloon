@@ -435,7 +435,7 @@ export default function OrderCompleteContent() {
         </Card>
       )}
 
-      {/* 注文者情報（旧称: 送り主情報）。sender が無い場合は customerName/customerEmail にフォールバック */}
+      {/* お客様情報（旧称: 送り主→注文者）。sender が無い場合は customerName/customerEmail にフォールバック */}
       {(() => {
         const hasSender = !!order.sender && !!(order.sender.senderName || order.sender.senderPhone || order.sender.senderEmail)
         if (!hasSender && !order.customerName && !order.customerEmail) return null
@@ -444,7 +444,7 @@ export default function OrderCompleteContent() {
             <CardContent className="p-6">
               <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
                 <User className="h-4 w-4" />
-                注文者情報
+                お客様情報
               </h3>
               <div className="space-y-1 text-sm">
                 {hasSender ? (
@@ -484,7 +484,7 @@ export default function OrderCompleteContent() {
               送り先情報
             </h3>
             {order.recipient.recipientSameAsSender ? (
-              <p className="text-sm text-muted-foreground">注文者と同じ</p>
+              <p className="text-sm text-muted-foreground">お客様情報と同じ</p>
             ) : (
               <div className="space-y-1 text-sm">
                 {order.recipient.recipientName && <p className="font-medium">{order.recipient.recipientName}</p>}

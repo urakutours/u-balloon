@@ -439,13 +439,13 @@ export default function OrderDetailPage() {
         </CardContent>
       </Card>
 
-      {/* 注文者情報（旧称: 送り主情報） */}
+      {/* お客様情報（旧称: 送り主→注文者） */}
       {order.sender && (order.sender.senderName || order.sender.senderPhone || order.sender.senderEmail) && (
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <User className="h-4 w-4" />
-              注文者情報
+              お客様情報
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -497,7 +497,7 @@ export default function OrderDetailPage() {
           </CardHeader>
           <CardContent>
             {order.recipient.recipientSameAsSender ? (
-              <p className="text-sm text-muted-foreground">注文者と同じ</p>
+              <p className="text-sm text-muted-foreground">お客様情報と同じ</p>
             ) : (
               <div className="space-y-2 text-sm">
                 {order.recipient.recipientName && (
