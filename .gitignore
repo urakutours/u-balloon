@@ -26,3 +26,6 @@ scripts/backups/
 
 # E2E / ローカル検証で取得する Payload の session cookie
 pl-cookie.txt
+
+# Payload CMS auto-generated (re-created on dev server start / build)
+src/app/(payload)/admin/importMap.js
