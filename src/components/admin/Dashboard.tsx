@@ -231,5 +231,16 @@ export default async function Dashboard() {
     },
   }
 
-  return <DashboardClient initialData={initialData} />
+  // Compute "today" in JST so SSR and CSR render the same string regardless
+  // of the server's local timezone (Vercel runs in UTC).
+  const jstNow = new Date(Date.now() + 9 * 60 * 60 * 1000)
+  const y = jstNow.getUTCFullYear()
+  const m = jstNow.getUTCMonth() + 1
+  const day = jstNow.getUTCDate()
+  const dowJa = ['日', '月', '火', '水', '木', '金', '土'][jstNow.getUTCDay()]
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const todayStr = `${y}-${pad(m)}-${pad(day)}`
+  const todayLabel = `${y}年${m}月${day}日（${dowJa}）`
+
+  return <DashboardClient initialData={initialData} todayStr={todayStr} todayLabel={todayLabel} />
 }

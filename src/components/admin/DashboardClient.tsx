@@ -518,6 +518,20 @@ function MiniAreaChart({ data, color }: { data: number[]; color: string }) {
   )
 }
 
+/**
+ * 与えられた ISO 文字列を JST タイムゾーンで `MM/dd HH:mm` に整形する。
+ * `format(new Date(iso), 'MM/dd HH:mm')` はランタイムローカル TZ に依存し
+ * Vercel (UTC) とブラウザ (JST) で別の文字列を返すため hydration mismatch
+ * (React #418) の原因になる。明示的に JST で固定する。
+ */
+function formatJSTMMddHHmm(iso: string): string {
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return ''
+  const j = new Date(d.getTime() + 9 * 60 * 60 * 1000)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(j.getUTCMonth() + 1)}/${pad(j.getUTCDate())} ${pad(j.getUTCHours())}:${pad(j.getUTCMinutes())}`
+}
+
 /** Format seconds into Japanese human-readable string */
 function formatDuration(sec: number): string {
   if (sec < 60) return `${sec}秒`
@@ -534,7 +548,15 @@ function formatDuration(sec: number): string {
 // ============================================================
 type DialogKind = 'revenue' | 'orders' | 'pending' | 'shipping-today' | 'unresponded' | 'recent-inquiries'
 
-export default function DashboardClient({ initialData }: { initialData: DashboardData }) {
+export default function DashboardClient({
+  initialData,
+  todayStr,
+  todayLabel,
+}: {
+  initialData: DashboardData
+  todayStr: string
+  todayLabel: string
+}) {
   const { theme, setTheme } = useTheme()
   const themeKey: ThemeKey = theme === 'dark' ? 'dark' : 'light'
   const t = THEMES[themeKey]
@@ -614,10 +636,8 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
   const periodLabel = period === 'custom' && customStart && customEnd
     ? `${customStart}〜${customEnd}`
     : PERIOD_LABELS[period]
-  const today = new Date()
 
   // Custom date validation
-  const todayStr = today.toISOString().split('T')[0]
   const customDateError = (() => {
     if (period !== 'custom') return null
     if (!customStart || !customEnd) return null
@@ -844,7 +864,7 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
             ダッシュボード
           </h1>
           <p style={{ fontSize: 13, color: t.textMuted, margin: '4px 0 0' }}>
-            {format(today, 'yyyy年M月d日（EEE）', { locale: ja })}
+            {todayLabel}
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -985,11 +1005,13 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
 
       {/* ===== 直近休業日バナー ===== */}
       {(() => {
-        const now = new Date()
-        const weekLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+        // todayStr は JST のサーバ算出値。SSR/CSR で同じ値を使い hydration 不一致を回避。
         const upcomingThisWeek = (data.upcomingHolidays ?? initialData.upcomingHolidays ?? []).filter(h => {
-          const d = new Date(h.date)
-          return d >= now && d <= weekLater
+          if (h.date < todayStr) return false
+          const todayDate = new Date(todayStr + 'T00:00:00Z')
+          const weekLater = new Date(todayDate.getTime() + 7 * 24 * 60 * 60 * 1000)
+          const d = new Date(h.date + 'T00:00:00Z')
+          return d <= weekLater
         })
         if (upcomingThisWeek.length === 0) return null
         const labels = upcomingThisWeek.map(h => {
@@ -1087,7 +1109,7 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
                   <span style={{ fontWeight: 500 }}>{o.customerName}</span>
                   <span style={{ fontWeight: 600 }}>{yen(o.totalAmount)}</span>
                   <StatusBadge status={o.status} themeKey={themeKey} />
-                  {!isMobile && (<span style={{ color: t.textMuted, fontSize: 12 }}>{format(new Date(o.createdAt), 'MM/dd HH:mm')}</span>)}
+                  {!isMobile && (<span style={{ color: t.textMuted, fontSize: 12 }}>{formatJSTMMddHHmm(o.createdAt)}</span>)}
                 </a>
               ))}
             </>
@@ -1366,7 +1388,7 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
                     {inq.status === 'new' ? '未対応' : inq.status === 'resolved' ? '対応済み' : '対応中'}
                   </span>
                   <span style={{ fontSize: 11, color: t.textMuted }}>
-                    {format(new Date(inq.createdAt), 'MM/dd HH:mm')}
+                    {formatJSTMMddHHmm(inq.createdAt)}
                   </span>
                 </div>
               </a>
