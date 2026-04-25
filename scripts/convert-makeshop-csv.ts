@@ -132,6 +132,16 @@ type EmailMissing = {
   legacyId: string
 }
 
+type EmailInvalid = {
+  legacyId: string
+  rawEmail: string
+}
+
+type DuplicateLegacyId = {
+  legacyId: string
+  occurrenceCount: number
+}
+
 type ConversionReport = {
   inputFile: string
   detectedEncoding: string
@@ -140,13 +150,24 @@ type ConversionReport = {
   successRows: number
   skippedRows: number
   errorRows: number
+  dedupedRows: number
   addressParseFailures: AddressParseFailure[]
   genderUnmapped: GenderUnmapped[]
   birthdayInvalid: BirthdayInvalid[]
   emailMissing: EmailMissing[]
+  emailInvalid: EmailInvalid[]
+  duplicateLegacyIds: DuplicateLegacyId[]
   pointsMigrationCount: number
   pointsMigrationTotal: number
 }
+
+/**
+ * Email validation 正規表現（Payload v3 サーバー側 reject を事前検出）
+ * - local-part: 英数 + .!#$%&'*+/=?^_`{|}~- を許可、連続ドット禁止
+ * - domain: 英数 + ハイフン + ドット、TLD は 2 文字以上
+ * - リハーサルで 8 件 reject されたパターンに対応
+ */
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,}$/
 
 // ---------------------------------------------------------------------------
 // 文字コード読み込み
@@ -486,10 +507,13 @@ async function main() {
     successRows: 0,
     skippedRows: 0,
     errorRows: 0,
+    dedupedRows: 0,
     addressParseFailures: [],
     genderUnmapped: [],
     birthdayInvalid: [],
     emailMissing: [],
+    emailInvalid: [],
+    duplicateLegacyIds: [],
     pointsMigrationCount: 0,
     pointsMigrationTotal: 0,
   }
@@ -507,11 +531,16 @@ async function main() {
       continue
     }
 
-    // メールアドレス検証
+    // メールアドレス検証（空欄 + 正規表現で API reject パターンを先回り検出）
     const rawEmail = row['E-mail'] ?? ''
     const email = normalizeEmail(rawEmail)
-    if (!email || !email.includes('@')) {
+    if (!email) {
       report.emailMissing.push({ legacyId })
+      report.skippedRows++
+      continue
+    }
+    if (!EMAIL_REGEX.test(email)) {
+      report.emailInvalid.push({ legacyId, rawEmail: email })
       report.skippedRows++
       continue
     }
@@ -625,6 +654,78 @@ async function main() {
   }
 
   // ---------------------------------------------------------------------------
+  // email 単位の dedup（最後の出現を採用、points は合算）
+  // ---------------------------------------------------------------------------
+  // 実調査の結果（リハーサル 2026-04-25）：
+  // - CSV 内の legacy_id は完全 unique
+  // - email が 98 件重複（同じ顧客が複数回 MakeShop に登録した状態）
+  // - Payload v3 は email を unique key として扱うため、API 側で 98 件が「updated」扱いになり
+  //   その結果 migrate-points で 51,505 pts (104 件) が失われていた。
+  // 修正方針：
+  // - customerRow は email 単位で dedup、最後の出現を採用（CSV 末尾が新しいデータと仮定）
+  // - points は同一 email グループ内のすべての legacy_id 分を合算
+  //   （顧客のポイントを保護するため後勝ちではなく合算）
+  // - 採用 legacy_id（採用 customerRow の MakeShop移行ID）に合算 points を紐付けて出力
+
+  // email から「採用 customerRow」と「同 email グループの legacy_id 一覧」を作る
+  const customerByEmail = new Map<string, CustomerRow>()
+  const legacyIdsByEmail = new Map<string, string[]>()
+  for (const row of customerRows) {
+    const emailKey = row['メールアドレス']
+    customerByEmail.set(emailKey, row) // 後勝ちで上書き
+    const list = legacyIdsByEmail.get(emailKey) ?? []
+    list.push(row['MakeShop移行ID'])
+    legacyIdsByEmail.set(emailKey, list)
+  }
+
+  // 重複している email を report に記録（duplicateLegacyIds は意味的に「同じ顧客の重複」として記録）
+  for (const [emailKey, lids] of legacyIdsByEmail.entries()) {
+    if (lids.length > 1) {
+      // 採用された legacy_id（最後の出現）を代表として記録
+      const adoptedLegacyId = customerByEmail.get(emailKey)!['MakeShop移行ID']
+      report.duplicateLegacyIds.push({
+        legacyId: adoptedLegacyId,
+        occurrenceCount: lids.length,
+      })
+    }
+  }
+
+  // legacy_id → points のマップ（CSV から作る素データ）
+  const pointsByLegacyId = new Map<string, number>(
+    pointsEntries.map((e) => [e.legacyId, e.points]),
+  )
+
+  // dedup 後の customerRows + pointsEntries を構築
+  const dedupedCustomerRows = Array.from(customerByEmail.values())
+  const dedupedPointsEntries: PointsMigrationEntry[] = []
+  for (const adoptedRow of dedupedCustomerRows) {
+    const adoptedLegacyId = adoptedRow['MakeShop移行ID']
+    const emailKey = adoptedRow['メールアドレス']
+    const groupLegacyIds = legacyIdsByEmail.get(emailKey) ?? [adoptedLegacyId]
+    // 同一 email グループ内の全 legacy_id の points を合算
+    const totalPoints = groupLegacyIds.reduce(
+      (sum, lid) => sum + (pointsByLegacyId.get(lid) ?? 0),
+      0,
+    )
+    if (totalPoints > 0) {
+      dedupedPointsEntries.push({ legacyId: adoptedLegacyId, points: totalPoints })
+    }
+  }
+
+  report.dedupedRows = customerRows.length - dedupedCustomerRows.length
+
+  // report の数値を dedup 後の値に上書き
+  report.successRows = dedupedCustomerRows.length
+  report.pointsMigrationCount = dedupedPointsEntries.length
+  report.pointsMigrationTotal = dedupedPointsEntries.reduce((sum, e) => sum + e.points, 0)
+
+  // 後段の出力でも dedup 後の配列を使うため customerRows / pointsEntries に反映
+  customerRows.length = 0
+  customerRows.push(...dedupedCustomerRows)
+  pointsEntries.length = 0
+  pointsEntries.push(...dedupedPointsEntries)
+
+  // ---------------------------------------------------------------------------
   // 出力ファイル生成
   // ---------------------------------------------------------------------------
 
@@ -686,9 +787,11 @@ async function main() {
   console.log(`  Encoding         : ${detectedEncoding}`)
   console.log(`  Delimiter        : ${detectedDelimiter}`)
   console.log(`  Total rows       : ${report.totalRows}`)
-  console.log(`  Success rows     : ${report.successRows}`)
+  console.log(`  Success rows     : ${report.successRows} (dedup 後)`)
   console.log(`  Skipped rows     : ${report.skippedRows}`)
   console.log(`  Error rows       : ${report.errorRows}`)
+  if (report.dedupedRows > 0)
+    console.log(`  Deduped rows     : ${report.dedupedRows} (重複 legacy_id を後勝ちで集約)`)
   console.log(`  Points entries   : ${report.pointsMigrationCount} (total: ${report.pointsMigrationTotal} pts)`)
   if (report.addressParseFailures.length > 0)
     console.log(`  Address failures : ${report.addressParseFailures.length}`)
@@ -698,6 +801,10 @@ async function main() {
     console.log(`  Birthday invalid : ${report.birthdayInvalid.length}`)
   if (report.emailMissing.length > 0)
     console.log(`  Email missing    : ${report.emailMissing.length}`)
+  if (report.emailInvalid.length > 0)
+    console.log(`  Email invalid    : ${report.emailInvalid.length} (正規表現で reject)`)
+  if (report.duplicateLegacyIds.length > 0)
+    console.log(`  Duplicate IDs    : ${report.duplicateLegacyIds.length} 個の legacy_id が重複`)
   if (isDryRun) console.log('\n  [DRY RUN] customers CSV and points JSON were NOT written.')
   console.log('==========================\n')
 }
