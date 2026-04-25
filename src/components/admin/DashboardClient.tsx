@@ -534,7 +534,15 @@ function formatDuration(sec: number): string {
 // ============================================================
 type DialogKind = 'revenue' | 'orders' | 'pending' | 'shipping-today' | 'unresponded' | 'recent-inquiries'
 
-export default function DashboardClient({ initialData }: { initialData: DashboardData }) {
+export default function DashboardClient({
+  initialData,
+  todayStr,
+  todayLabel,
+}: {
+  initialData: DashboardData
+  todayStr: string
+  todayLabel: string
+}) {
   const { theme, setTheme } = useTheme()
   const themeKey: ThemeKey = theme === 'dark' ? 'dark' : 'light'
   const t = THEMES[themeKey]
@@ -614,10 +622,8 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
   const periodLabel = period === 'custom' && customStart && customEnd
     ? `${customStart}〜${customEnd}`
     : PERIOD_LABELS[period]
-  const today = new Date()
 
   // Custom date validation
-  const todayStr = today.toISOString().split('T')[0]
   const customDateError = (() => {
     if (period !== 'custom') return null
     if (!customStart || !customEnd) return null
@@ -844,7 +850,7 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
             ダッシュボード
           </h1>
           <p style={{ fontSize: 13, color: t.textMuted, margin: '4px 0 0' }}>
-            {format(today, 'yyyy年M月d日（EEE）', { locale: ja })}
+            {todayLabel}
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -985,11 +991,13 @@ export default function DashboardClient({ initialData }: { initialData: Dashboar
 
       {/* ===== 直近休業日バナー ===== */}
       {(() => {
-        const now = new Date()
-        const weekLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+        // todayStr は JST のサーバ算出値。SSR/CSR で同じ値を使い hydration 不一致を回避。
         const upcomingThisWeek = (data.upcomingHolidays ?? initialData.upcomingHolidays ?? []).filter(h => {
-          const d = new Date(h.date)
-          return d >= now && d <= weekLater
+          if (h.date < todayStr) return false
+          const todayDate = new Date(todayStr + 'T00:00:00Z')
+          const weekLater = new Date(todayDate.getTime() + 7 * 24 * 60 * 60 * 1000)
+          const d = new Date(h.date + 'T00:00:00Z')
+          return d <= weekLater
         })
         if (upcomingThisWeek.length === 0) return null
         const labels = upcomingThisWeek.map(h => {
