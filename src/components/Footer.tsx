@@ -110,10 +110,16 @@ export async function Footer() {
           </div>
         )}
 
-        {/* Copyright */}
+        {/* Copyright — owner name from SiteSettings (admin GUI), per-instance.
+            Year is computed in JST so SSR (UTC) and CSR don't drift over the
+            year boundary. Footer is a Server Component so the year is rendered
+            once at request time. */}
         <div className="mt-8 border-t border-white/20 pt-6">
           <p className="text-center text-xs text-white/60">
-            &copy; {new Date().getFullYear()} UBALLOON
+            &copy; {(() => {
+              const jstNow = new Date(Date.now() + 9 * 60 * 60 * 1000)
+              return jstNow.getUTCFullYear()
+            })()} {settings?.companyName || settings?.siteTitle || ''}
           </p>
         </div>
       </div>

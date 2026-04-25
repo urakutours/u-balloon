@@ -84,17 +84,18 @@ export default async function DeliveryPage() {
       }))
     : FALLBACK_SHIPPING_RATES
 
-  // 連絡先情報
-  const companyPhone = settings?.companyPhone || '03-6277-4682'
-  const businessHours = settings?.companyBusinessHours || '平日 10:00〜17:00'
-  const contactEmail = settings?.companyContactEmail || 'info@u-balloon.com'
+  // 連絡先情報 — Per-instance values from SiteSettings (admin GUI).
+  // No shop-specific hardcoded fallbacks: empty string forces operator setup.
+  const companyPhone = settings?.companyPhone ?? ''
+  const businessHours = settings?.companyBusinessHours ?? ''
+  const contactEmail = settings?.companyContactEmail ?? ''
 
-  // 銀行振込情報
-  const bankName = settings?.bankName || 'PayPay銀行'
-  const bankBranchName = settings?.bankBranchName || '本店営業部'
+  // 銀行振込情報 — Per-instance values from SiteSettings.
+  const bankName = settings?.bankName ?? ''
+  const bankBranchName = settings?.bankBranchName ?? ''
   const bankAccountType = settings?.bankAccountType === 'checking' ? '当座' : '普通'
-  const bankAccountNumber = settings?.bankAccountNumber || '2409635'
-  const bankAccountHolder = settings?.bankAccountHolder || 'カ）ウラク（株式会社URAKU）'
+  const bankAccountNumber = settings?.bankAccountNumber ?? ''
+  const bankAccountHolder = settings?.bankAccountHolder ?? ''
   const bankDeadlineDays = settings?.bankTransferDeadlineDays ?? 7
 
   if (cmsPage?.layout?.length) {

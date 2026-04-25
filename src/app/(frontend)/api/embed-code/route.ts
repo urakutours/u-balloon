@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function GET(req: NextRequest) {
   const productId = req.nextUrl.searchParams.get('productId')
   const theme = req.nextUrl.searchParams.get('theme') || 'light'
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://uballoon.com'
+  // NEXT_PUBLIC_APP_URL must be set per-instance. No shop-specific fallback.
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
 
   if (!productId) {
     return NextResponse.json({ error: 'productId required' }, { status: 400 })

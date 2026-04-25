@@ -69,27 +69,28 @@ export default async function LegalPage() {
     )
   }
 
-  // 会社情報
-  const companyName = settings?.companyName || '株式会社URAKU'
-  const companyRepresentative = settings?.companyRepresentative || '奥山大介'
-  const postalCode = settings?.companyPostalCode || '〒108-0074'
-  const address = settings?.companyAddress || '東京都港区高輪2-1-13 高輪タウンハウス414'
-  const companyPhone = settings?.companyPhone || '03-6277-4682'
-  const businessHours = settings?.companyBusinessHours || '平日 10:00〜17:00'
-  const contactEmail = settings?.companyContactEmail || 'info@u-balloon.com'
+  // 会社情報 — Per-instance values from SiteSettings (admin GUI).
+  // No shop-specific hardcoded fallbacks: empty string forces operator setup.
+  const companyName = settings?.companyName ?? ''
+  const companyRepresentative = settings?.companyRepresentative ?? ''
+  const postalCode = settings?.companyPostalCode ?? ''
+  const address = settings?.companyAddress ?? ''
+  const companyPhone = settings?.companyPhone ?? ''
+  const businessHours = settings?.companyBusinessHours ?? ''
+  const contactEmail = settings?.companyContactEmail ?? ''
 
-  // 銀行振込情報
-  const bankName = settings?.bankName || 'PayPay銀行'
-  const bankBranchName = settings?.bankBranchName || '本店営業部'
+  // 銀行振込情報 — Per-instance values from SiteSettings.
+  const bankName = settings?.bankName ?? ''
+  const bankBranchName = settings?.bankBranchName ?? ''
   const bankAccountTypeLabel = BANK_ACCOUNT_TYPE_LABELS[settings?.bankAccountType || 'ordinary'] || '普通'
-  const bankAccountNumber = settings?.bankAccountNumber || '2409635'
-  const bankAccountHolder = settings?.bankAccountHolder || 'カ）ウラク'
+  const bankAccountNumber = settings?.bankAccountNumber ?? ''
+  const bankAccountHolder = settings?.bankAccountHolder ?? ''
   const bankDeadlineDays = settings?.bankTransferDeadlineDays ?? 7
 
   // 地域別送料テーブル（フォールバック用）
   const regionalFees = settings?.shippingRegionalFees
-  // 配送不可エリア
-  const restrictedAreas = settings?.shippingRestrictedAreas || '沖縄県'
+  // 配送不可エリア — operator must define in admin if shop has restrictions.
+  const restrictedAreas = settings?.shippingRestrictedAreas ?? ''
   // 決済方法一覧
   const paymentMethodsText = settings?.paymentMethodsText
   // 配送プラン（shippingPlans 駆動）

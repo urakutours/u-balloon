@@ -6,7 +6,8 @@ type Params = { params: Promise<{ productId: string }> }
 
 export async function GET(req: NextRequest, { params }: Params) {
   const { productId } = await params
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://uballoon.com'
+  // NEXT_PUBLIC_APP_URL must be set per-instance. No shop-specific fallback.
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
 
   try {
     const payload = await getPayload({ config })

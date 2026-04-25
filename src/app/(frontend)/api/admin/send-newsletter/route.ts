@@ -36,7 +36,9 @@ export async function POST(req: NextRequest) {
       siteSettings.emailFromAddress || process.env.EMAIL_FROM_ADDRESS || 'noreply@uballoon.com'
     const fromName =
       siteSettings.emailFromName || process.env.EMAIL_FROM_NAME || 'uballoon'
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://uballoon.com'
+    // NEXT_PUBLIC_APP_URL must be set per-instance (e.g. https://u-balloon.com).
+    // No shop-specific fallback to avoid leaking another instance's domain.
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
 
     // Test send
     if (testOnly && newsletter.testEmail) {

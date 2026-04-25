@@ -43,21 +43,24 @@ export default async function AboutPage() {
     )
   }
 
-  const postalCode = settings?.companyPostalCode || '〒108-0074'
-  const address = settings?.companyAddress || '東京都港区高輪2-1-13 高輪タウンハウス414'
-  const contactEmail = settings?.companyContactEmail || 'info@u-balloon.com'
+  // Per-instance values come from SiteSettings (admin GUI). No shop-specific
+  // hardcoded fallbacks — empty string forces the operator to fill in admin.
+  const postalCode = settings?.companyPostalCode ?? ''
+  const address = settings?.companyAddress ?? ''
+  const contactEmail = settings?.companyContactEmail ?? ''
+  const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
 
   const companyInfo = [
-    { label: '会社名', value: settings?.companyName || '株式会社URAKU' },
-    { label: '代表取締役', value: settings?.companyRepresentative || '奥山大介' },
+    { label: '会社名', value: settings?.companyName ?? '' },
+    { label: '代表取締役', value: settings?.companyRepresentative ?? '' },
     {
       label: '所在地',
-      value: `${postalCode}\n${address}`,
+      value: postalCode || address ? `${postalCode}\n${address}`.trim() : '',
     },
-    { label: '電話番号', value: settings?.companyPhone || '03-6277-4682' },
-    { label: 'メールアドレス', value: contactEmail, href: `mailto:${contactEmail}` },
-    { label: '営業時間', value: settings?.companyBusinessHours || '平日 10:00〜17:00（土日祝休み）' },
-    { label: 'URL', value: 'https://u-balloon.com', href: 'https://u-balloon.com' },
+    { label: '電話番号', value: settings?.companyPhone ?? '' },
+    { label: 'メールアドレス', value: contactEmail, href: contactEmail ? `mailto:${contactEmail}` : undefined },
+    { label: '営業時間', value: settings?.companyBusinessHours ?? '' },
+    { label: 'URL', value: siteUrl, href: siteUrl || undefined },
   ]
 
   return (
