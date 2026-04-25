@@ -141,7 +141,7 @@ function parseDateStr(dateStr: string): Date {
 export default function OrderDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const { user, isLoading: authLoading } = useAuth()
+  const { user, isLoading: authLoading, authFetch } = useAuth()
   const [order, setOrder] = useState<OrderData | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -157,9 +157,7 @@ export default function OrderDetailPage() {
     const fetchOrder = async () => {
       setLoading(true)
       try {
-        const res = await fetch(`/api/orders/${params.id}`, {
-          credentials: 'include',
-        })
+        const res = await authFetch(`/api/orders/${params.id}`)
         if (res.ok) {
           const data = await res.json()
           setOrder(data)

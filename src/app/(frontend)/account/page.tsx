@@ -66,7 +66,7 @@ const pointTypeLabels: Record<string, string> = {
 
 export default function AccountPage() {
   const router = useRouter()
-  const { user, isLoading, refreshUser } = useAuth()
+  const { user, isLoading, refreshUser, authFetch } = useAuth()
   const [pointHistory, setPointHistory] = useState<PointTransaction[]>([])
   const [pointPage, setPointPage] = useState(1)
   const [pointTotalPages, setPointTotalPages] = useState(1)
@@ -91,9 +91,8 @@ export default function AccountPage() {
 
   const fetchPointHistory = async (page: number) => {
     try {
-      const res = await fetch(
+      const res = await authFetch(
         `/api/point-transactions?where[user][equals]=${user!.id}&sort=-createdAt&limit=10&page=${page}`,
-        { credentials: 'include' },
       )
       if (res.ok) {
         const data = await res.json()
@@ -108,9 +107,8 @@ export default function AccountPage() {
 
   const fetchOrders = async () => {
     try {
-      const res = await fetch(
+      const res = await authFetch(
         `/api/orders?where[customer][equals]=${user!.id}&sort=-createdAt&limit=10`,
-        { credentials: 'include' },
       )
       if (res.ok) {
         const data = await res.json()
@@ -148,10 +146,9 @@ export default function AccountPage() {
     }
 
     try {
-      const res = await fetch(`/api/users/${user!.id}`, {
+      const res = await authFetch(`/api/users/${user!.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({
           email,
           name: formData.get('name'),
