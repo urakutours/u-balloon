@@ -28,7 +28,6 @@ scripts/backups/
 pl-cookie.txt
 
 # Payload CMS auto-generated (re-created on dev server start / build)
-src/app/(payload)/admin/importMap.js
 
 # Rehearsal-specific env files
 .env.rehearsal
