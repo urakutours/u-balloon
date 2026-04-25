@@ -91,28 +91,54 @@
 
 - **P0 issue 件数: 1**（auth-context.tsx 構造バグ → 全ユーザーロックアウト）
 - **P1 issue 件数: 2**（51,505 pts data loss、email reject 8 件のデータ品質）
-- **現時点判断: POSTPONE_TO_5_7（4/30 切替を 2026-05-07 早朝に延期）**
+- **現時点判断: EXECUTE_4_30_WITH_FIXES（4/30 切替を維持、Gate 1 で P0/P1 全解消が絶対条件）**
 
-理由:
-1. P0 が完全ロックアウト級。本番切替後に発覚すると 800+ 名の会員が一斉ログイン不能 → 緊急ロールバック必須の事態になる
-2. P0 fix は `auth-context.tsx` + `ChangePasswordContent.tsx` の修正に加え、token 保管設計（XSS リスク考慮）の判断が必要 → 数時間〜半日コース
-3. 4/28 24:00 までに fix + 再リハーサル + ゲート 1 再判定が現実的に厳しい
-4. P1 の 51,505 pts data loss も商品性に直結（顧客のポイント消失 = クレーム）→ CSV クリーニング or convert script dedup 強化が必要
+判断根拠（business decision: 4/30 切替マスト）:
+1. 4/30 切替は経営判断としてマスト（延期の business cost が技術リスクを上回る）
+2. P0 (auth-context.tsx) は影響範囲が明確、修正範囲も 2 ファイル + token 保管設計のみ → 1 日コースで完了可能
+3. P1 (51,505 pts data loss) は CSV 事前クリーニング + convert-makeshop-csv.ts dedup 強化で 1 日コース
+4. 残 3 日（〜4/28 24:00）で fix → 再リハーサル → Gate 1 再評価が可能
+5. Gate 2 (4/30 05:30 JST) で再度 import 開始 30 分検証 → 異常時はロールバック（既存設計通り）
 
-**Daisuke 追加所感**: _________
+**Daisuke 追加所感**:
+- 4/30 切替は business priority。延期不可。P0/P1 を 4/28 24:00 までに fix し、再リハーサル成功で Gate 1 通過する。
+- P0 fix の token 保管設計は **localStorage + httpOnly cookie 並列**の最小修正で先行（XSS リスクは 4/30 切替後の本格セキュリティレビューで再評価）。
+- P1 fix は **convert-makeshop-csv.ts に legacy_id dedup ロジック追加** を主案、CSV 事前クリーニングは MakeShop 側の export 仕様次第で副案。
+- リニューアル案内メール (Phase F) は 4/28-29 起草、4/30 切替前提のまま進める。
 
 ---
 
-## 次アクション（推奨順）
+## 次アクション（4/30 切替維持の前提、3 日スケジュール）
 
-### 即実施 (Step 12-13 完了後)
-1. **P0 fix を別タスク化**: `auth-context.tsx` に token state、すべての fetch に Authorization header、`/account` フローも併せて検証
-2. **P1 fix**: CSV 事前クリーニング（重複 legacy_id 集約 + email 修正） or convert-makeshop-csv.ts に dedup ロジック追加
-3. **延期決定の通知**: リニューアル案内メール (Phase F) 起草前に延期判断確定 → 文面を 5/7 切替前提に変更
+### Phase 1: P0 fix（2026-04-26 午前完了目標）
+1. `src/lib/auth-context.tsx` に `token` state 追加
+   - login で `data.token` を保存
+   - localStorage 永続化（リロード後も保持）
+   - context value に `token` を expose
+2. すべての `fetch` に `Authorization: JWT ${token}` header を追加（`refreshUser`, `logout`, `register`）
+3. `src/app/(frontend)/change-password/ChangePasswordContent.tsx` の PATCH に Authorization header 追加
+4. ローカル動作確認 → unit test （存在すれば）→ feature branch + PR
 
-### 4/28 までに
-- P0/P1 修正完了 → 同 Neon Launch + Vercel preview で再リハーサル → ゲート 1 再評価 → 5/7 GO/no-go 判断
+### Phase 2: P1 fix（2026-04-26 夕方完了目標）
+1. `scripts/convert-makeshop-csv.ts` に legacy_id dedup ロジック追加
+   - 同一 legacy_id 行の最終出現を採用（or 最初の出現）
+   - points は集約（max / sum / 最終のいずれかを Daisuke 確認）
+   - email validation を pre-check で実施（API reject に頼らない）
+2. CSV 再エクスポートが必要か Daisuke 判断（MakeShop 側で重複が解消できる場合は CSV 側で対応）
+3. ローカルで convert script の閾値テスト → feature branch + PR
 
-### 5/7 切替直前
-- Phase H 本番切替プロンプト起草（リハーサルの差分: production branch、DNS 切替、smoke test）
+### Phase 3: 再リハーサル（2026-04-27〜28 午前）
+- prompt-2 v3.2 として更新（Vercel bypass token 必須化、env quote 必須化、jq クエリ修正、SQL schema 修正）
+- 同 Neon Launch + Vercel preview で 13 Step 完走
+- T2.2 PASS 維持 + P0/P1 解消確認
+
+### Phase 4: Gate 1 再評価（2026-04-28 24:00 JST）
+- P0 件数 = 0、P1 件数 = 0 を絶対条件
+- 達成 → EXECUTE_4_30 確定
+- 未達成 → 緊急延期判断（POSTPONE_TO_5_7）
+
+### Phase 5: 本番切替（2026-04-29 メール → 4/30 早朝 DNS 切替）
+- 4/28-29: Phase F リニューアル案内メール起草・送信（4/30 切替前提のまま）
+- 4/30 早朝: Phase H 本番切替プロンプト実行
+- Gate 2 (05:30 JST): import 30 分時点で異常検出 → ロールバック設計は既存通り
 
