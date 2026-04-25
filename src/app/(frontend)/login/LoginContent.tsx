@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 export default function LoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { login } = useAuth()
+  const { login, authFetch } = useAuth()
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -30,7 +30,7 @@ export default function LoginContent() {
 
     try {
       await login(email, password)
-      const meRes = await fetch('/api/users/me', { credentials: 'include' })
+      const meRes = await authFetch('/api/users/me')
       if (meRes.ok) {
         const meData = await meRes.json()
         if (meData.user?.legacyData?.requirePasswordChange) {

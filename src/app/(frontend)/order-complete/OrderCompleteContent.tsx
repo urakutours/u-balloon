@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { CheckCircle, Loader2, Package, MapPin, CalendarDays, Gift, Building2, CreditCard, FileText, PartyPopper, User, Send } from 'lucide-react'
+import { useAuth } from '@/lib/auth-context'
 import { purchase as trackPurchase } from '@/lib/gtag'
 import { formatTimeSlot, formatCarrier, formatPaymentMethod, formatReceivedAt } from '@/lib/order-display-helpers'
 
@@ -120,6 +121,7 @@ export default function OrderCompleteContent() {
   const searchParams = useSearchParams()
   const sessionId = searchParams.get('session_id')
   const orderId = searchParams.get('order_id')
+  const { authFetch } = useAuth()
 
   const [order, setOrder] = useState<OrderData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -132,16 +134,13 @@ export default function OrderCompleteContent() {
         let fetchedOrder: OrderData | null = null
 
         if (orderId) {
-          const res = await fetch(`/api/orders/${orderId}`, {
-            credentials: 'include',
-          })
+          const res = await authFetch(`/api/orders/${orderId}`)
           if (res.ok) {
             fetchedOrder = await res.json()
           }
         } else if (sessionId) {
-          const res = await fetch(
+          const res = await authFetch(
             `/api/orders?where[stripeSessionId][equals]=${sessionId}&limit=1`,
-            { credentials: 'include' },
           )
           if (res.ok) {
             const data = await res.json()

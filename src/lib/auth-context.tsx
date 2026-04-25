@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 
 type User = {
   id: string
@@ -19,13 +19,17 @@ type User = {
   requirePasswordChange?: boolean
 }
 
+type AuthFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+
 type AuthContextType = {
   user: User | null
+  token: string | null
   isLoading: boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
   register: (data: RegisterData) => Promise<void>
   refreshUser: () => Promise<void>
+  authFetch: AuthFetch
 }
 
 type RegisterData = {
@@ -38,13 +42,65 @@ type RegisterData = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+const TOKEN_STORAGE_KEY = 'uballoon-auth-token'
+
+function readStoredToken(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    return window.localStorage.getItem(TOKEN_STORAGE_KEY)
+  } catch {
+    return null
+  }
+}
+
+function writeStoredToken(token: string | null) {
+  if (typeof window === 'undefined') return
+  try {
+    if (token) {
+      window.localStorage.setItem(TOKEN_STORAGE_KEY, token)
+    } else {
+      window.localStorage.removeItem(TOKEN_STORAGE_KEY)
+    }
+  } catch {
+    // localStorage unavailable (private mode, quota exceeded) — fall back silently
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
+  const [token, setTokenState] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+
+  // token を state + localStorage の両方に同期
+  const setToken = useCallback((next: string | null) => {
+    setTokenState(next)
+    writeStoredToken(next)
+  }, [])
+
+  // token は ref でも保持して、authFetch 内で最新値を参照する
+  // (state 更新前のクロージャからも最新 token を読みたいため)
+  const tokenRef = useRef<string | null>(null)
+  useEffect(() => {
+    tokenRef.current = token
+  }, [token])
+
+  // 認証付き fetch wrapper: cookie + Authorization JWT 両方を送る
+  const authFetch = useCallback<AuthFetch>(async (input, init = {}) => {
+    const headers = new Headers(init.headers || {})
+    const currentToken = tokenRef.current
+    if (currentToken && !headers.has('Authorization')) {
+      headers.set('Authorization', `JWT ${currentToken}`)
+    }
+    return fetch(input, {
+      ...init,
+      credentials: init.credentials ?? 'include',
+      headers,
+    })
+  }, [])
 
   const refreshUser = useCallback(async () => {
     try {
-      const res = await fetch('/api/users/me', { credentials: 'include' })
+      const res = await authFetch('/api/users/me')
       if (res.ok) {
         const data = await res.json()
         if (data.user) {
@@ -73,11 +129,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       setUser(null)
     }
-  }, [])
+  }, [authFetch])
 
+  // 初期マウント時: localStorage から token を復元 → /api/users/me でセッション解決
   useEffect(() => {
+    const stored = readStoredToken()
+    if (stored) {
+      tokenRef.current = stored
+      setTokenState(stored)
+    }
     refreshUser().finally(() => setIsLoading(false))
-  }, [refreshUser])
+    // refreshUser は authFetch 依存だが、authFetch は token を ref から読むため、依存配列は空で OK
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const login = async (email: string, password: string) => {
     const res = await fetch('/api/users/login', {
@@ -91,6 +155,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error(data.errors?.[0]?.message || 'ログインに失敗しました')
     }
     const data = await res.json()
+    if (data.token) {
+      // ref を即時更新して、直後の authFetch 呼び出しで最新 token が使えるようにする
+      tokenRef.current = data.token
+      setToken(data.token)
+    }
     setUser({
       id: data.user.id,
       email: data.user.email,
@@ -110,10 +179,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const logout = async () => {
-    await fetch('/api/users/logout', {
-      method: 'POST',
-      credentials: 'include',
-    })
+    await authFetch('/api/users/logout', { method: 'POST' })
+    tokenRef.current = null
+    setToken(null)
     setUser(null)
   }
 
@@ -140,7 +208,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, register, refreshUser }}>
+    <AuthContext.Provider
+      value={{ user, token, isLoading, login, logout, register, refreshUser, authFetch }}
+    >
       {children}
     </AuthContext.Provider>
   )

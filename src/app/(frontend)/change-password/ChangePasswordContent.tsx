@@ -18,7 +18,7 @@ import { AlertTriangle } from 'lucide-react'
 export default function ChangePasswordContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { user, refreshUser } = useAuth()
+  const { user, refreshUser, authFetch } = useAuth()
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -43,10 +43,9 @@ export default function ChangePasswordContent() {
 
     setIsSubmitting(true)
     try {
-      const res = await fetch(`/api/users/${user?.id}`, {
+      const res = await authFetch(`/api/users/${user?.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({
           password: newPassword,
           legacyData: {

@@ -34,7 +34,7 @@ type PlanOption = {
 
 export default function CheckoutPage() {
   const router = useRouter()
-  const { user, isLoading: authLoading } = useAuth()
+  const { user, isLoading: authLoading, authFetch } = useAuth()
   const { items, getSubtotal, clearCart } = useCartStore()
   const subtotal = getSubtotal()
   const [hydrated, setHydrated] = useState(false)
@@ -278,10 +278,9 @@ export default function CheckoutPage() {
       }
 
       if (paymentMethod === 'stripe') {
-        const res = await fetch('/api/create-checkout-session', {
+        const res = await authFetch('/api/create-checkout-session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
           body: JSON.stringify(commonBody),
         })
         const data = await res.json()
@@ -293,10 +292,9 @@ export default function CheckoutPage() {
         }
       } else {
         // 銀行振込
-        const res = await fetch('/api/create-bank-transfer-order', {
+        const res = await authFetch('/api/create-bank-transfer-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
           body: JSON.stringify({
             ...commonBody,
             customerId: user?.id,
