@@ -518,6 +518,20 @@ function MiniAreaChart({ data, color }: { data: number[]; color: string }) {
   )
 }
 
+/**
+ * 与えられた ISO 文字列を JST タイムゾーンで `MM/dd HH:mm` に整形する。
+ * `format(new Date(iso), 'MM/dd HH:mm')` はランタイムローカル TZ に依存し
+ * Vercel (UTC) とブラウザ (JST) で別の文字列を返すため hydration mismatch
+ * (React #418) の原因になる。明示的に JST で固定する。
+ */
+function formatJSTMMddHHmm(iso: string): string {
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return ''
+  const j = new Date(d.getTime() + 9 * 60 * 60 * 1000)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(j.getUTCMonth() + 1)}/${pad(j.getUTCDate())} ${pad(j.getUTCHours())}:${pad(j.getUTCMinutes())}`
+}
+
 /** Format seconds into Japanese human-readable string */
 function formatDuration(sec: number): string {
   if (sec < 60) return `${sec}秒`
@@ -1095,7 +1109,7 @@ export default function DashboardClient({
                   <span style={{ fontWeight: 500 }}>{o.customerName}</span>
                   <span style={{ fontWeight: 600 }}>{yen(o.totalAmount)}</span>
                   <StatusBadge status={o.status} themeKey={themeKey} />
-                  {!isMobile && (<span style={{ color: t.textMuted, fontSize: 12 }}>{format(new Date(o.createdAt), 'MM/dd HH:mm')}</span>)}
+                  {!isMobile && (<span style={{ color: t.textMuted, fontSize: 12 }}>{formatJSTMMddHHmm(o.createdAt)}</span>)}
                 </a>
               ))}
             </>
@@ -1374,7 +1388,7 @@ export default function DashboardClient({
                     {inq.status === 'new' ? '未対応' : inq.status === 'resolved' ? '対応済み' : '対応中'}
                   </span>
                   <span style={{ fontSize: 11, color: t.textMuted }}>
-                    {format(new Date(inq.createdAt), 'MM/dd HH:mm')}
+                    {formatJSTMMddHHmm(inq.createdAt)}
                   </span>
                 </div>
               </a>
