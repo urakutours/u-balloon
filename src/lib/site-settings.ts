@@ -127,6 +127,8 @@ export type SiteSettingsData = {
   shippingRestrictedAreas: string | null
   // OGP画像
   siteOgImageUrl: string | null
+  // フッター コピーライト表記（カスタム可。空欄なら自動表示）
+  footerCopyrightText: string | null
   // 決済方法一覧
   paymentMethodsText: string | null
   // 配送プラン
@@ -216,6 +218,7 @@ export async function getSiteSettings(): Promise<SiteSettingsData> {
     shippingRegionalFees: arrayField<ShippingRegionalFee>(doc.shippingRegionalFees),
     shippingRestrictedAreas: stringField(doc.shippingRestrictedAreas),
     siteOgImageUrl: stringField(doc.siteOgImageUrl),
+    footerCopyrightText: stringField(doc.footerCopyrightText),
     paymentMethodsText: stringField(doc.paymentMethodsText),
     emailFromAddress: stringField(doc.emailFromAddress),
     emailFromName: stringField(doc.emailFromName),
