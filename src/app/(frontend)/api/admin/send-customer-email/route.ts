@@ -8,6 +8,7 @@ import {
   DelayNotificationEmail,
   OrderStatusUpdateEmail,
 } from '@/lib/email-templates'
+import { getBrand } from '@/lib/brand'
 
 const TRACKING_URLS: Record<string, (n: string) => string> = {
   yamato: (n) => `https://toi.kuronekoyamato.co.jp/cgi-bin/tneko?number=${n}`,
@@ -61,6 +62,7 @@ export async function POST(req: NextRequest) {
     }
 
     const customerName = customer.name || customer.email
+    const brand = await getBrand()
 
     switch (type) {
       case 'shipping': {
@@ -70,13 +72,15 @@ export async function POST(req: NextRequest) {
 
         await sendEmail({
           to: customer.email,
-          subject: `【uballoon】発送のお知らせ ${order.orderNumber}`,
+          subject: `${brand.subjectPrefix}発送のお知らせ ${order.orderNumber}`,
           react: React.createElement(ShippingNotificationEmail, {
             name: customerName,
             orderNumber: order.orderNumber as string,
             carrier: CARRIER_LABELS[carrier] || carrier,
             trackingNumber,
             trackingUrl,
+            brandName: brand.name,
+            emailFooterTagline: brand.emailFooterTagline,
           }),
         })
 
@@ -96,12 +100,14 @@ export async function POST(req: NextRequest) {
       case 'delay': {
         await sendEmail({
           to: customer.email,
-          subject: `【uballoon】配送遅延のお知らせ ${order.orderNumber}`,
+          subject: `${brand.subjectPrefix}配送遅延のお知らせ ${order.orderNumber}`,
           react: React.createElement(DelayNotificationEmail, {
             name: customerName,
             orderNumber: order.orderNumber as string,
             reason: body.reason || '配送事情により遅延が発生しております',
             newEstimate: body.newEstimate,
+            brandName: brand.name,
+            emailFooterTagline: brand.emailFooterTagline,
           }),
         })
         break
@@ -119,6 +125,8 @@ export async function POST(req: NextRequest) {
             name: customerName,
             orderNumber: order.orderNumber as string,
             newStatus: body.body,
+            brandName: brand.name,
+            emailFooterTagline: brand.emailFooterTagline,
           }),
         })
         break

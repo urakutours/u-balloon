@@ -5,6 +5,7 @@ import { isAdmin, isAdminOrSelf, anyone } from '../access'
 import { afterUserCreate } from '../hooks/userHooks'
 import { beforeUserPointsChange } from '../hooks/pointAdjustHook'
 import { PasswordResetEmail } from '../lib/email-templates'
+import { getBrand } from '../lib/brand'
 
 const FORGOT_PASSWORD_EXPIRATION_MS = 1000 * 60 * 60 * 24 // 24 hours
 
@@ -27,7 +28,10 @@ export const Users: CollectionConfig = {
   auth: {
     forgotPassword: {
       expiration: FORGOT_PASSWORD_EXPIRATION_MS,
-      generateEmailSubject: () => '【u-balloon】パスワード再設定のご案内',
+      generateEmailSubject: async () => {
+        const brand = await getBrand()
+        return `${brand.subjectPrefix}パスワード再設定のご案内`
+      },
       generateEmailHTML: async (args) => {
         // args is `{ token, user, req } | undefined` per Payload v3 typings,
         // but the runtime always passes all three (forgotPasswordOperation.ts).
@@ -49,11 +53,14 @@ export const Users: CollectionConfig = {
           token,
         )}`
         const name = (user as { name?: string } | undefined)?.name || undefined
+        const brand = await getBrand()
         return await render(
           React.createElement(PasswordResetEmail, {
             name,
             resetUrl,
             expiresInHours: Math.round(FORGOT_PASSWORD_EXPIRATION_MS / 3_600_000),
+            brandName: brand.name,
+            emailFooterTagline: brand.emailFooterTagline,
           }),
         )
       },

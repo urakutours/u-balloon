@@ -4,6 +4,7 @@ import config from '@payload-config'
 import { sendEmail } from '@/lib/email'
 import React from 'react'
 import { FormNotificationEmail } from '@/lib/email-templates'
+import { getBrand } from '@/lib/brand'
 
 export async function POST(req: NextRequest) {
   try {
@@ -42,14 +43,17 @@ export async function POST(req: NextRequest) {
     const notifyEmails = (form as any).notifyEmails as string[] | undefined
     if (notifyEmails?.length) {
       const formFields = (form as any).fields as Array<{ name: string; label: string }>
+      const brand = await getBrand()
       for (const email of notifyEmails) {
         sendEmail({
           to: email,
-          subject: `【uballoon】${form.title}に新しい送信がありました`,
+          subject: `${brand.subjectPrefix}${form.title}に新しい送信がありました`,
           react: React.createElement(FormNotificationEmail, {
             formTitle: form.title as string,
             fields: formFields,
             data,
+            brandName: brand.name,
+            emailFooterTagline: brand.emailFooterTagline,
           }),
         }).catch(console.error)
       }
