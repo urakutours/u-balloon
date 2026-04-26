@@ -77,6 +77,37 @@ export const Users: CollectionConfig = {
     delete: isAdmin,
   },
   fields: [
+    // ─────────────────────────────────────────────────────────
+    // email field — auth: true で自動注入される。`validate` を
+    // override して MakeShop 移行時の RFC 違反 email (連続ドット
+    // `..`、末尾ドット `.@` 等、ガラケー時代のキャリアメール) を
+    // 受け入れる。新規登録時は通常の strict 検証を維持する。
+    //
+    // Trigger は `req.context.allowLegacyEmailFormat === true` の
+    // ときだけ。`/api/admin/import/customers` route が context に
+    // セットして渡すため、移行 import 限定で緩和される。
+    // ─────────────────────────────────────────────────────────
+    {
+      name: 'email',
+      type: 'email',
+      validate: ((value: unknown, args: { req: { context?: { allowLegacyEmailFormat?: boolean }; t: (k: string) => string }; required?: boolean }) => {
+        const { req, required } = args
+        const v = typeof value === 'string' ? value : ''
+        if (!v) {
+          return required ? req.t('validation:required') : true
+        }
+        const allowLegacy = req?.context?.allowLegacyEmailFormat === true
+        // Loose: RFC 違反だが local part に文字+@+domain+.+TLD という
+        // 最低限の形を満たすメール (legacy migrate 用)
+        const looseRegex = /^[^\s@"]+@[^\s@".]+(?:\.[^\s@".]+)*\.[a-z]{2,}$/i
+        // Strict: Payload v3 default (validations.js line 107)
+        const strictRegex =
+          /^(?!.*\.\.)[\w!#$%&'*+/=?^`{|}~-](?:[\w!#$%&'*+/=?^`{|}~.-]*[\w!#$%&'*+/=?^`{|}~-])?@[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*\.[a-z]{2,}$/i
+        const regex = allowLegacy ? looseRegex : strictRegex
+        if (!regex.test(v)) return req.t('validation:emailAddress')
+        return true
+      }) as never,
+    },
     // グループ1（常時表示）
     {
       name: 'role',
