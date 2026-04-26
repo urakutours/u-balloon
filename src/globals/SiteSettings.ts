@@ -223,6 +223,33 @@ export const SiteSettings: GlobalConfig = {
                   },
                 },
                 {
+                  name: 'brandName',
+                  type: 'text',
+                  label: 'ブランド名',
+                  admin: {
+                    description: 'メールヘッダー、件名 prefix、商品の構造化データ (schema.org Brand)、SEO 用の Header キャッチコピー等に使用されるブランド表記。',
+                    placeholder: 'u-balloon',
+                  },
+                },
+                {
+                  name: 'brandTagline',
+                  type: 'text',
+                  label: 'ブランドキャッチコピー',
+                  admin: {
+                    description: 'Header の SEO 用テキスト（「{ブランド名}（読み）｜{キャッチコピー}」の形で出力）。空欄ならブランド名のみが出力されます。',
+                    placeholder: '特別な日にバルーンを！ギフトやウェディング、大規模な装飾まで、何でもご相談ください',
+                  },
+                },
+                {
+                  name: 'emailSubjectPrefix',
+                  type: 'text',
+                  label: 'メール件名 Prefix',
+                  admin: {
+                    description: '全送信メールの件名の冒頭に付く文字列（例:「【u-balloon】」）。空欄ならブランド名から自動生成されます。',
+                    placeholder: '【u-balloon】',
+                  },
+                },
+                {
                   name: 'footerCopyrightText',
                   type: 'text',
                   label: 'フッター コピーライト表記（任意）',

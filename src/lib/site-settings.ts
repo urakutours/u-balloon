@@ -82,6 +82,10 @@ export type SiteSettingsData = {
   // サイト基本設定
   siteTitle: string | null
   siteDescription: string | null
+  // ブランド (B 群整理 — メールヘッダー / 件名 prefix / SEO で使用)
+  brandName: string | null
+  brandTagline: string | null
+  emailSubjectPrefix: string | null
   // Stripe mode
   stripeMode: 'test' | 'live'
   // Stripe (test/live keys)
@@ -183,6 +187,9 @@ export async function getSiteSettings(): Promise<SiteSettingsData> {
     // サイト基本設定
     siteTitle: stringField(doc.siteTitle),
     siteDescription: stringField(doc.siteDescription),
+    brandName: stringField(doc.brandName),
+    brandTagline: stringField(doc.brandTagline),
+    emailSubjectPrefix: stringField(doc.emailSubjectPrefix),
     stripeMode: ((doc.stripeMode as string) === 'live' ? 'live' : 'test'),
     stripeTestPublishableKey: decryptField(doc.stripeTestPublishableKey),
     stripeTestSecretKey: decryptField(doc.stripeTestSecretKey),
