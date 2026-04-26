@@ -28,14 +28,18 @@ export default function ForgotPasswordContent() {
     }
 
     try {
-      // Always show success regardless of whether the user exists.
-      // Payload's forgot-password endpoint silently returns success for
-      // non-existent emails to avoid leaking user enumeration.
-      await fetch('/api/users/forgot-password', {
+      // Payload's forgot-password endpoint returns 200 for both existing and
+      // non-existent emails to avoid user-enumeration leaks. We mirror that
+      // by treating every non-server-error as success.
+      const res = await fetch('/api/users/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       })
+      if (res.status >= 500) {
+        setError('サーバーエラーが発生しました。時間をおいて再度お試しください。')
+        return
+      }
       setSubmitted(true)
     } catch {
       // Network failures still surface a generic error.

@@ -74,10 +74,11 @@ export default function ResetPasswordContent() {
       }
 
       // Migrated members carry legacyData.requirePasswordChange: true.
-      // Clear it now so they don't get bounced to /change-password again.
+      // Clear it now so they don't get bounced to /change-password on next login.
+      let flagClearFailed = false
       if (data.user?.id && data.user.legacyData?.requirePasswordChange && data.token) {
         try {
-          await fetch(`/api/users/${data.user.id}`, {
+          const patchRes = await fetch(`/api/users/${data.user.id}`, {
             method: 'PATCH',
             credentials: 'include',
             headers: {
@@ -92,13 +93,24 @@ export default function ResetPasswordContent() {
               },
             }),
           })
-        } catch {
-          // Non-fatal — login still succeeded. Admin can clear the flag if needed.
+          if (!patchRes.ok) {
+            flagClearFailed = true
+            console.warn(
+              'reset-password: failed to clear legacyData.requirePasswordChange',
+              patchRes.status,
+            )
+          }
+        } catch (patchErr) {
+          flagClearFailed = true
+          console.warn('reset-password: legacyData PATCH threw', patchErr)
         }
       }
 
       // Full reload so AuthProvider re-reads localStorage and rehydrates state.
-      window.location.href = '/'
+      // If the legacyData flag clear failed, the user will be re-routed to
+      // /change-password by LoginContent on next login, which is acceptable
+      // (they can change the password again, then it will succeed).
+      window.location.href = flagClearFailed ? '/change-password' : '/'
     } catch (err) {
       setError(err instanceof Error ? err.message : 'パスワード再設定に失敗しました')
     } finally {

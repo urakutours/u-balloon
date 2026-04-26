@@ -1,4 +1,4 @@
-import type { CollectionConfig, PayloadRequest } from 'payload'
+import type { CollectionConfig } from 'payload'
 import React from 'react'
 import { render } from '@react-email/render'
 import { isAdmin, isAdminOrSelf, anyone } from '../access'
@@ -7,43 +7,6 @@ import { beforeUserPointsChange } from '../hooks/pointAdjustHook'
 import { PasswordResetEmail } from '../lib/email-templates'
 
 const FORGOT_PASSWORD_EXPIRATION_MS = 1000 * 60 * 60 * 24 // 24 hours
-
-/**
- * Resolve the public origin for password reset URLs.
- *
- * Priority:
- *   1. payload.config.serverURL (set explicitly when known-good)
- *   2. request Host header — only if it is in the cors/csrf allowlist
- *   3. NEXT_PUBLIC_APP_URL env (last-resort fallback)
- *
- * Mirrors `payload/dist/utilities/getRequestOrigin` which is not part of the
- * public export surface; inlining avoids depending on internal paths.
- */
-function resolveResetOrigin(req: PayloadRequest): string {
-  const config = req.payload.config
-  if (config.serverURL && config.serverURL !== '') return config.serverURL
-
-  let origin = ''
-  try {
-    const protocol = new URL(req.url || '').protocol
-    const host = req.headers?.get('host')
-    if (host) origin = `${protocol}//${host}`
-  } catch {
-    // malformed url — fall through
-  }
-
-  const allowed = new Set<string>()
-  const cors = config.cors
-  if (Array.isArray(cors)) cors.forEach((o) => allowed.add(o))
-  else if (cors && typeof cors === 'object' && Array.isArray((cors as { origins?: string[] }).origins)) {
-    ;(cors as { origins: string[] }).origins.forEach((o) => allowed.add(o))
-  }
-  const csrf = config.csrf
-  if (Array.isArray(csrf)) csrf.forEach((o) => allowed.add(o))
-
-  if (origin && allowed.has(origin)) return origin
-  return process.env.NEXT_PUBLIC_APP_URL || ''
-}
 
 export const Users: CollectionConfig = {
   slug: 'users',
@@ -66,10 +29,22 @@ export const Users: CollectionConfig = {
       expiration: FORGOT_PASSWORD_EXPIRATION_MS,
       generateEmailSubject: () => '【u-balloon】パスワード再設定のご案内',
       generateEmailHTML: async (args) => {
-        // args is `{ token, user, req } | undefined` per Payload v3 typings.
+        // args is `{ token, user, req } | undefined` per Payload v3 typings,
+        // but the runtime always passes all three (forgotPasswordOperation.ts).
         if (!args || !args.token || !args.req) return ''
         const { token, user, req } = args
-        const origin = resolveResetOrigin(req)
+        // payload.config.serverURL is normalized in payload.config.ts and is
+        // the single source of truth for the public origin (handles Vercel
+        // production / preview / local dev). NEXT_PUBLIC_APP_URL is the last
+        // resort and may legitimately be localhost in dev.
+        const origin =
+          req.payload.config.serverURL || process.env.NEXT_PUBLIC_APP_URL || ''
+        if (!origin) {
+          req.payload.logger.error(
+            'forgotPassword: cannot resolve reset URL origin. ' +
+              'Set NEXT_PUBLIC_APP_URL or VERCEL_PROJECT_PRODUCTION_URL.',
+          )
+        }
         const resetUrl = `${origin.replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(
           token,
         )}`
