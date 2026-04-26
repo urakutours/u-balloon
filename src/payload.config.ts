@@ -7,6 +7,7 @@ import { ja } from '@payloadcms/translations/languages/ja'
 import sharp from 'sharp'
 import { fileURLToPath } from 'url'
 
+import { payloadEmailAdapter } from './lib/payload-email-adapter'
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
 import { Products } from './collections/Products'
@@ -106,6 +107,7 @@ export default buildConfig({
   collections: [Products, Orders, OrderAuditLogs, SubscriptionPlans, Subscriptions, Users, PointTransactions, Pages, Posts, Forms, FormSubmissions, Promotions, SecretSales, ABTests, NewsletterSubscribers, Newsletters, Media, BusinessCalendar, EmailTemplates],
   globals: [SiteSettings],
   editor: lexicalEditor(),
+  email: payloadEmailAdapter,
   secret: process.env.PAYLOAD_SECRET,
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
