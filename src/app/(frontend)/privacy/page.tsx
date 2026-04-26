@@ -16,6 +16,11 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function PrivacyPage() {
   const cmsPage = await getStaticPage('privacy')
 
+  // TODO (B5 follow-up, post-launch): The hardcoded fallback below contains
+  // u-balloon-specific text (company name, address, phone, email, URL).
+  // Migrate this content into the Pages collection ('privacy' slug) so admin
+  // can edit it without code changes, and replace the fallback with a generic
+  // placeholder (e.g. an admin notice asking to create the Pages entry).
   if (cmsPage?.layout?.length) {
     return (
       <div className="min-h-screen bg-white">

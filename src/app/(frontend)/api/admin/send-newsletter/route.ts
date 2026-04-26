@@ -3,6 +3,7 @@ import { getPayload } from 'payload'
 import config from '@payload-config'
 import { Resend } from 'resend'
 import { getSiteSettings } from '@/lib/site-settings'
+import { getBrand } from '@/lib/brand'
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,10 +33,11 @@ export async function POST(req: NextRequest) {
     }
 
     const resend = new Resend(resendApiKey)
+    const brand = await getBrand()
     const fromEmail =
       siteSettings.emailFromAddress || process.env.EMAIL_FROM_ADDRESS || 'noreply@u-balloon.com'
     const fromName =
-      siteSettings.emailFromName || process.env.EMAIL_FROM_NAME || 'uballoon'
+      siteSettings.emailFromName || process.env.EMAIL_FROM_NAME || brand.name
     // NEXT_PUBLIC_APP_URL must be set per-instance (e.g. https://u-balloon.com).
     // No shop-specific fallback to avoid leaking another instance's domain.
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
@@ -84,7 +86,7 @@ export async function POST(req: NextRequest) {
             to: subscriber.email,
             subject: newsletter.subject,
             html: `<div style="max-width:600px;margin:0 auto;font-family:sans-serif;">
-              <h2 style="text-align:center;">🎈 uballoon</h2>
+              <h2 style="text-align:center;">🎈 ${brand.name}</h2>
               <hr />
               <div>${newsletter.subject}</div>
               <hr />

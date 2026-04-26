@@ -8,9 +8,11 @@ type Props = {
     sku?: string
     stock?: number | null
   }
+  /** Brand name for schema.org Brand. Resolved from SiteSettings by callers. */
+  brandName?: string
 }
 
-export function ProductJsonLd({ product }: Props) {
+export function ProductJsonLd({ product, brandName = 'u-balloon' }: Props) {
   // NEXT_PUBLIC_APP_URL must be set per-instance. No shop-specific fallback.
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
   const imageUrl = product.images?.[0]?.image?.url || ''
@@ -25,7 +27,7 @@ export function ProductJsonLd({ product }: Props) {
     sku: product.sku || undefined,
     brand: {
       '@type': 'Brand',
-      name: 'uballoon',
+      name: brandName,
     },
     offers: {
       '@type': 'Offer',

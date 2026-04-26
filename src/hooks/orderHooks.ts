@@ -6,6 +6,7 @@ import type { OrderConfirmEmailProps } from '@/lib/email-templates'
 import { renderEmailBlocks } from '@/lib/email-template-renderer'
 import { sendAdminAlert } from '@/lib/admin-alerts'
 import { getSiteSettings } from '@/lib/site-settings'
+import { getBrand } from '@/lib/brand'
 import React from 'react'
 import type { Payload } from 'payload'
 
@@ -161,11 +162,17 @@ async function processOrderCreate(payload: Payload, doc: Record<string, unknown>
       name: baseEmailProps.name,
       orderNumber: baseEmailProps.orderNumber,
     })
-    emailProps = { ...emailProps, blocks: blocksResult?.blocks ?? {} }
+    const brand = await getBrand()
+    emailProps = {
+      ...emailProps,
+      blocks: blocksResult?.blocks ?? {},
+      brandName: brand.name,
+      emailFooterTagline: brand.emailFooterTagline,
+    }
 
     await sendEmail({
       to: customerEmail,
-      subject: `【uballoon】ご注文確認 ${doc.orderNumber}`,
+      subject: `${brand.subjectPrefix}ご注文確認 ${doc.orderNumber}`,
       react: React.createElement(OrderConfirmEmail, emailProps as OrderConfirmEmailProps),
     })
     console.log('[Hook] Order confirm email sent for', doc.orderNumber)
@@ -201,16 +208,20 @@ async function processOrderStatusChange(payload: Payload, doc: Record<string, un
       customerName = (customer as { name?: string }).name || customerEmail
     }
 
+    const brand = await getBrand()
+
     // Send status update email (only if we have a valid email address)
     if (customerEmail) {
       await sendEmail({
         to: customerEmail,
-        subject: `【uballoon】ご注文ステータス更新 ${doc.orderNumber}`,
+        subject: `${brand.subjectPrefix}ご注文ステータス更新 ${doc.orderNumber}`,
         react: React.createElement(OrderStatusUpdateEmail, {
           name: customerName,
           orderNumber: doc.orderNumber as string,
           newStatus: doc.status as string,
           scheduledShipDate: doc.scheduledShipDate as string | undefined,
+          brandName: brand.name,
+          emailFooterTagline: brand.emailFooterTagline,
         }),
       })
       console.log('[Hook] Status update email sent for', doc.orderNumber, '->', doc.status)
@@ -243,12 +254,14 @@ async function processOrderStatusChange(payload: Payload, doc: Record<string, un
         if (customerEmail) {
           await sendEmail({
             to: customerEmail,
-            subject: `【uballoon】ポイント付与のお知らせ`,
+            subject: `${brand.subjectPrefix}ポイント付与のお知らせ`,
             react: React.createElement(PointsEarnedEmail, {
               name: customerName,
               pointsEarned: result.pointsEarned,
               newBalance: result.newBalance,
               orderNumber: doc.orderNumber as string,
+              brandName: brand.name,
+              emailFooterTagline: brand.emailFooterTagline,
             }),
           })
         }

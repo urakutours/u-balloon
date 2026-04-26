@@ -8,6 +8,7 @@ import { Header } from '@/components/Header'
 import { Footer } from '@/components/Footer'
 import { CartDrawer } from '@/components/CartDrawer'
 import { GoogleAnalytics } from '@/components/GoogleAnalytics'
+import { getBrand } from '@/lib/brand'
 
 const notoSansJP = Noto_Sans_JP({
   subsets: ['latin'],
@@ -18,9 +19,7 @@ const notoSansJP = Noto_Sans_JP({
 
 import type { Metadata } from 'next'
 import { getSiteSettings } from '@/lib/site-settings'
-
-const DEFAULT_TITLE = 'uballoon | バルーンギフト・バルーン電報の通販'
-const DEFAULT_DESCRIPTION = 'バルーンギフトで特別な日を彩ります。誕生日、結婚式、記念日に最適なバルーン電報・バルーンギフトの通販サイト。東京都心への即日配送対応。'
+import { FALLBACK_BRAND } from '@/lib/brand'
 
 export async function generateMetadata(): Promise<Metadata> {
   let settings = null
@@ -29,13 +28,14 @@ export async function generateMetadata(): Promise<Metadata> {
   } catch {
     // DB columns may not be ready yet
   }
-  const title = settings?.siteTitle || DEFAULT_TITLE
-  const description = settings?.siteDescription || DEFAULT_DESCRIPTION
+  const brandName = settings?.brandName || FALLBACK_BRAND.name
+  const title = settings?.siteTitle || brandName
+  const description = settings?.siteDescription || ''
   const ogImage = settings?.siteOgImageUrl
   return {
     title: {
       default: title,
-      template: '%s | uballoon',
+      template: `%s | ${brandName}`,
     },
     description,
     openGraph: {
@@ -55,8 +55,13 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout(props: { children: React.ReactNode }) {
   const { children } = props
 
-  // Fetch GA4 measurement ID from SiteSettings (safe: returns null if not configured)
+  // Fetch GA4 + brand info from SiteSettings (60-second cache via
+  // getSiteSettings / getBrand). GA4 measurement ID is read directly from
+  // payload because it is not yet exposed on getSiteSettings(), but brand
+  // values go through the cached helper.
   let ga4Id: string | null = null
+  let brandName = FALLBACK_BRAND.name
+  let brandTagline = FALLBACK_BRAND.tagline
   try {
     const payload = await getPayload({ config })
     const settings = await payload.findGlobal({ slug: 'site-settings' })
@@ -64,13 +69,20 @@ export default async function RootLayout(props: { children: React.ReactNode }) {
   } catch {
     // SiteSettings not yet initialized — fall back to env var
   }
+  try {
+    const brand = await getBrand()
+    brandName = brand.name
+    brandTagline = brand.tagline
+  } catch {
+    // SiteSettings unavailable — keep static fallbacks
+  }
 
   return (
     <html lang="ja" className={notoSansJP.variable}>
       <body className="flex min-h-screen flex-col">
         <GoogleAnalytics ga4Id={ga4Id} />
         <AuthProvider>
-          <Header />
+          <Header brandName={brandName} brandTagline={brandTagline} />
           <main className="flex-1">{children}</main>
           <Footer />
           <CartDrawer />
