@@ -32,3 +32,7 @@ pl-cookie.txt
 # Rehearsal-specific env files
 .env.rehearsal
 *.rehearsal
+
+# Temporary working dir (rehearsal artifacts, CSV, point migration JSON, etc.)
+# These contain potentially sensitive customer data and must never be committed.
+/tmp/

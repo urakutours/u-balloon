@@ -110,10 +110,24 @@ export async function Footer() {
           </div>
         )}
 
-        {/* Copyright */}
+        {/* Copyright — fully customizable via SiteSettings.footerCopyrightText.
+            If unset, defaults to "© {year} {companyName || siteTitle}".
+            Year is computed in JST so SSR (UTC) and CSR don't drift over the
+            year boundary. Footer is a Server Component so the year is rendered
+            once at request time. */}
         <div className="mt-8 border-t border-white/20 pt-6">
           <p className="text-center text-xs text-white/60">
-            &copy; {new Date().getFullYear()} UBALLOON
+            {(() => {
+              const jstNow = new Date(Date.now() + 9 * 60 * 60 * 1000)
+              const year = String(jstNow.getUTCFullYear())
+              const owner = settings?.companyName || settings?.siteTitle || ''
+              const custom = settings?.footerCopyrightText
+              if (custom && custom.trim().length > 0) {
+                // Replace {year} placeholder; otherwise render as-is.
+                return custom.replace(/\{year\}/g, year)
+              }
+              return `© ${year} ${owner}`.trim()
+            })()}
           </p>
         </div>
       </div>

@@ -222,6 +222,15 @@ export const SiteSettings: GlobalConfig = {
                     placeholder: 'https://u-balloon.com/og-image.jpg',
                   },
                 },
+                {
+                  name: 'footerCopyrightText',
+                  type: 'text',
+                  label: 'フッター コピーライト表記（任意）',
+                  admin: {
+                    description: '空欄の場合「© {年} {会社名 / サイト名}」が自動表示されます。テキスト内の {year} は今年の年に置換されます。例: "© {year} ABC, Inc. All rights reserved."',
+                    placeholder: '© {year} ABC, Inc. All rights reserved.',
+                  },
+                },
               ],
             },
             // ─────────────────────────────────────────────────────────

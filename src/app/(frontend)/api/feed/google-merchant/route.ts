@@ -5,7 +5,8 @@ import config from '@payload-config'
 export async function GET() {
   try {
     const payload = await getPayload({ config })
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://uballoon.com'
+    // NEXT_PUBLIC_APP_URL must be set per-instance. No shop-specific fallback.
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
 
     const products = await payload.find({
       collection: 'products',

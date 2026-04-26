@@ -11,7 +11,8 @@ type Props = {
 }
 
 export function ProductJsonLd({ product }: Props) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://uballoon.com'
+  // NEXT_PUBLIC_APP_URL must be set per-instance. No shop-specific fallback.
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
   const imageUrl = product.images?.[0]?.image?.url || ''
   const fullImageUrl = imageUrl.startsWith('http') ? imageUrl : `${appUrl}${imageUrl}`
 
