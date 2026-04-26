@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
     const resend = new Resend(resendApiKey)
     const fromEmail =
-      siteSettings.emailFromAddress || process.env.EMAIL_FROM_ADDRESS || 'noreply@uballoon.com'
+      siteSettings.emailFromAddress || process.env.EMAIL_FROM_ADDRESS || 'noreply@u-balloon.com'
     const fromName =
       siteSettings.emailFromName || process.env.EMAIL_FROM_NAME || 'uballoon'
     // NEXT_PUBLIC_APP_URL must be set per-instance (e.g. https://u-balloon.com).

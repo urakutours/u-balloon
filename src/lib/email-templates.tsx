@@ -87,7 +87,7 @@ export function PasswordResetEmail({
         第三者による誤入力の可能性があります。
       </Text>
       <Text style={{ color: '#8898aa', fontSize: '12px' }}>
-        ご不明な点がございましたら、info@uballoon.com までお問い合わせください。
+        ご不明な点がございましたら、info@u-balloon.com までお問い合わせください。
       </Text>
     </EmailLayout>
   )

@@ -49,8 +49,12 @@ function normalizeRecipients(value: SendEmailOptions['to']): string[] {
 export const payloadEmailAdapter: EmailAdapter<{ success: boolean; id?: string; error?: unknown }> = ({
   payload,
 }) => {
+  // The verified Resend domain is `u-balloon.com` (hyphenated). The
+  // unhyphenated `uballoon.com` is a different unverified domain — using it
+  // causes Resend to reject every send with 403 (see feedback memory
+  // `feedback_uballoon_domain_naming.md`).
   const defaultFromAddress =
-    process.env.EMAIL_FROM_ADDRESS || 'noreply@uballoon.com'
+    process.env.EMAIL_FROM_ADDRESS || 'noreply@u-balloon.com'
   const defaultFromName = process.env.EMAIL_FROM_NAME || 'uballoon'
 
   return {
@@ -63,7 +67,7 @@ export const payloadEmailAdapter: EmailAdapter<{ success: boolean; id?: string; 
         settings.emailFromAddress || process.env.EMAIL_FROM_ADDRESS || defaultFromAddress
       const fromName = settings.emailFromName || process.env.EMAIL_FROM_NAME || defaultFromName
       const replyTo =
-        settings.emailReplyTo || process.env.EMAIL_REPLY_TO || 'info@uballoon.com'
+        settings.emailReplyTo || process.env.EMAIL_REPLY_TO || 'info@u-balloon.com'
 
       const to = normalizeRecipients(message.to)
       if (to.length === 0) {

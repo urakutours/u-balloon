@@ -25,7 +25,7 @@ export async function sendAdminAlert({ type, title, details, urgency = 'normal' 
     settings.adminAlertEmail ||
     process.env.ADMIN_ALERT_EMAIL ||
     process.env.EMAIL_REPLY_TO ||
-    'info@uballoon.com'
+    'info@u-balloon.com'
 
   const prefix = urgency === 'high' ? '【緊急】' : ''
   const label = alertLabels[type] || type

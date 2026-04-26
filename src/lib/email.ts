@@ -37,14 +37,18 @@ export async function sendEmail({ to, subject, react }: SendEmailParams) {
     return { success: true, fallback: true }
   }
 
+  // The verified Resend domain is `u-balloon.com` (hyphenated). The
+  // unhyphenated `uballoon.com` is a different unverified domain — using it
+  // causes Resend to reject every send with 403 (see feedback memory
+  // `feedback_uballoon_domain_naming.md`).
   const fromEmail =
     settings.emailFromAddress ||
     process.env.EMAIL_FROM_ADDRESS ||
-    'noreply@uballoon.com'
+    'noreply@u-balloon.com'
   const fromName =
     settings.emailFromName || process.env.EMAIL_FROM_NAME || 'uballoon'
   const replyTo =
-    settings.emailReplyTo || process.env.EMAIL_REPLY_TO || 'info@uballoon.com'
+    settings.emailReplyTo || process.env.EMAIL_REPLY_TO || 'info@u-balloon.com'
 
   try {
     const { data, error } = await resend.emails.send({
