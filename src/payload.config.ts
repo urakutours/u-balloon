@@ -7,6 +7,7 @@ import { ja } from '@payloadcms/translations/languages/ja'
 import sharp from 'sharp'
 import { fileURLToPath } from 'url'
 
+import { payloadEmailAdapter } from './lib/payload-email-adapter'
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
 import { Products } from './collections/Products'
@@ -52,21 +53,40 @@ const s3Plugins = process.env.R2_BUCKET
     ]
   : []
 
-const vercelUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+// VERCEL_URL is the actual deployment URL (preview-specific on previews).
+// VERCEL_PROJECT_PRODUCTION_URL is the configured production domain — it is
+// set on ALL deployments (including previews) to the same production URL,
+// so we must not treat it as the preview's own URL.
+const vercelDeploymentUrl = process.env.VERCEL_URL
+  ? `https://${process.env.VERCEL_URL}`
+  : undefined
+const vercelProductionUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
   ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-  : process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : undefined
+  : undefined
 
-const resolvedServerURL =
-  process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes('localhost')
-    ? process.env.NEXT_PUBLIC_APP_URL
-    : vercelUrl || process.env.NEXT_PUBLIC_APP_URL || ''
+// On preview deployments, serverURL must point to *this* preview so that
+// generated links (forgot-password reset URL, embed snippets, etc.) resolve
+// back to the same database/code revision. NEXT_PUBLIC_APP_URL is shared
+// across all environments and would otherwise route preview emails to
+// production, where the new code may not yet be merged.
+const isVercelPreview = process.env.VERCEL_ENV === 'preview'
+
+const resolvedServerURL = (() => {
+  if (isVercelPreview && vercelDeploymentUrl) return vercelDeploymentUrl
+  if (
+    process.env.NEXT_PUBLIC_APP_URL &&
+    !process.env.NEXT_PUBLIC_APP_URL.includes('localhost')
+  ) {
+    return process.env.NEXT_PUBLIC_APP_URL
+  }
+  return vercelProductionUrl || vercelDeploymentUrl || process.env.NEXT_PUBLIC_APP_URL || ''
+})()
 
 const allowedOrigins = [
   resolvedServerURL,
   process.env.NEXT_PUBLIC_APP_URL,
-  vercelUrl,
+  vercelDeploymentUrl,
+  vercelProductionUrl,
   'https://u-balloon.vercel.app',
   'https://u-balloon.com',
   'https://www.u-balloon.com',
@@ -106,6 +126,7 @@ export default buildConfig({
   collections: [Products, Orders, OrderAuditLogs, SubscriptionPlans, Subscriptions, Users, PointTransactions, Pages, Posts, Forms, FormSubmissions, Promotions, SecretSales, ABTests, NewsletterSubscribers, Newsletters, Media, BusinessCalendar, EmailTemplates],
   globals: [SiteSettings],
   editor: lexicalEditor(),
+  email: payloadEmailAdapter,
   secret: process.env.PAYLOAD_SECRET,
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),

@@ -1,7 +1,12 @@
 import type { CollectionConfig } from 'payload'
+import React from 'react'
+import { render } from '@react-email/render'
 import { isAdmin, isAdminOrSelf, anyone } from '../access'
 import { afterUserCreate } from '../hooks/userHooks'
 import { beforeUserPointsChange } from '../hooks/pointAdjustHook'
+import { PasswordResetEmail } from '../lib/email-templates'
+
+const FORGOT_PASSWORD_EXPIRATION_MS = 1000 * 60 * 60 * 24 // 24 hours
 
 export const Users: CollectionConfig = {
   slug: 'users',
@@ -19,7 +24,41 @@ export const Users: CollectionConfig = {
       beforeListTable: ['@/components/admin/ListImportExportActions'],
     },
   },
-  auth: true,
+  auth: {
+    forgotPassword: {
+      expiration: FORGOT_PASSWORD_EXPIRATION_MS,
+      generateEmailSubject: () => '【u-balloon】パスワード再設定のご案内',
+      generateEmailHTML: async (args) => {
+        // args is `{ token, user, req } | undefined` per Payload v3 typings,
+        // but the runtime always passes all three (forgotPasswordOperation.ts).
+        if (!args || !args.token || !args.req) return ''
+        const { token, user, req } = args
+        // payload.config.serverURL is normalized in payload.config.ts and is
+        // the single source of truth for the public origin (handles Vercel
+        // production / preview / local dev). NEXT_PUBLIC_APP_URL is the last
+        // resort and may legitimately be localhost in dev.
+        const origin =
+          req.payload.config.serverURL || process.env.NEXT_PUBLIC_APP_URL || ''
+        if (!origin) {
+          req.payload.logger.error(
+            'forgotPassword: cannot resolve reset URL origin. ' +
+              'Set NEXT_PUBLIC_APP_URL or VERCEL_PROJECT_PRODUCTION_URL.',
+          )
+        }
+        const resetUrl = `${origin.replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(
+          token,
+        )}`
+        const name = (user as { name?: string } | undefined)?.name || undefined
+        return await render(
+          React.createElement(PasswordResetEmail, {
+            name,
+            resetUrl,
+            expiresInHours: Math.round(FORGOT_PASSWORD_EXPIRATION_MS / 3_600_000),
+          }),
+        )
+      },
+    },
+  },
   hooks: {
     beforeChange: [beforeUserPointsChange],
     afterChange: [afterUserCreate],

@@ -9,6 +9,7 @@ import {
   Heading,
   Hr,
 } from '@react-email/components'
+import { Button } from '@react-email/components'
 import { formatTimeSlot, formatCarrier, formatPaymentMethod } from './order-display-helpers'
 
 // Common layout wrapper
@@ -30,6 +31,65 @@ function EmailLayout({ children }: { children: React.ReactNode }) {
         </Container>
       </Body>
     </Html>
+  )
+}
+
+// 0. パスワード再設定メール
+export function PasswordResetEmail({
+  name,
+  resetUrl,
+  expiresInHours = 24,
+}: {
+  name?: string
+  resetUrl: string
+  expiresInHours?: number
+}) {
+  const greeting = name ? `${name} 様` : 'お客様'
+  return (
+    <EmailLayout>
+      <Heading as="h3" style={{ color: '#333' }}>
+        パスワード再設定のご案内
+      </Heading>
+      <Text style={{ color: '#525f7f' }}>
+        {greeting}
+      </Text>
+      <Text style={{ color: '#525f7f' }}>
+        uballoon でパスワード再設定のリクエストを受け付けました。
+        下のボタンから新しいパスワードを設定してください。
+      </Text>
+      <Section style={{ textAlign: 'center' as const, margin: '24px 0' }}>
+        <Button
+          href={resetUrl}
+          style={{
+            backgroundColor: '#e91e8c',
+            color: '#fff',
+            padding: '12px 28px',
+            borderRadius: '24px',
+            textDecoration: 'none',
+            fontWeight: 'bold',
+            display: 'inline-block',
+          }}
+        >
+          パスワードを再設定する
+        </Button>
+      </Section>
+      <Text style={{ color: '#8898aa', fontSize: '12px', wordBreak: 'break-all' as const }}>
+        ボタンが押せない場合は、以下の URL をブラウザに貼り付けてアクセスしてください。
+        <br />
+        {resetUrl}
+      </Text>
+      <Text style={{ color: '#525f7f' }}>
+        このリンクは {expiresInHours} 時間有効です。期限を過ぎた場合は、
+        再度パスワード再設定をお申し込みください。
+      </Text>
+      <Text style={{ color: '#8898aa', fontSize: '12px' }}>
+        ※ お心当たりのない場合は、このメールを破棄していただいて問題ありません。
+        第三者による誤入力の可能性があります。
+      </Text>
+      <Text style={{ color: '#8898aa', fontSize: '12px' }}>
+        ご不明な点がございましたら、info@u-balloon.com までお問い合わせください。
+      </Text>
+    </EmailLayout>
   )
 }
 

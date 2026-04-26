@@ -76,6 +76,15 @@ export default function LoginContent() {
               {isSubmitting ? 'ログイン中...' : 'ログイン'}
             </Button>
 
+            <p className="text-center text-sm">
+              <Link
+                href="/forgot-password"
+                className="font-medium text-brand-teal hover:text-brand-teal/80"
+              >
+                パスワードをお忘れの方はこちら
+              </Link>
+            </p>
+
             <p className="text-center text-sm text-muted-foreground">
               アカウントをお持ちでないですか？{' '}
               <Link href="/register" className="font-medium text-brand-teal hover:text-brand-teal/80">
