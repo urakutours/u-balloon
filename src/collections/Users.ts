@@ -1,7 +1,49 @@
-import type { CollectionConfig } from 'payload'
+import type { CollectionConfig, PayloadRequest } from 'payload'
+import React from 'react'
+import { render } from '@react-email/render'
 import { isAdmin, isAdminOrSelf, anyone } from '../access'
 import { afterUserCreate } from '../hooks/userHooks'
 import { beforeUserPointsChange } from '../hooks/pointAdjustHook'
+import { PasswordResetEmail } from '../lib/email-templates'
+
+const FORGOT_PASSWORD_EXPIRATION_MS = 1000 * 60 * 60 * 24 // 24 hours
+
+/**
+ * Resolve the public origin for password reset URLs.
+ *
+ * Priority:
+ *   1. payload.config.serverURL (set explicitly when known-good)
+ *   2. request Host header — only if it is in the cors/csrf allowlist
+ *   3. NEXT_PUBLIC_APP_URL env (last-resort fallback)
+ *
+ * Mirrors `payload/dist/utilities/getRequestOrigin` which is not part of the
+ * public export surface; inlining avoids depending on internal paths.
+ */
+function resolveResetOrigin(req: PayloadRequest): string {
+  const config = req.payload.config
+  if (config.serverURL && config.serverURL !== '') return config.serverURL
+
+  let origin = ''
+  try {
+    const protocol = new URL(req.url || '').protocol
+    const host = req.headers?.get('host')
+    if (host) origin = `${protocol}//${host}`
+  } catch {
+    // malformed url — fall through
+  }
+
+  const allowed = new Set<string>()
+  const cors = config.cors
+  if (Array.isArray(cors)) cors.forEach((o) => allowed.add(o))
+  else if (cors && typeof cors === 'object' && Array.isArray((cors as { origins?: string[] }).origins)) {
+    ;(cors as { origins: string[] }).origins.forEach((o) => allowed.add(o))
+  }
+  const csrf = config.csrf
+  if (Array.isArray(csrf)) csrf.forEach((o) => allowed.add(o))
+
+  if (origin && allowed.has(origin)) return origin
+  return process.env.NEXT_PUBLIC_APP_URL || ''
+}
 
 export const Users: CollectionConfig = {
   slug: 'users',
@@ -19,7 +61,29 @@ export const Users: CollectionConfig = {
       beforeListTable: ['@/components/admin/ListImportExportActions'],
     },
   },
-  auth: true,
+  auth: {
+    forgotPassword: {
+      expiration: FORGOT_PASSWORD_EXPIRATION_MS,
+      generateEmailSubject: () => '【u-balloon】パスワード再設定のご案内',
+      generateEmailHTML: async (args) => {
+        // args is `{ token, user, req } | undefined` per Payload v3 typings.
+        if (!args || !args.token || !args.req) return ''
+        const { token, user, req } = args
+        const origin = resolveResetOrigin(req)
+        const resetUrl = `${origin.replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(
+          token,
+        )}`
+        const name = (user as { name?: string } | undefined)?.name || undefined
+        return await render(
+          React.createElement(PasswordResetEmail, {
+            name,
+            resetUrl,
+            expiresInHours: Math.round(FORGOT_PASSWORD_EXPIRATION_MS / 3_600_000),
+          }),
+        )
+      },
+    },
+  },
   hooks: {
     beforeChange: [beforeUserPointsChange],
     afterChange: [afterUserCreate],
