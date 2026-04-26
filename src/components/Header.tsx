@@ -54,7 +54,12 @@ const DELIVERY_MENU = {
   ],
 }
 
-export function Header() {
+type HeaderProps = {
+  brandName?: string
+  brandTagline?: string
+}
+
+export function Header({ brandName = 'u-balloon', brandTagline = '' }: HeaderProps = {}) {
   const { user, isLoading, logout } = useAuth()
   const itemCountRaw = useCartStore((s) => s.getItemCount())
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -98,7 +103,7 @@ export function Header() {
     <>
       {/* SEO text — visually hidden, accessible to search engines */}
       <p className="sr-only">
-        u-balloon（ユーバルーン）｜特別な日にバルーンを！ギフトやウェディング、大規模な装飾まで、何でもご相談ください
+        {brandTagline ? `${brandName}｜${brandTagline}` : brandName}
       </p>
 
       {/* Main Header — Shopify layout: search(left) / logo(center-large) / account+cart(right) */}

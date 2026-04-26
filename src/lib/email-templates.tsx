@@ -13,20 +13,29 @@ import { Button } from '@react-email/components'
 import { formatTimeSlot, formatCarrier, formatPaymentMethod } from './order-display-helpers'
 
 // Common layout wrapper
-function EmailLayout({ children }: { children: React.ReactNode }) {
+function EmailLayout({
+  children,
+  brandName = 'u-balloon',
+  emailFooterTagline,
+}: {
+  children: React.ReactNode
+  brandName?: string
+  emailFooterTagline?: string
+}) {
+  const footer = emailFooterTagline || `${brandName} - バルーンギフトEC`
   return (
     <Html lang="ja">
       <Head />
       <Body style={{ backgroundColor: '#f6f9fc', fontFamily: 'sans-serif' }}>
         <Container style={{ backgroundColor: '#ffffff', margin: '40px auto', padding: '20px 48px', borderRadius: '8px', maxWidth: '600px' }}>
           <Heading as="h2" style={{ color: '#333', textAlign: 'center' as const }}>
-            🎈 uballoon
+            🎈 {brandName}
           </Heading>
           <Hr style={{ borderColor: '#e6ebf1', margin: '20px 0' }} />
           {children}
           <Hr style={{ borderColor: '#e6ebf1', margin: '20px 0' }} />
           <Text style={{ color: '#8898aa', fontSize: '12px', textAlign: 'center' as const }}>
-            uballoon - バルーンギフトEC
+            {footer}
           </Text>
         </Container>
       </Body>
@@ -34,19 +43,27 @@ function EmailLayout({ children }: { children: React.ReactNode }) {
   )
 }
 
+/** Optional brand metadata supplied by callers; defaults render as `u-balloon`. */
+export type EmailBrandProps = {
+  brandName?: string
+  emailFooterTagline?: string
+}
+
 // 0. パスワード再設定メール
 export function PasswordResetEmail({
   name,
   resetUrl,
   expiresInHours = 24,
+  brandName,
+  emailFooterTagline,
 }: {
   name?: string
   resetUrl: string
   expiresInHours?: number
-}) {
+} & EmailBrandProps) {
   const greeting = name ? `${name} 様` : 'お客様'
   return (
-    <EmailLayout>
+    <EmailLayout brandName={brandName} emailFooterTagline={emailFooterTagline}>
       <Heading as="h3" style={{ color: '#333' }}>
         パスワード再設定のご案内
       </Heading>
@@ -54,7 +71,7 @@ export function PasswordResetEmail({
         {greeting}
       </Text>
       <Text style={{ color: '#525f7f' }}>
-        uballoon でパスワード再設定のリクエストを受け付けました。
+        {brandName || 'u-balloon'} でパスワード再設定のリクエストを受け付けました。
         下のボタンから新しいパスワードを設定してください。
       </Text>
       <Section style={{ textAlign: 'center' as const, margin: '24px 0' }}>
@@ -94,9 +111,13 @@ export function PasswordResetEmail({
 }
 
 // 1. 会員登録完了メール
-export function WelcomeEmail({ name }: { name: string }) {
+export function WelcomeEmail({
+  name,
+  brandName,
+  emailFooterTagline,
+}: { name: string } & EmailBrandProps) {
   return (
-    <EmailLayout>
+    <EmailLayout brandName={brandName} emailFooterTagline={emailFooterTagline}>
       <Heading as="h3" style={{ color: '#333' }}>
         会員登録完了のお知らせ
       </Heading>
@@ -104,7 +125,7 @@ export function WelcomeEmail({ name }: { name: string }) {
         {name} 様
       </Text>
       <Text style={{ color: '#525f7f' }}>
-        uballoonへの会員登録が完了しました。
+        {brandName || 'u-balloon'}への会員登録が完了しました。
       </Text>
       <Text style={{ color: '#525f7f' }}>
         当店では特別なバルーンギフトを取り扱っております。
@@ -198,6 +219,10 @@ export type OrderConfirmEmailProps = {
   usageInfo?: UsageInfo
   /** DB から取得したブロックテキスト。キーが無い場合はコード内デフォルト文言にフォールバック */
   blocks?: Record<string, string>
+  /** Brand metadata. Resolved from SiteSettings by callers (defaults: u-balloon). */
+  brandName?: string
+  /** Footer line shown at the very bottom of the email layout. */
+  emailFooterTagline?: string
 }
 
 function formatAccountType(type: string | null | undefined): string {
@@ -235,6 +260,8 @@ export function OrderConfirmEmail({
   giftInfo,
   usageInfo,
   blocks = {},
+  brandName,
+  emailFooterTagline,
 }: OrderConfirmEmailProps) {
   const greeting = blocks['greeting'] ?? `${name} 様、ご注文ありがとうございます。`
   const intro = blocks['intro'] ?? '以下の内容でご注文を承りました。内容をご確認ください。'
@@ -242,9 +269,10 @@ export function OrderConfirmEmail({
     blocks['bank_transfer_lead'] ??
     '以下の口座までお振込みをお願いいたします。期限までにご入金が確認できない場合、ご注文はキャンセルとなります。'
   const thanksMessage = blocks['thanks_message'] ?? 'この度はご注文いただきありがとうございました。'
+  const resolvedBrand = brandName || 'u-balloon'
   const footerNote =
     blocks['footer_note'] ??
-    'ご不明な点はお問い合わせページよりお気軽にご連絡ください。\nuballoon - バルーンギフトEC'
+    `ご不明な点はお問い合わせページよりお気軽にご連絡ください。\n${resolvedBrand} - バルーンギフトEC`
   const labelStyle = { color: '#333', fontWeight: 'bold' as const, margin: '0 0 2px' }
   const valueStyle = { color: '#525f7f', margin: '0 0 4px' }
   const bankBoxStyle = {
@@ -261,7 +289,7 @@ export function OrderConfirmEmail({
   const infoHeadingStyle = { color: '#333', fontWeight: 'bold' as const, margin: '0 0 8px', fontSize: '13px' }
 
   return (
-    <EmailLayout>
+    <EmailLayout brandName={brandName} emailFooterTagline={emailFooterTagline}>
       <Heading as="h3" style={{ color: '#333' }}>
         ご注文確認
       </Heading>
@@ -515,14 +543,16 @@ export function OrderStatusUpdateEmail({
   orderNumber,
   newStatus,
   scheduledShipDate,
+  brandName,
+  emailFooterTagline,
 }: {
   name: string
   orderNumber: string
   newStatus: string
   scheduledShipDate?: string
-}) {
+} & EmailBrandProps) {
   return (
-    <EmailLayout>
+    <EmailLayout brandName={brandName} emailFooterTagline={emailFooterTagline}>
       <Heading as="h3" style={{ color: '#333' }}>
         ご注文ステータス更新
       </Heading>
@@ -566,11 +596,18 @@ type FormNotificationEmailProps = {
   formTitle: string
   fields: Array<{ name: string; label: string }>
   data: Record<string, unknown>
-}
+} & EmailBrandProps
 
-export function FormNotificationEmail({ formTitle, fields, data }: FormNotificationEmailProps) {
+export function FormNotificationEmail({
+  formTitle,
+  fields,
+  data,
+  brandName,
+  emailFooterTagline,
+}: FormNotificationEmailProps) {
+  const resolvedBrand = brandName || 'u-balloon'
   return (
-    <EmailLayout>
+    <EmailLayout brandName={brandName} emailFooterTagline={emailFooterTagline}>
       <Heading as="h3" style={{ color: '#333' }}>
         {formTitle} - 新しい送信
       </Heading>
@@ -587,7 +624,7 @@ export function FormNotificationEmail({ formTitle, fields, data }: FormNotificat
         ))}
       </Section>
       <Text style={{ color: '#8898aa', fontSize: '12px' }}>
-        このメールはuballoonのフォームから自動送信されました。
+        このメールは{resolvedBrand}のフォームから自動送信されました。
       </Text>
     </EmailLayout>
   )
@@ -599,14 +636,16 @@ export function PointsEarnedEmail({
   pointsEarned,
   newBalance,
   orderNumber,
+  brandName,
+  emailFooterTagline,
 }: {
   name: string
   pointsEarned: number
   newBalance: number
   orderNumber: string
-}) {
+} & EmailBrandProps) {
   return (
-    <EmailLayout>
+    <EmailLayout brandName={brandName} emailFooterTagline={emailFooterTagline}>
       <Heading as="h3" style={{ color: '#333' }}>
         ポイント付与のお知らせ
       </Heading>
@@ -638,15 +677,18 @@ export function AdminAlertEmail({
   title,
   details,
   urgency = 'normal',
+  brandName,
+  emailFooterTagline,
 }: {
   alertType: string
   title: string
   details: string
   urgency?: 'normal' | 'high'
-}) {
+} & EmailBrandProps) {
   const borderColor = urgency === 'high' ? '#e53e3e' : '#ed8936'
+  const resolvedBrand = brandName || 'u-balloon'
   return (
-    <EmailLayout>
+    <EmailLayout brandName={brandName} emailFooterTagline={emailFooterTagline}>
       <Heading as="h3" style={{ color: '#333' }}>
         {alertType}
       </Heading>
@@ -659,7 +701,7 @@ export function AdminAlertEmail({
         </Text>
       </Section>
       <Text style={{ color: '#8898aa', fontSize: '12px', marginTop: '16px' }}>
-        このメールはuballoon管理システムから自動送信されました。
+        このメールは{resolvedBrand}管理システムから自動送信されました。
       </Text>
     </EmailLayout>
   )
@@ -672,15 +714,17 @@ export function ShippingNotificationEmail({
   carrier,
   trackingNumber,
   trackingUrl,
+  brandName,
+  emailFooterTagline,
 }: {
   name: string
   orderNumber: string
   carrier: string
   trackingNumber: string
   trackingUrl?: string
-}) {
+} & EmailBrandProps) {
   return (
-    <EmailLayout>
+    <EmailLayout brandName={brandName} emailFooterTagline={emailFooterTagline}>
       <Heading as="h3" style={{ color: '#333' }}>
         発送のお知らせ
       </Heading>
@@ -716,14 +760,16 @@ export function DelayNotificationEmail({
   orderNumber,
   reason,
   newEstimate,
+  brandName,
+  emailFooterTagline,
 }: {
   name: string
   orderNumber: string
   reason: string
   newEstimate?: string
-}) {
+} & EmailBrandProps) {
   return (
-    <EmailLayout>
+    <EmailLayout brandName={brandName} emailFooterTagline={emailFooterTagline}>
       <Heading as="h3" style={{ color: '#333' }}>
         配送遅延のお知らせ
       </Heading>
