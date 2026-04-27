@@ -57,10 +57,10 @@ export default function HomePage() {
           <div className="absolute inset-0 flex items-center justify-center pb-8 sm:pb-12">
             <div className="mx-auto w-full max-w-7xl px-4 sm:px-6">
               <div className="mx-auto max-w-4xl text-center">
-                <p className="mb-3 text-sm font-semibold tracking-wider text-[#3c9ced] uppercase [text-shadow:_0_0_40px_#ffffff8f] sm:mb-5 sm:text-base md:text-lg">
+                <p className="mb-3 text-sm font-semibold tracking-wider text-[#008dc5] uppercase [text-shadow:_0_0_40px_#ffffff8f] sm:mb-5 sm:text-base md:text-lg">
                   Make Them Smile
                 </p>
-                <h1 className="text-4xl font-bold leading-tight tracking-tight text-[#3c9ced] [text-shadow:_0_0_40px_#ffffff8f] sm:text-5xl md:text-6xl lg:text-7xl">
+                <h1 className="text-4xl font-bold leading-tight tracking-tight text-[#008dc5] [text-shadow:_0_0_40px_#ffffff8f] sm:text-5xl md:text-6xl lg:text-7xl">
                   特別な日を
                   <br />
                   <span className="text-brand-pink">バルーン</span>で彩ろう
