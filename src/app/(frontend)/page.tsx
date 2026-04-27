@@ -67,12 +67,10 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Hero Image Placeholder */}
           <div className="mt-10 flex-1 sm:mt-0 sm:pl-10">
             <div className="relative mx-auto aspect-square max-w-md overflow-hidden rounded-2xl bg-gradient-to-br from-brand-pink/20 via-brand-mint/20 to-brand-teal-bright/20">
-              <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
-                <span className="text-6xl">🎈</span>
-                <p className="text-sm text-foreground/40">ヒーロー画像</p>
+              <div className="flex h-full items-center justify-center p-8">
+                <span className="text-7xl">🎈</span>
               </div>
             </div>
           </div>
