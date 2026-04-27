@@ -259,6 +259,10 @@ export async function POST(request: NextRequest) {
           context: {
             skipWelcomeEmail: true,
             skipPointAdjustHook: true,
+            // MakeShop 移行: ガラケー時代の RFC 違反 email (連続ドット
+            // `..`、末尾ドット `.@`) を受け入れる。Users.email validate
+            // が context flag を見て loose regex に切り替える。
+            allowLegacyEmailFormat: true,
           },
         })
         result.updated++
@@ -282,6 +286,8 @@ export async function POST(request: NextRequest) {
           depth: 0,
           context: {
             skipWelcomeEmail: true,
+            // MakeShop 移行: 同上 (Users.email validate が緩和される)
+            allowLegacyEmailFormat: true,
           },
         })
         result.created++

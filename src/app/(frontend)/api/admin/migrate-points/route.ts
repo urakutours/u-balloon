@@ -58,7 +58,14 @@ export async function POST(req: NextRequest) {
           collection: 'users',
           id: targetUser.id,
           data: { points: newBalance },
-          context: { skipPointAdjustHook: true },
+          context: {
+            skipPointAdjustHook: true,
+            // MakeShop 移行: ガラケー時代の RFC 違反 email (連続ドット
+            // `..`、末尾ドット `.@`) を持つユーザの points 更新でも
+            // email 再 validate が走るため、loose regex に切り替える。
+            // Users.email validate がこの flag を見て緩和される。
+            allowLegacyEmailFormat: true,
+          },
         })
 
         results.push({ legacyId: item.legacyId, status: 'success' })
