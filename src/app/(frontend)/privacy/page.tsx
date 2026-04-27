@@ -119,12 +119,16 @@ export default async function PrivacyPage() {
             </Section>
 
             {/* 5 */}
-            <Section num={5} title="アクセス解析ツールについて">
-              <p>当サイトでは、サービスの改善およびお客様の利便性向上のため、以下のアクセス解析ツールを使用しています。</p>
+            <Section num={5} title="アクセス解析ツールおよび外部サービス連携について">
+              <p>当サイトでは、サービスの提供および改善のため、以下の外部サービスにお客様の情報の一部を送信または共有しています。各サービスのプライバシーポリシーに基づきデータが管理されます。</p>
               <ul className="mt-3 list-disc space-y-1.5 pl-6">
-                <li><strong>Google Analytics：</strong>Googleが提供するアクセス解析ツールを利用し、サイトの利用状況を匿名で収集・分析しています。データはGoogleのプライバシーポリシーに基づき管理されます。</li>
+                <li><strong>Google Analytics 4（Google LLC）：</strong>サイト利用状況の匿名分析。Cookieを使用しますが個人を特定する情報は含まれません。詳細は <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-brand-teal underline underline-offset-2">Google のプライバシーポリシー</a> をご確認ください。</li>
+                <li><strong>Stripe（Stripe, Inc.）：</strong>クレジットカード決済処理。お支払い情報（カード番号等）は当社サーバーには保存されず、Stripe が管理します。詳細は <a href="https://stripe.com/jp/privacy" target="_blank" rel="noopener noreferrer" className="text-brand-teal underline underline-offset-2">Stripe のプライバシーポリシー</a> をご確認ください。</li>
+                <li><strong>Resend：</strong>注文確認・各種通知メールの送信。お客様のお名前・メールアドレス等を送信元として利用します。詳細は <a href="https://resend.com/" target="_blank" rel="noopener noreferrer" className="text-brand-teal underline underline-offset-2">Resend 公式サイト</a> よりプライバシーポリシーをご確認ください。</li>
+                <li><strong>Cloudflare R2（Cloudflare, Inc.）：</strong>商品画像等のメディア配信。アクセスログが Cloudflare 側に記録されます。詳細は <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer" className="text-brand-teal underline underline-offset-2">Cloudflare のプライバシーポリシー</a> をご確認ください。</li>
+                <li><strong>Google Maps Platform（Google LLC）：</strong>配送距離計算のためお届け先住所を送信します。詳細は <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-brand-teal underline underline-offset-2">Google のプライバシーポリシー</a> をご確認ください。</li>
               </ul>
-              <p className="mt-3">これらのツールはCookieを使用してデータを収集しますが、個人を特定する情報は含まれません。</p>
+              <p className="mt-3">ブラウザの設定によりCookieの受け取りを拒否することもできますが、一部のサービスが正常に機能しなくなる場合がございます。</p>
             </Section>
 
             {/* 6 */}
