@@ -68,6 +68,12 @@
 - [ ] SiteSettings.resendApiKey = 本番 keys
 - [ ] SiteSettings.googleMapsApiKey = 本番 key
 - [ ] SiteSettings 全項目 (会社情報 / 配送 / SNS) 入力済 (Phase G で確認)
+- [ ] **SiteSettings.emailFromAddress = `noreply@u-balloon.com`** (root domain、Daisuke 確定 2026-04-27)
+- [ ] **SiteSettings.emailReplyTo = `info@u-balloon.com`** (X サーバー受信、Daisuke 確定 2026-04-27)
+- [ ] ルート SPF を Resend 含むように更新確認 (root from `noreply@u-balloon.com` で送信するため):
+  - 現状: `u-balloon.com TXT v=spf1 +a:sv14166.xserver.jp +a:u-balloon.com +mx include:spf.sender.xserver.jp ~all`
+  - 推奨: `v=spf1 +a:sv14166.xserver.jp +a:u-balloon.com +mx include:spf.sender.xserver.jp include:amazonses.com ~all`
+  - (もしくは Resend 側で root from が subdomain DKIM だけで通るなら現状維持可、Resend テスト送信で `Authentication-Results: spf=pass` を確認)
 
 ### 4-4. ゲート2 判定
 
@@ -90,10 +96,43 @@
 
 ### 5-2. DNS 切替 (~06:00)
 
-- [ ] (Phase G 4/28 で TTL 短縮済前提)
-- [ ] u-balloon.com の A/CNAME を MakeShop → Vercel に切替
-- [ ] Vercel custom domain `u-balloon.com` の SSL 証明書発行確認 (通常即時、稀に数十分)
-- [ ] DNS 浸透確認: `dig u-balloon.com` / `dig u-balloon.com @8.8.8.8` で複数 resolver から確認
+#### 前提 (4/28 中に Daisuke 完了済)
+
+- [x] TTL 300 短縮完了: `u-balloon.com A` / `www.u-balloon.com CNAME` / `*.u-balloon.com A`
+- [x] Resend ドメイン認証 (subdomain mode `send.u-balloon.com`) verified
+- [x] X サーバーで `info@u-balloon.com` メールアカウント作成 + DNS `u-balloon.com MX` 設定 (受信用、切替対象外)
+
+#### Vercel custom domain 登録 (4/29 中に Daisuke 完了想定)
+
+Vercel dashboard で `u-balloon.com` を u-balloon project に紐付けると、Vercel から以下の指示値が表示される:
+
+- **Apex domain (root)** `u-balloon.com`: A レコード `76.76.21.21` (Vercel の固定 IP) 推奨
+- **www subdomain** `www.u-balloon.com`: CNAME `cname.vercel-dns.com` 推奨
+- (確認時刻次第で IP / CNAME 値は変わる可能性あり、Vercel UI の表示を正とする)
+
+#### 4/30 切替操作手順
+
+- [ ] **A レコード更新** (X サーバー DNS 管理画面)
+  - `u-balloon.com A 162.43.120.167` (X サーバー) → `u-balloon.com A 76.76.21.21` (Vercel) に変更
+  - TTL: 300 (既に短縮済)
+- [ ] **www CNAME 更新**
+  - `www.u-balloon.com CNAME uballoon.cn.makeshop.jp` (MakeShop) → `cname.vercel-dns.com` (Vercel) に変更
+- [ ] **`*.u-balloon.com A` (ワイルドカード) 判断**
+  - X サーバーで使うサブドメイン (例: `webmail.u-balloon.com`) があるなら、ワイルドカードを残し個別サブドメインを X サーバー A レコードに追記
+  - サブドメイン未使用なら**ワイルドカードを削除** (意図しないアクセスを防ぐ)
+  - `*.u-balloon.com` を Vercel に向けるのは、Vercel 側のルートで全 wildcard を受けるパターン (今回は推奨しない)
+- [ ] **Vercel custom domain SSL 証明書発行確認**
+  - Vercel dashboard で証明書 status を確認 (通常即時、稀に数十分)
+  - 確認方法: `https://u-balloon.com/` にブラウザアクセス → 鍵マーク + Vercel が "Valid Configuration" を表示
+- [ ] **DNS 浸透確認** (複数 resolver から)
+  - `dig u-balloon.com @8.8.8.8` (Google DNS)
+  - `dig u-balloon.com @1.1.1.1` (Cloudflare DNS)
+  - `dig u-balloon.com @208.67.222.222` (OpenDNS)
+  - 全て `76.76.21.21` 等の Vercel IP を返したら浸透完了
+- [ ] **X サーバー受信維持確認** (`info@u-balloon.com`)
+  - 切替後、自身の Gmail などから `info@u-balloon.com` に test mail 送信
+  - X サーバー Webmail で受信確認
+  - **MX レコードは触っていないので影響しないが、SPF が変わる場合は念のため確認**
 
 ### 5-3. Stripe webhook 切替 (~06:00)
 

@@ -170,6 +170,32 @@ export default async function sitemap() {
 
 ---
 
+## 🌐 DNS レコード整理 (4/30 切替後、5月以降)
+
+### 削除候補 (X サーバー時代の旧レコード)
+
+| レコード | 削除理由 | 影響確認 |
+|---|---|---|
+| `default._domainkey.u-balloon.com TXT` | X サーバー旧 DKIM。X サーバー経由のメール送信を完全停止したら削除可 | `info@u-balloon.com` 受信は X サーバー継続だが、送信は Resend なのでこの DKIM は使われていない |
+| `_adsp._domainkey.u-balloon.com TXT (dkim=unknown)` | ADSP は 2013 年 RFC 6541 で廃止された仕様 | 削除しても影響ゼロ、即実施可 |
+
+### 確認候補 (削除可能性あり、要動作確認)
+
+| レコード | 検討理由 | 削除前確認 |
+|---|---|---|
+| `*.u-balloon.com A 162.43.120.167` (X サーバー) | 4/30 切替後、ワイルドカード A をどうするか。Vercel に向けるか、削除するか | サブドメイン (例: `mail.u-balloon.com`、`webmail.u-balloon.com`) を X サーバーで使っているなら個別 A レコードを残す方向、ワイルドカードは外す |
+| `u-balloon.com TXT (root SPF: v=spf1 +a:sv14166.xserver.jp ...)` | X サーバー経由送信の SPF。Resend は subdomain (`send.`) で SPF 別管理 | root from でメール送信したい場合、Resend 含む SPF に書換え必要。Daisuke 確定: emailFromAddress=noreply@u-balloon.com (root) のため、**書換えが必要**: `v=spf1 +a:sv14166.xserver.jp +a:u-balloon.com +mx include:spf.sender.xserver.jp include:amazonses.com ~all` |
+
+### DMARC 強化 (5月以降、レピュテーション形成後)
+
+- 現状: `_dmarc.u-balloon.com TXT v=DMARC1; p=none;`
+- 推奨次段階: `v=DMARC1; p=none; rua=mailto:dmarc@u-balloon.com; pct=100` (集計受信先付き、Phase H で対応)
+- 安定後 (5月中旬): `v=DMARC1; p=quarantine; rua=mailto:dmarc@u-balloon.com; pct=25` (段階的にスパム判定強化)
+- 1ヶ月後: `v=DMARC1; p=quarantine; rua=mailto:dmarc@u-balloon.com; pct=100`
+- 3ヶ月後 (問題なければ): `v=DMARC1; p=reject; rua=mailto:dmarc@u-balloon.com;` (なりすまし完全 reject)
+
+---
+
 ## 📝 着手トリガー
 
 各項目は以下のいずれかで着手:
