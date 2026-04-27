@@ -5,7 +5,7 @@ import Link from 'next/link'
 
 export const metadata: Metadata = {
   title: 'uballoon | バルーンギフト・バルーン電報の通販',
-  description: 'バルーンギフトで特別な日を彩ります。誕生日、結婚式、記念日に最適なバルーン電報・バルーンギフトの通販サイト。東京都心への即日配送対応。',
+  description: 'バルーンギフトで特別な日を彩ります。誕生日、結婚式、記念日に最適なバルーン電報・バルーンギフトの通販サイト。沖縄を除く全国へ発送、東京都心は即日配送対応。',
 }
 import { Button } from '@/components/ui/button'
 import { ArrowRight, Truck, Clock, Gift } from 'lucide-react'
@@ -36,35 +36,35 @@ const TYPE_CATEGORIES = [
 export default function HomePage() {
   return (
     <div>
-      {/* Hero Section — 21:9 横長 hero に画像 + 中央揃えテキスト overlay */}
+      {/* Hero Section — モバイル 4:3 / デスクトップ 21:9 の hero 画像 + 中央揃えテキスト overlay */}
       <section className="relative overflow-hidden bg-brand-pink-light">
-        {/* 21:9 hero (デスクトップ・モバイル共通、min-height で極小化を防ぐ) */}
-        <div className="relative aspect-[21/9] w-full min-h-[320px] sm:min-h-[420px]">
+        {/*
+          aspect 比:
+            - モバイル: 4:3 (画像を縦に大きく、左寄せクロップで右を逃がす)
+            - デスクトップ (sm 以上): 21:9 (横長 cinematic)
+        */}
+        <div className="relative aspect-[4/3] w-full min-h-[360px] sm:aspect-[21/9] sm:min-h-[420px]">
           <Image
             src="/hero-img.webp"
             alt="バルーンギフト・電報専門店 u-balloon"
             fill
             sizes="100vw"
-            className="object-cover"
+            className="object-cover [object-position:8%_50%] sm:object-center"
             priority
           />
 
-          {/* Text overlay (中央揃え、ボタンなし) */}
+          {/* Text overlay (中央揃え、説明文なし、h1 大きく) */}
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="mx-auto w-full max-w-7xl px-4 sm:px-6">
-              <div className="mx-auto max-w-2xl text-center">
-                <p className="mb-2 text-xs font-semibold tracking-wider text-brand-teal uppercase sm:mb-3 sm:text-sm">
-                  Balloon Gift Delivery in Tokyo
+              <div className="mx-auto max-w-3xl text-center">
+                <p className="mb-3 text-xs font-semibold tracking-wider text-[#3c9ced] uppercase sm:mb-5 sm:text-sm">
+                  Balloon Gifts Delivered Nationwide
                 </p>
-                <h1 className="mb-3 text-2xl font-bold leading-tight tracking-tight text-brand-teal sm:mb-4 sm:text-4xl lg:text-5xl">
+                <h1 className="text-3xl font-bold leading-tight tracking-tight text-[#3c9ced] sm:text-5xl lg:text-7xl">
                   特別な日を、
                   <br />
                   <span className="text-brand-pink">バルーン</span>で彩ろう
                 </h1>
-                <p className="mx-auto max-w-lg text-sm leading-relaxed text-foreground/70 sm:text-base lg:text-lg">
-                  お誕生日、記念日、イベントに。
-                  オリジナルバルーンギフトを東京都内へお届けします。
-                </p>
               </div>
             </div>
           </div>
