@@ -49,19 +49,19 @@ export default function HomePage() {
             alt="バルーンギフト・電報専門店 u-balloon"
             fill
             sizes="100vw"
-            className="object-cover [object-position:-2%_50%] sm:object-center"
+            className="object-cover [object-position:30%_50%] sm:object-center"
             priority
           />
 
           {/* Text overlay (中央揃え、説明文なし、h1 大きく、白シャドウで読みやすさ確保) */}
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center pb-8 sm:pb-12">
             <div className="mx-auto w-full max-w-7xl px-4 sm:px-6">
               <div className="mx-auto max-w-4xl text-center">
-                <p className="mb-3 text-sm font-semibold tracking-wider text-[#3c9ced] uppercase [text-shadow:_0_2px_12px_rgba(255,255,255,0.85)] sm:mb-5 sm:text-base lg:text-lg">
+                <p className="mb-3 text-sm font-semibold tracking-wider text-[#3c9ced] uppercase [text-shadow:_0_0_40px_#ffffff8f] sm:mb-5 sm:text-base md:text-lg">
                   Make Them Smile
                 </p>
-                <h1 className="text-4xl font-bold leading-tight tracking-tight text-[#3c9ced] [text-shadow:_0_2px_12px_rgba(255,255,255,0.85)] sm:text-6xl lg:text-8xl">
-                  特別な日を、
+                <h1 className="text-4xl font-bold leading-tight tracking-tight text-[#3c9ced] [text-shadow:_0_0_40px_#ffffff8f] sm:text-5xl md:text-6xl lg:text-7xl">
+                  特別な日を
                   <br />
                   <span className="text-brand-pink">バルーン</span>で彩ろう
                 </h1>
