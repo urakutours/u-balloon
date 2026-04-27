@@ -120,6 +120,11 @@ export default async function sitemap() {
 - X-Frame-Options / Strict-Transport-Security
 - rate limit (Phase G で /api/auth/ /api/admin/ は対応、他 endpoint も検討)
 - admin route の権限監査 (定期)
+- **pg-connection-string SSL モード厳格化** (期限: pg-connection-string v3.0.0 / pg v9.0.0 リリース前)
+  - 現状: `pg-connection-string@2.12.0` / `pg@8.16.3` で `prefer/require/verify-ca` が `verify-full` のエイリアスとして警告ログを出力
+  - v3.0.0 / v9.0.0 で libpq 標準セマンティクスに変わり、CA 検証が緩い扱いになる
+  - 対応: `DATABASE_URL` の `sslmode` を `verify-full` に明示 + Neon root CA 検証導入を検討
+  - 検出: u-mini 監視で 2026-04-27 にエスカレ (`/api/admin/stripe-mode` 経由)、現状は警告のみで動作影響なし
 
 ---
 
