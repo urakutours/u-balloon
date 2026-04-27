@@ -49,7 +49,7 @@ export default function HomePage() {
             alt="バルーンギフト・電報専門店 u-balloon"
             fill
             sizes="100vw"
-            className="object-cover [object-position:30%_50%] sm:object-center"
+            className="object-cover [object-position:40%_50%] sm:object-center"
             priority
           />
 
