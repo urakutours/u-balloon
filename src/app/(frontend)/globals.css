@@ -33,6 +33,7 @@
 @theme inline {
   --font-heading: var(--font-sans);
   --font-sans: var(--font-sans);
+  --font-serif: var(--font-eb-garamond);
 
   /* Brand-specific colors */
   --color-brand-pink: var(--brand-pink);
@@ -197,6 +198,15 @@
 
 .animate-scale-in {
   animation: scale-in 0.2s ease-out forwards;
+}
+
+/* Hide scrollbar (used by horizontal product carousels) */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
 /* Stagger children animations */

@@ -196,6 +196,39 @@ export default async function sitemap() {
 
 ---
 
+## 🏠 TOP おすすめ商品セクションを管理画面から編集可能化
+
+**経緯**: 2026-04-27 の TOP 全面改修で、おすすめ商品 5 カテゴリを `src/components/home/FeaturedProductsSection.tsx` の `FEATURED_CATEGORIES` 定数に直書きで実装した。Daisuke から「管理画面 (Pages 編集) から並べ替え・追加・削除できると望ましい」との要望あり。
+
+### 現状
+
+- カテゴリ定義: `FEATURED_CATEGORIES` (title / subtitle / skus[]) のハードコード
+- 編集には PR + Vercel deploy が必要
+- 商品 SKU を直指定するため、404 商品が混じってもアプリ層で skip される (silent)
+
+### 実装スコープ (post-launch、優先度 中)
+
+- `Pages.ts` に新ブロック `FeaturedProductsBlock` を追加 (blocks フィールド内):
+  - title (text, required)
+  - subtitle (text)
+  - products (relationship, hasMany, relationTo: 'products')
+- TOP ページを `Pages` の slug=`home` ドキュメントとして取り込む or 専用 Global を新設
+- `FeaturedProductsSection` を `Pages.layout` ブロック renderer に書き換え、ハードコード `FEATURED_CATEGORIES` を撤去
+- 管理画面で並べ替え (drag) / カテゴリ追加 / 商品差し替えが可能になる
+
+### 着手条件
+
+- 4/30 切替後 1-2 週間運用して TOP 構成が固まる
+- Daisuke から「もう少し細かく入れ替えたい」要望が出たタイミング
+- またはマルチサイト対応 (汎用 EC プラットフォーム化、Phase 5/6) と併せて
+
+### 注意点
+
+- Pages.layout は `type: 'blocks'` = jsonb 列。ブロック内の `products` relationship は別テーブル化されるので jsonb 制約は問題なし
+- 既存 `FEATURED_CATEGORIES` の 5 カテゴリを seed として Pages に投入するスクリプトを書く必要あり
+
+---
+
 ## 📝 着手トリガー
 
 各項目は以下のいずれかで着手:

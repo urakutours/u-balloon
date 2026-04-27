@@ -1,5 +1,5 @@
 import React from 'react'
-import { Noto_Sans_JP } from 'next/font/google'
+import { Noto_Sans_JP, EB_Garamond } from 'next/font/google'
 import './globals.css'
 import { getPayload } from 'payload'
 import config from '@payload-config'
@@ -15,6 +15,14 @@ const notoSansJP = Noto_Sans_JP({
   weight: ['400', '500', '600', '700'],
   display: 'swap',
   variable: '--font-sans',
+})
+
+const ebGaramond = EB_Garamond({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  style: ['normal', 'italic'],
+  display: 'swap',
+  variable: '--font-eb-garamond',
 })
 
 import type { Metadata } from 'next'
@@ -78,7 +86,7 @@ export default async function RootLayout(props: { children: React.ReactNode }) {
   }
 
   return (
-    <html lang="ja" className={notoSansJP.variable}>
+    <html lang="ja" className={`${notoSansJP.variable} ${ebGaramond.variable}`}>
       <body className="flex min-h-screen flex-col">
         <GoogleAnalytics ga4Id={ga4Id} />
         <AuthProvider>
