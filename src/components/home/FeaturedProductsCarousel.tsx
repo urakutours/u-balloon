@@ -40,6 +40,12 @@ export function FeaturedProductsCarousel({ title, subtitle, products }: Props) {
     }
   }, [products.length])
 
+  // scroll position から左右矢印の表示状態を再計算する
+  const refreshArrows = (el: HTMLDivElement, sl: number) => {
+    setCanLeft(sl > 4)
+    setCanRight(sl + el.clientWidth < el.scrollWidth - 4)
+  }
+
   const scrollBy = (dir: 1 | -1) => {
     const el = scrollerRef.current
     if (!el) return
@@ -58,6 +64,9 @@ export function FeaturedProductsCarousel({ title, subtitle, products }: Props) {
       window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     if (document.hidden || reduceMotion) {
       el.scrollLeft = target
+      // direct 代入は scroll event を発火しないことがあるので明示的に
+      // 矢印状態を更新する
+      refreshArrows(el, target)
       return
     }
 
@@ -74,6 +83,7 @@ export function FeaturedProductsCarousel({ title, subtitle, products }: Props) {
       const ease = 1 - Math.pow(1 - t, 3) // ease-out cubic
       el.scrollLeft = start + distance * ease
       if (t < 1) requestAnimationFrame(animate)
+      else refreshArrows(el, el.scrollLeft) // 最終 frame で矢印状態を確定
     }
     requestAnimationFrame(animate)
   }
