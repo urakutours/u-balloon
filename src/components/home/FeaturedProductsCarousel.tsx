@@ -44,12 +44,26 @@ export function FeaturedProductsCarousel({ title, subtitle, products }: Props) {
     const el = scrollerRef.current
     if (!el) return
     const card = el.querySelector<HTMLElement>('[data-carousel-card]')
-    // 1 click = カード 2 枚分スライド (snap-proximity でちょうど 2 枚スナップ)
     const step = card ? card.offsetWidth + 16 : el.clientWidth * 0.5
-    const target = el.scrollLeft + step * dir * 2
-    // smooth + snap-mandatory はブラウザ実装で 1 step しか動かないことがあるため
-    // snap は proximity を採用し、scrollTo で確実に target 位置を指定する
-    el.scrollTo({ left: Math.max(0, target), behavior: 'smooth' })
+    const max = el.scrollWidth - el.clientWidth
+    const target = Math.max(0, Math.min(max, el.scrollLeft + step * dir * 2))
+    if (Math.abs(target - el.scrollLeft) < 1) return
+
+    // ブラウザ環境によって `scrollTo({behavior: 'smooth'})` や CSS
+    // `scroll-behavior: smooth` が不安定 (prefers-reduced-motion / smooth と
+    // scroll-snap の相互作用 / ブラウザ別実装差) なため、requestAnimationFrame
+    // による自前 smooth scroll を採用する。これでどの環境でも確実に動く。
+    const start = el.scrollLeft
+    const distance = target - start
+    const duration = 320
+    const startTime = performance.now()
+    const animate = (now: number) => {
+      const t = Math.min(1, (now - startTime) / duration)
+      const ease = 1 - Math.pow(1 - t, 3) // ease-out cubic
+      el.scrollLeft = start + distance * ease
+      if (t < 1) requestAnimationFrame(animate)
+    }
+    requestAnimationFrame(animate)
   }
 
   if (products.length === 0) return null
@@ -87,14 +101,14 @@ export function FeaturedProductsCarousel({ title, subtitle, products }: Props) {
 
         <div
           ref={scrollerRef}
-          className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-hide snap-x snap-proximity pb-2"
+          className="flex gap-4 overflow-x-auto scrollbar-hide pb-2"
         >
           {products.map((p) => (
             <Link
               key={p.id}
               href={`/products/${p.slug}`}
               data-carousel-card
-              className="group w-[44vw] sm:w-[28%] md:w-[22%] lg:w-[18%] flex-shrink-0 snap-start"
+              className="group w-[44vw] sm:w-[28%] md:w-[22%] lg:w-[18%] flex-shrink-0"
             >
               <div className="overflow-hidden rounded-xl border border-border/60 bg-white transition-all group-hover:border-border group-hover:shadow-md">
                 <div className="relative aspect-square overflow-hidden bg-muted">
