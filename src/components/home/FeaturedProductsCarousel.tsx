@@ -44,8 +44,12 @@ export function FeaturedProductsCarousel({ title, subtitle, products }: Props) {
     const el = scrollerRef.current
     if (!el) return
     const card = el.querySelector<HTMLElement>('[data-carousel-card]')
-    const step = card ? card.offsetWidth + 16 : el.clientWidth * 0.8
-    el.scrollBy({ left: step * dir * 2, behavior: 'smooth' })
+    // 1 click = カード 2 枚分スライド (snap-proximity でちょうど 2 枚スナップ)
+    const step = card ? card.offsetWidth + 16 : el.clientWidth * 0.5
+    const target = el.scrollLeft + step * dir * 2
+    // smooth + snap-mandatory はブラウザ実装で 1 step しか動かないことがあるため
+    // snap は proximity を採用し、scrollTo で確実に target 位置を指定する
+    el.scrollTo({ left: Math.max(0, target), behavior: 'smooth' })
   }
 
   if (products.length === 0) return null
@@ -83,7 +87,7 @@ export function FeaturedProductsCarousel({ title, subtitle, products }: Props) {
 
         <div
           ref={scrollerRef}
-          className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-hide snap-x snap-mandatory pb-2"
+          className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-hide snap-x snap-proximity pb-2"
         >
           {products.map((p) => (
             <Link
