@@ -49,10 +49,22 @@ export function FeaturedProductsCarousel({ title, subtitle, products }: Props) {
     const target = Math.max(0, Math.min(max, el.scrollLeft + step * dir * 2))
     if (Math.abs(target - el.scrollLeft) < 1) return
 
+    // タブが background (hidden) の場合は requestAnimationFrame が
+    // throttle されてアニメーションが進まないので、即座に target に
+    // ジャンプさせる。matchMedia('(prefers-reduced-motion: reduce)') も
+    // 同様にフォールバック。
+    const reduceMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    if (document.hidden || reduceMotion) {
+      el.scrollLeft = target
+      return
+    }
+
     // ブラウザ環境によって `scrollTo({behavior: 'smooth'})` や CSS
-    // `scroll-behavior: smooth` が不安定 (prefers-reduced-motion / smooth と
-    // scroll-snap の相互作用 / ブラウザ別実装差) なため、requestAnimationFrame
-    // による自前 smooth scroll を採用する。これでどの環境でも確実に動く。
+    // `scroll-behavior: smooth` が不安定 (snap interaction / ブラウザ別
+    // 実装差) なため、requestAnimationFrame による自前 smooth scroll を
+    // 採用する。これでどの visible 環境でも確実に動く。
     const start = el.scrollLeft
     const distance = target - start
     const duration = 320
