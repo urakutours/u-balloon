@@ -36,7 +36,7 @@ const TYPE_CATEGORIES = [
 export default function HomePage() {
   return (
     <div>
-      {/* Hero Section — 21:9 横長 hero に画像背景 + テキスト overlay */}
+      {/* Hero Section — 21:9 横長 hero に画像 + 中央揃えテキスト overlay */}
       <section className="relative overflow-hidden bg-brand-pink-light">
         {/* 21:9 hero (デスクトップ・モバイル共通、min-height で極小化を防ぐ) */}
         <div className="relative aspect-[21/9] w-full min-h-[320px] sm:min-h-[420px]">
@@ -48,13 +48,11 @@ export default function HomePage() {
             className="object-cover"
             priority
           />
-          {/* Gradient mask: 左から白フェード、テキスト読みやすさを確保 */}
-          <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/45 to-white/0 sm:via-white/30 sm:to-transparent" />
 
-          {/* Text + CTA overlay */}
-          <div className="absolute inset-0 flex items-center">
-            <div className="mx-auto flex w-full max-w-7xl px-4 sm:px-6">
-              <div className="max-w-xl text-left">
+          {/* Text overlay (中央揃え、ボタンなし) */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="mx-auto w-full max-w-7xl px-4 sm:px-6">
+              <div className="mx-auto max-w-2xl text-center">
                 <p className="mb-2 text-xs font-semibold tracking-wider text-brand-teal uppercase sm:mb-3 sm:text-sm">
                   Balloon Gift Delivery in Tokyo
                 </p>
@@ -63,30 +61,10 @@ export default function HomePage() {
                   <br />
                   <span className="text-brand-pink">バルーン</span>で彩ろう
                 </h1>
-                <p className="mb-4 hidden max-w-lg text-base leading-relaxed text-foreground/70 sm:mb-8 sm:block sm:text-lg">
+                <p className="mx-auto max-w-lg text-sm leading-relaxed text-foreground/70 sm:text-base lg:text-lg">
                   お誕生日、記念日、イベントに。
                   オリジナルバルーンギフトを東京都内へお届けします。
                 </p>
-                <div className="flex flex-col items-start gap-2 sm:flex-row sm:gap-3">
-                  <Link href="/products">
-                    <Button
-                      size="lg"
-                      className="gap-2 bg-brand-dark px-5 text-xs font-semibold hover:bg-brand-dark/90 sm:px-8 sm:text-sm"
-                    >
-                      商品を見る
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                  <Link href="/products?tag=誕生日">
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      className="gap-2 border-brand-dark/20 bg-white/70 px-5 text-xs font-semibold text-brand-dark backdrop-blur hover:bg-brand-dark/5 sm:bg-transparent sm:px-8 sm:text-sm"
-                    >
-                      誕生日ギフトを探す
-                    </Button>
-                  </Link>
-                </div>
               </div>
             </div>
           </div>
