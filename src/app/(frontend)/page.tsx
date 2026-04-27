@@ -49,18 +49,18 @@ export default function HomePage() {
             alt="バルーンギフト・電報専門店 u-balloon"
             fill
             sizes="100vw"
-            className="object-cover [object-position:8%_50%] sm:object-center"
+            className="object-cover [object-position:-2%_50%] sm:object-center"
             priority
           />
 
-          {/* Text overlay (中央揃え、説明文なし、h1 大きく) */}
+          {/* Text overlay (中央揃え、説明文なし、h1 大きく、白シャドウで読みやすさ確保) */}
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="mx-auto w-full max-w-7xl px-4 sm:px-6">
-              <div className="mx-auto max-w-3xl text-center">
-                <p className="mb-3 text-xs font-semibold tracking-wider text-[#3c9ced] uppercase sm:mb-5 sm:text-sm">
-                  Balloon Gifts Delivered Nationwide
+              <div className="mx-auto max-w-4xl text-center">
+                <p className="mb-3 text-sm font-semibold tracking-wider text-[#3c9ced] uppercase [text-shadow:_0_2px_12px_rgba(255,255,255,0.85)] sm:mb-5 sm:text-base lg:text-lg">
+                  Make Them Smile
                 </p>
-                <h1 className="text-3xl font-bold leading-tight tracking-tight text-[#3c9ced] sm:text-5xl lg:text-7xl">
+                <h1 className="text-4xl font-bold leading-tight tracking-tight text-[#3c9ced] [text-shadow:_0_2px_12px_rgba(255,255,255,0.85)] sm:text-6xl lg:text-8xl">
                   特別な日を、
                   <br />
                   <span className="text-brand-pink">バルーン</span>で彩ろう
